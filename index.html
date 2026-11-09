@@ -110,6 +110,7 @@ button.armed{outline:3px solid var(--great)}
 <div class="modal" id="modal" hidden><div id="modalBody"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 // ===== Rules: odds, value, tribute and merchant numbers follow the ForgeTax data on forgetax.tools =====
 const BREAK = [0,1.8,5.9,12.9,24.8,29.7,34.7,38.3,41.8,44.3,46.7,49.1,50.5,51.9,53.2,54.5,55.8,57.6,59.4,61.2,63,63.9,64.8,65.7,66.6,67.5,68.4,69.3,70.2,71.1,72];
@@ -504,18 +505,15 @@ const BRICK = canvasTex((x, n) => { x.fillStyle = "#2a1610"; x.fillRect(0, 0, n,
 const STRAW = canvasTex((x, n) => { x.fillStyle = "#b08a3a"; x.fillRect(0, 0, n, n);
   for (let i = 0; i < 400; i++) { x.strokeStyle = `hsla(${40 + Math.random() * 12},60%,${35 + Math.random() * 35}%,.8)`; x.lineWidth = 1 + Math.random(); x.beginPath();
     const a = (Math.random() - .5) * .5, X = Math.random() * n, Y = Math.random() * n; x.moveTo(X, Y); x.lineTo(X + Math.cos(a) * 40, Y + Math.sin(a) * 40); x.stroke(); } });
-const wood = c => M(c, { map: GRAIN, bumpMap: GRAIN, bumpScale: .01 });
-function plankTex(base, line) {
-  const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
-  x.fillStyle = base; x.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 8; i++) { x.fillStyle = `rgba(0,0,0,${.08 + Math.random() * .12})`; x.fillRect(0, i * 32, 256, 30); x.fillStyle = line; x.fillRect(0, i * 32 + 30, 256, 2); }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
-}
+const wood = c => M(new THREE.Color(c).lerp(new THREE.Color(0xffffff), .35), pbr("wall", .6)); // photo planks tinted per piece
+// Photo-scanned CC0 surfaces from Poly Haven (tex/CREDITS.md): colour, normal and roughness maps
+const TL = new THREE.TextureLoader();
+const PBR = {}; // one texture set per name+repeat, shared by every material that asks for it
+function pbr(name, rx, ry = rx) { const key = `${name}:${rx}:${ry}`; if (PBR[key]) return PBR[key]; const t = k => { const x = TL.load(`tex/${name}_${k}.jpg`); x.wrapS = x.wrapT = THREE.RepeatWrapping; x.repeat.set(rx, ry); if (k === "diff") x.encoding = THREE.sRGBEncoding; return x; };
+  return PBR[key] = { map: t("diff"), normalMap: t("nor"), roughnessMap: t("rough"), roughness: 1 }; }
 { // barn room
-  const ft = plankTex("#5a3a22", "#2a1a0e"); ft.repeat.set(6, 6);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xffffff, { map: ft, bumpMap: ft, bumpScale: .03 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
-  const wt = plankTex("#4a2e1a", "#1e1209"); wt.repeat.set(10, 2);
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xffffff, { map: wt, bumpMap: wt, bumpScale: .03, side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xb0a08c, pbr("floor", 5))); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xa08a78, { ...pbr("wall", 8, 2), side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
   for (let i = 0; i < 6; i++) box(.25, 4, .25, wood(0x5a3a22), at(i * 60 + 30, 4.05, 2));
   const hay = M(0xffffff, { map: STRAW, bumpMap: STRAW, bumpScale: .03, roughness: 1 });
   for (const y of [25, 85, 135]) box(.8, .4, .5, hay, at(y, 3.6, .2));
@@ -530,26 +528,27 @@ const anvilPos = at(0, 1.6, 0);
   s.quadraticCurveTo(-.13, .27, -.12, .2); s.quadraticCurveTo(-.13, .08, -.28, .05); s.lineTo(-.3, 0);
   const g = new THREE.ExtrudeGeometry(s, { depth: .22, bevelEnabled: true, bevelThickness: .02, bevelSize: .015, bevelSegments: 3, curveSegments: 18 });
   g.translate(0, 0, -.11);
-  const body = new THREE.Mesh(g, M(0x3c3f44, { metalness: .85, roughness: .45 })); body.position.copy(anvilPos).setY(.3); scene.add(body);
-  const face = new THREE.Mesh(rbox(.6, .02, .25, .006), M(0xb8bec6, { metalness: .6, roughness: .3 })); face.position.copy(anvilPos).add(new THREE.Vector3(.01, .735, 0)); scene.add(face);
+  const body = new THREE.Mesh(g, M(0x4c4a48, { ...pbr("iron", 2.5), metalness: .6 })); body.position.copy(anvilPos).setY(.3); scene.add(body);
+  const face = new THREE.Mesh(rbox(.6, .02, .25, .006), M(0x9a9ea4, { normalMap: pbr("iron", 1.5).normalMap, metalness: .65, roughness: .35 })); face.position.copy(anvilPos).add(new THREE.Vector3(.01, .735, 0)); scene.add(face);
   const hardy = new THREE.Mesh(new THREE.BoxGeometry(.04, .005, .04), M(0x050505)); hardy.position.copy(anvilPos).add(new THREE.Vector3(.24, .746, 0)); scene.add(hardy); }
 // Pivot sits right of the pig at pig-top height; rotation.z = 0 puts the head flat on the pig, negative lifts it overhead
 const hammer = new THREE.Group(); hammer.position.copy(anvilPos).add(new THREE.Vector3(.62, 1.13, 0)); scene.add(hammer);
-{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.022, .032, .64, 16), wood(0x8a5a32)); h.rotation.z = Math.PI / 2; h.position.x = -.31; hammer.add(h);
+const hammerStandIn = new THREE.Group(); hammer.add(hammerStandIn);
+{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.022, .032, .64, 16), wood(0x8a5a32)); h.rotation.z = Math.PI / 2; h.position.x = -.31; hammerStandIn.add(h);
   // Lathe-turned head: flat striking face down, tapered peen up
   const prof = [[0, -.08], [.05, -.08], [.068, -.065], [.068, .09], [.05, .14], [.022, .19], [0, .19]].map(([r, y]) => new THREE.Vector2(r, y));
   const steel = M(0x9aa0a8, { metalness: .7, roughness: .3 });
-  const head = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), steel); head.position.x = -.62; hammer.add(head);
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(.036, .012, 8, 20), steel); collar.rotation.y = Math.PI / 2; collar.position.x = -.56; hammer.add(collar); }
+  const head = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), steel); head.position.x = -.62; hammerStandIn.add(head);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.036, .012, 8, 20), steel); collar.rotation.y = Math.PI / 2; collar.position.x = -.56; hammerStandIn.add(collar); }
 const HAMMER_UP = -1.05;
 // Furnace
 const furnPos = at(55, 2.3);
-box(1.1, 1.3, .8, M(0xa07868, { map: BRICK, bumpMap: BRICK, bumpScale: .04, roughness: .95 }), furnPos.clone().setY(.65));
-const chim = new THREE.Mesh(new THREE.CylinderGeometry(.16, .26, 2.2, 20), M(0xa07868, { map: BRICK, roughness: .95 })); chim.position.copy(at(55, 2.45, 2.4)); scene.add(chim);
+box(1.1, 1.3, .8, M(0xc0a090, pbr("brick", 1.4)), furnPos.clone().setY(.65));
+const chim = new THREE.Mesh(new THREE.CylinderGeometry(.16, .26, 2.2, 20), M(0xc0a090, pbr("brick", 1.2, 2.4))); chim.position.copy(at(55, 2.45, 2.4)); scene.add(chim);
 const fireG = new THREE.Group(); fireG.position.copy(at(55, 1.89)); fireG.lookAt(0, 0, 0); scene.add(fireG);
 { const s = new THREE.Shape(); s.moveTo(-.3, .28); s.lineTo(.3, .28); s.lineTo(.3, .6); s.absarc(0, .6, .3, 0, Math.PI, false); s.lineTo(-.3, .28);
   const mouth = new THREE.Mesh(new THREE.ShapeGeometry(s, 24), new THREE.MeshBasicMaterial({ color: 0x1a0603 })); fireG.add(mouth);
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(.33, .04, 8, 24, Math.PI), M(0x5a2a1c, { roughness: 1 })); rim.position.y = .6; fireG.add(rim);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.33, .045, 10, 28, Math.PI), M(0x9a7060, pbr("brick", .5))); rim.position.y = .6; fireG.add(rim);
   const coals = new THREE.Group(), coalM = new THREE.MeshStandardMaterial({ color: 0x220800, emissive: 0xff4a10, emissiveIntensity: 1.1, roughness: 1 });
   for (let i = 0; i < 14; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.035 + Math.random() * .03), coalM);
     c.position.set((Math.random() - .5) * .5, .3 + Math.random() * .04, .02); c.rotation.set(Math.random() * 3, Math.random() * 3, 0); coals.add(c); } bake(coals); fireG.add(coals); }
@@ -617,7 +616,7 @@ const FUR = canvasTex((x, n) => { x.fillStyle = "#3a2618"; x.fillRect(0, 0, n, n
   for (let i = 0; i < 900; i++) { x.strokeStyle = `hsla(${20 + Math.random() * 15},${30 + Math.random() * 25}%,${8 + Math.random() * 22}%,.9)`; x.lineWidth = 1 + Math.random() * 1.5;
     const X = Math.random() * n, Y = Math.random() * n; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + (Math.random() - .5) * 6, Y + 10 + Math.random() * 14); x.stroke(); } });
 const arm = new THREE.Group(), handG = new THREE.Group(), fingers = []; arm.visible = false; arm.add(handG); hatch.add(arm); handG.scale.setScalar(1.45);
-{ const skin = M(0x6a4632, { roughness: .8 }), claw = M(0x16110d, { roughness: .25, metalness: .3 }), fur = M(0x8a6040, { map: FUR, bumpMap: FUR, bumpScale: .04, roughness: 1 });
+{ const skin = M(0x9a6a50, pbr("hide", 1.5)), claw = M(0x16110d, { roughness: .25, metalness: .3 }), fur = M(0x8a6040, { map: FUR, bumpMap: FUR, bumpScale: .04, roughness: 1 });
   const palm = new THREE.Mesh(rbox(.36, .11, .3, .045), skin); handG.add(palm);
   for (let i = 0; i < 4; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(.045, 10, 8), skin); k.position.set(-.13 + i * .087, .045, .12); k.scale.set(1, .7, 1); handG.add(k); }
   const digit = (len1, len2, r) => { const f = new THREE.Group(), joint = new THREE.Group();
@@ -664,8 +663,22 @@ async function collectTribute() {
 }
 const bell = new THREE.Mesh(new THREE.LatheGeometry([[.17, -.13], [.15, -.11], [.11, -.02], [.09, .08], [.07, .12], [.03, .14], [0, .14]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
 bell.position.copy(at(-48, 2.6, 1.5)); scene.add(bell);
-for (const y of [30, 140, -100]) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
-  const b = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd08a })); b.position.copy(l.position); scene.add(b); }
+const LAMPS = [30, 140, -100];
+for (const y of LAMPS) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd08a })); b.position.copy(l.position); scene.add(b);
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, 1.1, 5), M(0x2a2018)); rope.position.copy(l.position).setY(3.45); scene.add(rope); }
+
+// ===== CC0 photo-scanned props from Poly Haven (models/, see models/CREDITS.md); the game runs fine before they arrive =====
+function prop(name, place) { if (!THREE.GLTFLoader) return;
+  new THREE.GLTFLoader().load(`models/${name}.glb`, g => place(g.scene), undefined, () => {}); }
+prop("cross_pein_hammer", m => { // model: handle along +y, head on top → lay it along -x with the head at the strike point
+  m.rotation.z = Math.PI / 2; m.scale.setScalar(2.4); m.position.set(-.27, .05, 0); hammer.add(m); hammer.remove(hammerStandIn); });
+const putOnFloor = (m, yaw, r, s = 1, turn = 0) => { m.position.copy(at(yaw, r)); m.scale.setScalar(s); m.rotation.y = turn; scene.add(m); return m; };
+prop("wine_barrel_01", m => { putOnFloor(m, 76, 3.0, .95, .6); putOnFloor(m.clone(), 68, 3.55, .85, 2.1); });
+prop("wooden_bucket_02", m => { putOnFloor(m, -24, 1.85, .85); // quench bucket by the anvil
+  const water = new THREE.Mesh(new THREE.CircleGeometry(.24, 24), M(0x1a2a30, { metalness: .2, roughness: .08 })); water.rotation.x = -Math.PI / 2; water.position.copy(m.position).setY(.26); scene.add(water); });
+prop("wooden_crate_02", m => { putOnFloor(m, -160, 2.95, .9, .3); putOnFloor(m.clone(), -160, 2.95, .75, 1.1).position.y = .4; putOnFloor(m.clone(), -121, 3.05, .85, -.4); });
+prop("wooden_lantern_01", m => LAMPS.forEach((y, i) => { const l = i ? m.clone() : m; l.position.copy(at(y, 3.3, 2.32)); l.scale.setScalar(.9); scene.add(l); }));
 
 // Pig model per level
 function auraTex() { const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d");
