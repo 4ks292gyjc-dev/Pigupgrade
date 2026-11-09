@@ -98,7 +98,6 @@ body.menu .hud,body.ko .hud{opacity:0;pointer-events:none}
 #menu .best{margin:10px 0 0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-shadow:0 1px 2px #000}
 #menu .foot{width:100%;max-width:340px;margin-inline:auto;display:grid;gap:8px}
 #menu .foot>button{min-height:52px;font-size:19px}
-#menu .credit{margin:6px 0 0;text-align:center;font-size:10px;color:var(--muted);opacity:.7}
 #menu .achPanel{width:100%;max-width:440px;margin-inline:auto;align-self:end;display:grid;gap:8px;max-height:72vh}
 #menu .achPanel .scroll{overflow:auto;display:grid;gap:10px;padding-right:2px}
 #menu .achPanel h2{margin:0;font-family:var(--display);font-weight:400;font-size:26px}
@@ -287,7 +286,8 @@ function flushToasts(delay = 1200) {
   toasts.splice(0).forEach((id, i) => setTimeout(() => { const a = ACH[id];
     banner("업적 달성!", a.name + (a.relic ? ` · ${RB[a.relic].name} 해금` : ""), "g"); sfx.play("jach"); }, delay + i * 2000));
 }
-const need = () => Math.max(0, Math.round(quota(S.day) - (S.carry || 0)));
+const TRIBUTE_MULT = 1.5; // difficulty: tribute demanded vs the calendar; merchant prices keep the base quota
+const need = () => Math.max(0, Math.round(quota(S.day) * TRIBUTE_MULT - (S.carry || 0)));
 function pigName(p, L = p.lvl) {
   const f = FAMS[p.fam], look = Math.max(L, p.peak || 0);
   if (f?.special) return `${f.forms[Math.min(10, look >> 1)]} 돼지`;
@@ -1100,8 +1100,7 @@ function showMenu(view = "main") {
       <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</small></button>` : ""}
       <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
       <button class="ghost" id="mAch">업적 ${achCount()}</button>
-      <button class="ghost" id="mSnd">${sfx.muted ? "소리 끔" : "소리 켬"}</button>
-      <p class="credit">효과음 · 3D 모델 · 질감: CC0 (OpenGameArt · Poly Haven)</p></div>`;
+      <button class="ghost" id="mSnd">${sfx.muted ? "소리 끔" : "소리 켬"}</button></div>`;
   }
   m.querySelectorAll("button").forEach(b => b.onclick = () => { sfx.play("tick"); menuClick(b.id); });
 }
