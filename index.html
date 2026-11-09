@@ -327,12 +327,11 @@ function makeMerchant() {
 function ringBell() {
   const q = quota(S.day), total = S.tribute.reduce((a, p) => a + V(p), 0), day = S.day;
   const paid = total >= q; // as in the original, only offered pig value counts; gold never pays tribute
-  const change = Math.max(0, total - q); // only the pig value above the tribute comes back as gold
-  S.gold += change; S.tribute = [];
+  S.gold += total; S.tribute = []; // as in the original, the full offered value comes back as gold, paid or not
   if (paid) { S.pays++; if (has("tally")) S.credits++; } else S.anger++;
   if (S.anger >= 3) { sfx.play("error-sharp-alert"); save(); ui(); return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart); }
   S.day++; morning();
-  banner(paid ? "공물 완납" : "공물 부족", paid ? `거스름돈 +${G(change)} · Day ${S.day}` : `${G(q - total)} 모자라요 · 분노 ${S.anger}/3`, paid ? "s" : "b");
+  banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : `${G(q - total)} 모자라요 · 분노 ${S.anger}/3 · 골드 +${G(total)}`, paid ? "s" : "b");
   sfx.play(paid ? "success-celebrate" : "warning-buzz");
   if (!paid) shakeT = .6;
   ui();
@@ -671,10 +670,9 @@ function ui() {
   if (s === "tribute") {
     const short = Math.max(0, q - tsum);
     h += `<div class="row"><span>오늘 공물 <b class="num">${G(tsum)}</b> / ${G(q)}</span>${S.hand ? `<button id="offer">창구에 넣기</button>` : ""}</div>`;
-    if (!short && tsum > q) h += `<p class="gold">공물을 내고 남는 ${G(tsum - q)}을 골드로 받아요</p>`;
     if (short) h += `<p class="bad">부족 ${G(short)} · 돼지를 더 바쳐야 해요 (골드로는 못 내요)</p>`;
     if (S.tribute.length) h += `<div class="list">${S.tribute.map((p, i) => pigLine(p, `<button class="ghost" data-take="${i}" ${S.hand ? "disabled" : ""}>꺼내기</button>`)).join("")}</div>`;
-    h += `<p class="label">종을 치면 하루가 끝나요. 공물은 돼지로만 낼 수 있어요. 모자라면 분노가 쌓이고, 3번이면 끝이에요. 돼지 가치가 공물보다 많으면 남는 만큼 골드로 받아요.</p>
+    h += `<p class="label">종을 치면 하루가 끝나요. 공물은 돼지로만 낼 수 있어요. 모자라면 분노가 쌓이고, 3번이면 끝이에요. 바친 돼지 가치는 완납이든 아니든 전부 골드로 돌려받아요.</p>
       <button id="bell" class="${confirmBell ? "hot" : ""}">${confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
   }
   $("panel").innerHTML = h; save();
