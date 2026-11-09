@@ -110,7 +110,6 @@ button.armed{outline:3px solid var(--great)}
 <div class="modal" id="modal" hidden><div id="modalBody"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="sounds.js"></script>
 <script>
 // ===== Rules: odds, value, tribute and merchant numbers follow the ForgeTax data on forgetax.tools =====
 const BREAK = [0,1.8,5.9,12.9,24.8,29.7,34.7,38.3,41.8,44.3,46.7,49.1,50.5,51.9,53.2,54.5,55.8,57.6,59.4,61.2,63,63.9,64.8,65.7,66.6,67.5,68.4,69.3,70.2,71.1,72];
@@ -185,17 +184,47 @@ const ITEMS = {
   incense:{ name: "망각의 향", desc: "분노 -1 (게임당 1번)", k: 2.12, stock: 1, day: 9 },
 };
 
-// ===== Sound: pooled <audio> so rapid hits overlap; mute is remembered =====
+// ===== Sound: CC0 recordings (sfx/, see sfx/CREDITS.md) played through Web Audio =====
+// Web Audio is unlocked once by the first touch, so sounds fired later (after an await) still play on iPhone.
+const SND = { // f: file variants (no immediate repeats), v: volume, p: random pitch spread
+  ting: { f: ["anvil-1", "anvil-3"], v: .95, p: .04 }, clang: { f: ["anvil-2"], v: .95, p: .03 }, heavy: { f: ["anvil-heavy"], v: .8, p: .03 },
+  ok: { f: ["ding-ok"], v: .55 }, great: { f: ["ding-great"], v: .55 }, hold: { f: ["hold"], v: .55, p: .05 },
+  damage: { f: ["damage-1"], v: .6 }, dent: { f: ["damage-2"], v: .7 }, crack: { f: ["crack"], v: .8 },
+  shatter: { f: ["shatter-1", "shatter-2"], v: .8 }, shards: { f: ["shards"], v: .55 },
+  jgreat: { f: ["jingle-great"], v: .45 }, jach: { f: ["jingle-achieve"], v: .45 }, jfrenzy: { f: ["jingle-frenzy"], v: .45 }, spell: { f: ["spell"], v: .45 },
+  swish: { f: ["swish-1", "swish-3", "swish-5", "swish-8", "swish-11"], v: .3, p: .08 }, tick: { f: ["tick"], v: .5 },
+  fireWhoosh: { f: ["fire-whoosh"], v: .55 }, fireDone: { f: ["fire-done"], v: .6 },
+  pick: { f: ["pick"], v: .55, p: .06 }, place: { f: ["place"], v: .6, p: .06 }, offer: { f: ["offer"], v: .6, p: .05 }, thud: { f: ["thud"], v: .8, p: .08 },
+  coins: { f: ["coins-1", "coins-2", "coins-3"], v: .5, p: .05 }, coinsBig: { f: ["coins-big"], v: .6 }, gem: { f: ["gem"], v: .55 }, shuffle: { f: ["shuffle"], v: .6 },
+  bell: { f: ["bell-1", "bell-2"], v: .7 }, creak: { f: ["creak"], v: .6 }, chain: { f: ["chain"], v: .45 }, hatch: { f: ["hatch-close"], v: .6 }, grab: { f: ["grab"], v: .6 },
+  roar: { f: ["roar-1", "roar-2"], v: .8 }, grunt: { f: ["grunt"], v: .7 }, step: { f: ["step-00", "step-03", "step-05", "step-07"], v: .22, p: .1 },
+  error: { f: ["error"], v: .45 }, plop: { f: ["plop"], v: .6 },
+};
 const sfx = (() => {
   let muted = false; try { muted = localStorage.getItem("pigforge-mute") === "1"; } catch {}
-  const pool = {};
+  const AC = window.AudioContext || window.webkitAudioContext, ctx = AC && new AC(), buf = {}, last = {};
+  if (!ctx) return { play() {}, ambience() {}, get muted() { return muted; }, toggle() { muted = !muted; } };
+  const master = ctx.createGain(), amb = ctx.createGain(); master.gain.value = muted ? 0 : 1; amb.gain.value = 0;
+  master.connect(ctx.destination); amb.connect(master);
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {} // keep playing with the ringer switch off, like <audio> did
+  const files = new Set(Object.values(SND).flatMap(s => s.f)); files.add("fire-loop");
+  for (const f of files) fetch(`sfx/${f}.mp3`).then(r => r.arrayBuffer()).then(a => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)))
+    .then(b => { buf[f] = b; if (f === "fire-loop") { const src = ctx.createBufferSource(); src.buffer = b; src.loop = true; src.loopStart = .06; src.loopEnd = b.duration - .06; src.connect(amb); src.start(); } })
+    .catch(() => {});
+  const unlock = () => { if (ctx.state !== "running") ctx.resume(); };
+  for (const ev of ["pointerdown", "touchend", "keydown"]) addEventListener(ev, unlock, { capture: true, passive: true });
+  document.addEventListener("visibilitychange", () => document.hidden ? ctx.suspend() : ctx.resume());
+  let ambLevel = -1;
   return {
-    play(...ids) { if (muted || !window.SFX_DATA) return;
-      for (const id of ids) { const src = SFX_DATA[id]; if (!src) continue; const list = pool[id] ||= [];
-        let a = list.find(x => x.paused || x.ended); if (!a) { a = list.length < 4 ? new Audio(src) : list[0]; if (!list.includes(a)) list.push(a); }
-        a.volume = Math.min(1, (SFX_VOL[id] ?? .4) * 1.2); try { a.currentTime = 0; } catch {} a.play().catch(() => {}); } },
+    play(...ids) { if (muted) return;
+      for (const id of ids) { const s = SND[id]; if (!s) continue;
+        const n = s.f.length, i = n > 1 ? ((last[id] ?? -1) + 1 + Math.floor(Math.random() * (n - 1))) % n : 0; last[id] = i;
+        const b = buf[s.f[i]]; if (!b) continue;
+        const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = b; src.playbackRate.value = 1 + (Math.random() * 2 - 1) * (s.p || 0); g.gain.value = s.v;
+        src.connect(g); g.connect(master); src.start(); } },
+    ambience(level) { if (Math.abs(level - ambLevel) < .02) return; ambLevel = level; amb.gain.setTargetAtTime(level, ctx.currentTime, .25); },
     get muted() { return muted; },
-    toggle() { muted = !muted; try { localStorage.setItem("pigforge-mute", muted ? "1" : "0"); } catch {} },
+    toggle() { muted = !muted; try { localStorage.setItem("pigforge-mute", muted ? "1" : "0"); } catch {} master.gain.value = muted ? 0 : 1; },
   };
 })();
 
@@ -232,7 +261,7 @@ const toasts = [];
 function achieve(id) { if (achieved(id)) return; achs.push(id); toasts.push(id); try { localStorage.setItem("pigforge-ach", JSON.stringify(achs)); } catch {} }
 function flushToasts(delay = 1200) {
   toasts.splice(0).forEach((id, i) => setTimeout(() => { const a = ACH[id];
-    banner("업적 달성!", a.name + (a.relic ? ` · ${RB[a.relic].name} 해금` : ""), "g"); sfx.play("achievement"); }, delay + i * 2000));
+    banner("업적 달성!", a.name + (a.relic ? ` · ${RB[a.relic].name} 해금` : ""), "g"); sfx.play("jach"); }, delay + i * 2000));
 }
 const need = () => Math.max(0, Math.round(quota(S.day) - (S.carry || 0)));
 function pigName(p, L = p.lvl) {
@@ -427,22 +456,22 @@ function ringBell() {
   let pardoned = false;
   if (S.anger >= 3 && has("pardon")) { S.relics = S.relics.filter(x => x !== "pardon"); S.anger = 2; pardoned = true; }
   if (S.anger >= 3) {
-    achieve("firstdeath"); sfx.play("error-sharp-alert"); save(); ui(); flushToasts(400);
+    achieve("firstdeath"); sfx.play("roar"); save(); ui(); flushToasts(400);
     return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart);
   }
   if (day === 21) achieve("clear");
   S.day++; const born = morning();
   banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : pardoned ? "군주의 사면장이 목숨을 구했다 · 분노 2/3" : `${G(q - total)} 모자라요 · 분노 ${S.anger}/3 · 골드 +${G(total)}`, paid ? "s" : "b");
   ui();
-  if (paid) sfx.play("success-celebrate"); else rage(born);
-  if (day === 21 && !S.contract) { S.contract = true; sfx.play("achievement"); showModal(`<h2 class="gold">계약 완료!</h2><p>21일을 버텼어요. 이제부터는 매일 공물이 20%씩 올라요.</p><button id="ok">계속하기</button>`, () => $("ok").onclick = closeModal); }
+  if (paid) sfx.play("coinsBig", "grunt"); else rage(born);
+  if (day === 21 && !S.contract) { S.contract = true; sfx.play("jach"); showModal(`<h2 class="gold">계약 완료!</h2><p>21일을 버텼어요. 이제부터는 매일 공물이 20%씩 올라요.</p><button id="ok">계속하기</button>`, () => $("ok").onclick = closeModal); }
   flushToasts(paid ? 1500 : 4200);
 }
 
 // ===== 3D =====
 const $ = id => document.getElementById(id);
 const canvas = $("gl"), R = new THREE.WebGLRenderer({ canvas, antialias: true });
-R.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); R.outputEncoding = THREE.sRGBEncoding;
+let pixR = Math.min(devicePixelRatio || 1, 2), frameN = 0, slowT = 0; R.setPixelRatio(pixR); R.outputEncoding = THREE.sRGBEncoding;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0907); scene.fog = new THREE.Fog(0x0d0907, 4, 10);
 const cam = new THREE.PerspectiveCamera(62, 1, .05, 50); cam.position.set(0, 1.55, 0); scene.add(cam);
 scene.add(new THREE.AmbientLight(0xffe2c4, .35));
@@ -521,27 +550,36 @@ const fireG = new THREE.Group(); fireG.position.copy(at(55, 1.89)); fireG.lookAt
 { const s = new THREE.Shape(); s.moveTo(-.3, .28); s.lineTo(.3, .28); s.lineTo(.3, .6); s.absarc(0, .6, .3, 0, Math.PI, false); s.lineTo(-.3, .28);
   const mouth = new THREE.Mesh(new THREE.ShapeGeometry(s, 24), new THREE.MeshBasicMaterial({ color: 0x1a0603 })); fireG.add(mouth);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(.33, .04, 8, 24, Math.PI), M(0x5a2a1c, { roughness: 1 })); rim.position.y = .6; fireG.add(rim);
-  for (let i = 0; i < 14; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.035 + Math.random() * .03), new THREE.MeshStandardMaterial({ color: 0x220800, emissive: 0xff4a10, emissiveIntensity: .6 + Math.random() * .8, roughness: 1 }));
-    c.position.set((Math.random() - .5) * .5, .3 + Math.random() * .04, .02); c.rotation.set(Math.random() * 3, Math.random() * 3, 0); fireG.add(c); } }
-const FLAME = canvasTex((x, n) => { const g = x.createRadialGradient(n / 2, n * .6, 2, n / 2, n * .55, n / 2);
-  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.35, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); }, 64);
-// Flame particles: born white-yellow at the coals, rise, cool through orange to deep red and fade
-const flames = Array.from({ length: 46 }, () => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-  sp.userData = { life: 0, max: 1, seed: Math.random() * 9 }; fireG.add(sp); return sp; });
-const embers = Array.from({ length: 10 }, () => { const e = new THREE.Mesh(new THREE.SphereGeometry(.008, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb040, transparent: true }));
-  e.userData = { life: 0, v: new THREE.Vector3() }; fireG.add(e); return e; });
+  const coals = new THREE.Group(), coalM = new THREE.MeshStandardMaterial({ color: 0x220800, emissive: 0xff4a10, emissiveIntensity: 1.1, roughness: 1 });
+  for (let i = 0; i < 14; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.035 + Math.random() * .03), coalM);
+    c.position.set((Math.random() - .5) * .5, .3 + Math.random() * .04, .02); c.rotation.set(Math.random() * 3, Math.random() * 3, 0); coals.add(c); } bake(coals); fireG.add(coals); }
+const FLAME = canvasTex((x, n) => { x.translate(n / 2, n / 2); x.scale(.6, 1); const g = x.createRadialGradient(0, n * .08, 1, 0, 0, n / 2); // tall soft tongue
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.35, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(-n, -n, 2 * n, 2 * n); }, 64);
+// Flames + embers share one point cloud: born white-yellow at the coals, rise, cool through orange to deep red and fade
+const NF = 46, NE = 10, fireGeo = new THREE.BufferGeometry(), fPos = new Float32Array((NF + NE) * 3), fCol = new Float32Array((NF + NE) * 3), fA = new Float32Array(NF + NE), fS = new Float32Array(NF + NE);
+fireGeo.setAttribute("position", new THREE.BufferAttribute(fPos, 3)); fireGeo.setAttribute("acol", new THREE.BufferAttribute(fCol, 3));
+fireGeo.setAttribute("alpha", new THREE.BufferAttribute(fA, 1)); fireGeo.setAttribute("size", new THREE.BufferAttribute(fS, 1));
+const fireMat = new THREE.ShaderMaterial({ uniforms: { map: { value: FLAME }, scale: { value: 400 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: "attribute vec3 acol; attribute float alpha; attribute float size; uniform float scale; varying vec3 vC; varying float vA;" +
+    "void main(){ vC = acol; vA = alpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * scale / -mv.z; gl_Position = projectionMatrix * mv; }",
+  fragmentShader: "uniform sampler2D map; varying vec3 vC; varying float vA; void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC * t.rgb, t.a * vA); }" });
+const firePts = new THREE.Points(fireGeo, fireMat); firePts.frustumCulled = false; fireG.add(firePts);
+const flames = Array.from({ length: NF }, () => ({ life: 0, max: 1, seed: Math.random() * 9, x: 0, y: 0, z: 0, vy: 0, s: 0 }));
+const embers = Array.from({ length: NE }, () => ({ life: 0, p: new THREE.Vector3(), v: new THREE.Vector3() }));
 const fireCol = new THREE.Color();
 function tickFire(dt, t) {
-  for (const f of flames) { const u = f.userData; u.life -= dt;
-    if (u.life <= 0) { u.max = u.life = .45 + Math.random() * .5; u.x = (Math.random() - .5) * .44; u.vy = .35 + Math.random() * .35; u.s = .12 + Math.random() * .12; f.position.set(u.x, .3, .04 + Math.random() * .03); }
+  fireMat.uniforms.scale.value = R.domElement.height / (2 * Math.tan(cam.fov * Math.PI / 360));
+  flames.forEach((u, i) => { u.life -= dt;
+    if (u.life <= 0) { u.max = u.life = .45 + Math.random() * .5; u.x0 = (Math.random() - .5) * .44; u.y = .3; u.z = .04 + Math.random() * .03; u.vy = .35 + Math.random() * .35; u.s = .12 + Math.random() * .12; }
     const k = 1 - u.life / u.max; // 0 at birth → 1 at death
-    f.position.y += u.vy * dt; f.position.x = u.x * (1 - k * .7) + Math.sin(t * 9 + u.seed) * .025 * k;
-    if (f.position.y > .82) u.life = 0; // keep inside the arch
-    const sc = u.s * (1 + k * .6) * (1 - k * k * .7); f.scale.set(sc * .8, sc * 1.4, 1);
-    fireCol.setHSL(.13 - k * .12, 1, .75 - k * .4); f.material.color.copy(fireCol); f.material.opacity = Math.min(1, (1 - k) * 1.6) * .85; }
-  for (const e of embers) { const u = e.userData; u.life -= dt;
-    if (u.life <= 0 && Math.random() < dt * 3) { u.life = .8 + Math.random(); e.position.set((Math.random() - .5) * .4, .35, .06); u.v.set((Math.random() - .5) * .2, .5 + Math.random() * .4, .15); }
-    e.visible = u.life > 0; if (e.visible) { e.position.addScaledVector(u.v, dt); e.material.opacity = Math.min(1, u.life); } }
+    u.y += u.vy * dt; if (u.y > .82) u.life = 0; // keep inside the arch
+    fPos[i * 3] = u.x0 * (1 - k * .7) + Math.sin(t * 9 + u.seed) * .025 * k; fPos[i * 3 + 1] = u.y; fPos[i * 3 + 2] = u.z;
+    fS[i] = u.s * (1 + k * .6) * (1 - k * k * .7) * 1.4;
+    fireCol.setHSL(.13 - k * .12, 1, .75 - k * .4); fireCol.toArray(fCol, i * 3); fA[i] = Math.min(1, (1 - k) * 1.6) * .85; });
+  embers.forEach((u, j) => { const i = NF + j; u.life -= dt;
+    if (u.life <= 0 && Math.random() < dt * 3) { u.life = .8 + Math.random(); u.p.set((Math.random() - .5) * .4, .35, .06); u.v.set((Math.random() - .5) * .2, .5 + Math.random() * .4, .15); }
+    if (u.life > 0) u.p.addScaledVector(u.v, dt); u.p.toArray(fPos, i * 3); fS[i] = u.life > 0 ? .025 : 0; fA[i] = Math.min(1, Math.max(0, u.life)); fCol[i * 3] = 1; fCol[i * 3 + 1] = .69; fCol[i * 3 + 2] = .25; });
+  for (const k of ["position", "acol", "alpha", "size"]) fireGeo.attributes[k].needsUpdate = true;
 }
 const fireLight = new THREE.PointLight(0xff7a2a, 2.2, 6, 2); fireLight.position.copy(at(55, 1.6, .9)); scene.add(fireLight);
 // Pen fences
@@ -570,9 +608,60 @@ box(1.1, .7, .5, wood(0x7a5030), at(-140, 1.95, .35));
 // Tribute hatch: bars and the boar lord's eyes
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
-  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3, 12), M(0x3a3a3a, { metalness: .8, roughness: .5 })); bar.position.set(i * .22, 0, .05); hatch.add(bar); }
+  const gate = new THREE.Group(), barM = M(0x3a3a3a, { metalness: .8, roughness: .5 }); gate.position.y = .65; hatch.add(gate); hatch.userData.gate = gate; // pivots at the top so it folds up
+  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3, 12), barM); bar.position.set(i * .22, -.65, .05); gate.add(bar); }
   hatch.userData.eyes = [-.25, .25].map(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); e.position.set(x, .2, .01); hatch.add(e); return e; }); }
 box(.6, .1, 1.8, wood(0x7a5030), at(-70, 2.9, .5));
+// The boar lord's arm: lives in the hatch frame (+z points into the room), hidden behind the dark opening until the bell rings
+const FUR = canvasTex((x, n) => { x.fillStyle = "#3a2618"; x.fillRect(0, 0, n, n);
+  for (let i = 0; i < 900; i++) { x.strokeStyle = `hsla(${20 + Math.random() * 15},${30 + Math.random() * 25}%,${8 + Math.random() * 22}%,.9)`; x.lineWidth = 1 + Math.random() * 1.5;
+    const X = Math.random() * n, Y = Math.random() * n; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + (Math.random() - .5) * 6, Y + 10 + Math.random() * 14); x.stroke(); } });
+const arm = new THREE.Group(), handG = new THREE.Group(), fingers = []; arm.visible = false; arm.add(handG); hatch.add(arm); handG.scale.setScalar(1.45);
+{ const skin = M(0x6a4632, { roughness: .8 }), claw = M(0x16110d, { roughness: .25, metalness: .3 }), fur = M(0x8a6040, { map: FUR, bumpMap: FUR, bumpScale: .04, roughness: 1 });
+  const palm = new THREE.Mesh(rbox(.36, .11, .3, .045), skin); handG.add(palm);
+  for (let i = 0; i < 4; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(.045, 10, 8), skin); k.position.set(-.13 + i * .087, .045, .12); k.scale.set(1, .7, 1); handG.add(k); }
+  const digit = (len1, len2, r) => { const f = new THREE.Group(), joint = new THREE.Group();
+    const s1 = new THREE.Mesh(new THREE.CylinderGeometry(r * .9, r, len1, 10), skin); s1.rotation.x = Math.PI / 2; s1.position.z = len1 / 2; f.add(s1);
+    f.add(new THREE.Mesh(new THREE.SphereGeometry(r * 1.05, 10, 8), skin)); joint.position.z = len1; f.add(joint);
+    joint.add(new THREE.Mesh(new THREE.SphereGeometry(r * .95, 10, 8), skin));
+    const s2 = new THREE.Mesh(new THREE.CylinderGeometry(r * .75, r * .9, len2, 10), skin); s2.rotation.x = Math.PI / 2; s2.position.z = len2 / 2; joint.add(s2);
+    const c = new THREE.Mesh(new THREE.ConeGeometry(r * .75, .09, 8), claw); c.rotation.x = Math.PI / 2; c.position.z = len2 + .035; joint.add(c);
+    return { f, joint }; };
+  for (let i = 0; i < 4; i++) { const d = digit(.13 - Math.abs(i - 1.5) * .015, .1, .038); d.f.position.set(-.13 + i * .087, 0, .14); d.f.rotation.y = (1.5 - i) * .06; handG.add(d.f); fingers.push(d); }
+  const th = digit(.1, .08, .042); th.f.position.set(.19, -.02, .0); th.f.rotation.set(0, -.9, .3); handG.add(th.f); fingers.push(th);
+  const fore = new THREE.Mesh(new THREE.CylinderGeometry(.15, .19, 1.9, 16), fur); fore.rotation.x = Math.PI / 2; fore.position.z = -1.05; handG.add(fore);
+  const cuff = new THREE.Mesh(new THREE.TorusGeometry(.2, .05, 10, 24), M(0x7a1a14, { roughness: .7 })); cuff.position.z = -.75; handG.add(cuff);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(.205, .015, 6, 24), M(0xd4a840, { metalness: .9, roughness: .3 })); band.position.z = -.69; handG.add(band); }
+// z: reach (into the room), y: height, tilt: fingers down, curl: 0 open → 1 fist
+function poseArm(z, y, tilt, curl) { arm.position.set(0, y, z); arm.rotation.x = tilt;
+  fingers.forEach(({ f, joint }, i) => { const c = i === 4 ? curl * .6 : curl; f.rotation.x = c * .9; joint.rotation.x = c * 1.1; }); }
+const tween = (ms, f) => new Promise(done => { const t0 = performance.now();
+  const step = now => { const k = Math.min(1, (now - t0) / ms); f(k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2); k < 1 ? requestAnimationFrame(step) : done(); }; requestAnimationFrame(step); });
+const lerp = (a, b, k) => a + (b - a) * k;
+let collecting = false;
+// Bell → portcullis lifts → the hand reaches out, scoops the offered pigs and drags them in → tribute is judged
+async function collectTribute() {
+  collecting = true; ui();
+  const sp = reduced ? .35 : 1, gate = hatch.userData.gate;
+  sfx.play("bell"); await tween(420 * sp, k => bell.rotation.z = Math.sin(k * Math.PI * 3) * .45 * (1 - k));
+  sfx.play("creak", "chain"); await tween(500 * sp, k => gate.scale.y = 1 - .93 * k);
+  // take over the tribute pigs already standing on the table so the swap is invisible
+  const held = []; for (let i = 0; i < 8; i++) { const o = slots.get("tr" + i); if (o) { held.push(o.group); slots.delete("tr" + i); } }
+  hideTribute = true; sync();
+  arm.visible = true; poseArm(-1.2, -.12, 0, 0); sfx.play("swish");
+  await tween(650 * sp, k => poseArm(lerp(-1.2, .5, k), lerp(-.12, -.33, k), .4 * k, -.25 * k));
+  sfx.play("grab");
+  const from = held.map(m => { handG.attach(m); return { p: m.position.clone(), q: m.quaternion.clone() }; }), q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 2, 0));
+  await tween(320 * sp, k => { poseArm(.5, lerp(-.33, -.43, k), lerp(.4, .55, k), lerp(-.25, 1.15, k));
+    held.forEach((m, i) => { m.position.lerpVectors(from[i].p, new THREE.Vector3((i % 4 - 1.5) * .07, -.14 - Math.floor(i / 4) * .05, .1), k); m.quaternion.slerpQuaternions(from[i].q, q0, k); }); });
+  if (held.length) sfx.play("thud");
+  sfx.play("swish");
+  await tween(700 * sp, k => poseArm(lerp(.5, -1.25, k), lerp(-.43, -.1, k), lerp(.55, .1, k), 1.15));
+  arm.visible = false; held.forEach(m => { handG.remove(m); disposePig(m); });
+  sfx.play("hatch"); await tween(300 * sp, k => gate.scale.y = .07 + .93 * k);
+  hideTribute = false; collecting = false;
+  ringBell();
+}
 const bell = new THREE.Mesh(new THREE.LatheGeometry([[.17, -.13], [.15, -.11], [.11, -.02], [.09, .08], [.07, .12], [.03, .14], [0, .14]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
 bell.position.copy(at(-48, 2.6, 1.5)); scene.add(bell);
 for (const y of [30, 140, -100]) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
@@ -591,31 +680,31 @@ function makePig(p) {
   const dark = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.7), metalness: mat.metalness, roughness: mat.roughness });
   const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
   // Body, rump and neck overlap so the silhouette reads as one soft barrel instead of two balls
-  add(new THREE.SphereGeometry(.5, 36, 26), mat, 0, .55, 0, 1.3, 1, 1);
-  add(new THREE.SphereGeometry(.42, 28, 20), mat, -.32, .58, 0, 1, 1, 1.08);
-  add(new THREE.SphereGeometry(.34, 28, 20), mat, .42, .63, 0, 1, .92, 1.1);
-  add(new THREE.SphereGeometry(.36, 32, 24), mat, .62, .72, 0, 1, .95, 1.05);
-  for (const z of [-.17, .17]) add(new THREE.SphereGeometry(.14, 20, 14), mat, .78, .62, z);
+  add(new THREE.SphereGeometry(.5, 28, 18), mat, 0, .55, 0, 1.3, 1, 1);
+  add(new THREE.SphereGeometry(.42, 20, 14), mat, -.32, .58, 0, 1, 1, 1.08);
+  add(new THREE.SphereGeometry(.34, 20, 14), mat, .42, .63, 0, 1, .92, 1.1);
+  add(new THREE.SphereGeometry(.36, 24, 16), mat, .62, .72, 0, 1, .95, 1.05);
+  for (const z of [-.17, .17]) add(new THREE.SphereGeometry(.14, 12, 8), mat, .78, .62, z);
   const snoutM = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.88), metalness: mat.metalness, roughness: mat.roughness * .9 });
-  const snout = add(new THREE.LatheGeometry([[0, 0], [.13, 0], [.155, .02], [.165, .08], [.155, .13], [.12, .155], [0, .155]].map(([r, y]) => new THREE.Vector2(r, y)), 28), snoutM, .9, .66, 0);
+  const snout = add(new THREE.LatheGeometry([[0, 0], [.13, 0], [.155, .02], [.165, .08], [.155, .13], [.12, .155], [0, .155]].map(([r, y]) => new THREE.Vector2(r, y)), 18), snoutM, .9, .66, 0);
   snout.rotation.z = -Math.PI / 2;
   const holeM = new THREE.MeshBasicMaterial({ color: 0x1a0505 });
-  for (const z of [-.05, .05]) add(new THREE.SphereGeometry(.03, 12, 8), holeM, 1.052, .665, z, .35, 1.3, 1);
+  for (const z of [-.05, .05]) add(new THREE.SphereGeometry(.03, 8, 6), holeM, 1.052, .665, z, .35, 1.3, 1);
   const eyeM = new THREE.MeshStandardMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x1a1210, roughness: .15, emissive: L >= 7 ? (L >= 12 ? 0x6a4a00 : 0x5a0000) : 0 });
   const whiteM = new THREE.MeshStandardMaterial({ color: 0xf4efe8, roughness: .3 }), glintM = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  for (const z of [-.16, .16]) { add(new THREE.SphereGeometry(.06, 16, 12), whiteM, .9, .83, z, .7, 1, 1);
-    add(new THREE.SphereGeometry(.038, 14, 10), eyeM, .935, .83, z * 1.02); add(new THREE.SphereGeometry(.012, 8, 6), glintM, .968, .847, z * .95);
-    add(new THREE.SphereGeometry(.065, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.4), mat, .9, .835, z, .75, .9, 1.05).rotation.z = -.35; } // upper lid
+  for (const z of [-.16, .16]) { add(new THREE.SphereGeometry(.06, 12, 8), whiteM, .9, .83, z, .7, 1, 1);
+    add(new THREE.SphereGeometry(.038, 10, 8), eyeM, .935, .83, z * 1.02); add(new THREE.SphereGeometry(.012, 6, 4), glintM, .968, .847, z * .95);
+    add(new THREE.SphereGeometry(.065, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), mat, .9, .835, z, .75, .9, 1.05).rotation.z = -.35; } // upper lid
   // Ears: soft extruded leaf shape, tipped forward and outward on a pivot
   const earShape = new THREE.Shape(); earShape.moveTo(-.11, 0); earShape.quadraticCurveTo(-.11, .2, .01, .3); earShape.quadraticCurveTo(.11, .19, .11, 0); earShape.quadraticCurveTo(0, -.03, -.11, 0);
-  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: .015, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 3, curveSegments: 14 });
+  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: .015, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 2, curveSegments: 8 });
   for (const side of [-1, 1]) { const piv = new THREE.Group(); piv.position.set(.55, 1, side * .2); piv.rotation.set(side * .5, 0, -.55); g.add(piv);
     const ear = new THREE.Mesh(earGeo, dark); ear.rotation.y = Math.PI / 2; piv.add(ear); }
   const hoofM = new THREE.MeshStandardMaterial({ color: 0x2a1c16, roughness: .5, metalness: metal ? .6 : 0 });
-  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) { add(new THREE.CylinderGeometry(.09, .07, .26, 18), dark, x, .19, z);
-    add(new THREE.CylinderGeometry(.068, .078, .07, 18), hoofM, x, .035, z); add(new THREE.BoxGeometry(.16, .06, .012), holeM, x + .02, .035, z); } // cloven split
+  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) { add(new THREE.CylinderGeometry(.09, .07, .26, 12), dark, x, .19, z);
+    add(new THREE.CylinderGeometry(.068, .078, .07, 12), hoofM, x, .035, z); add(new THREE.BoxGeometry(.16, .06, .012), holeM, x + .02, .035, z); } // cloven split
   const tail = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 3.4, r = .07 * (1 - i / 34); tail.push(new THREE.Vector3(-.64 - i * .007, .74 + Math.sin(a) * r, Math.cos(a) * r - .07)); }
-  add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tail), 60, .018, 8), dark, 0, 0, 0);
+  add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tail), 40, .018, 6), dark, 0, 0, 0);
   if (p.fam === "tree") for (const [x, z, r] of [[-.2, -.15, .5], [0, .1, -.3], [.2, -.05, .2]]) { const leaf = add(new THREE.ConeGeometry(.09, .32, 5), new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: .6 }), x, 1.1, z); leaf.rotation.set(r, 0, r); }
   if (p.fam === "fish") add(new THREE.ConeGeometry(.22, .4, 3), new THREE.MeshStandardMaterial({ color: 0x2ec4b6, metalness: .4, roughness: .3 }), -.1, 1.1, 0, .4, 1, 1.4);
   if (p.fam === "grave") { g.userData.wisp = add(new THREE.SphereGeometry(.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb98cff }), .1, 1.45, .25); }
@@ -637,8 +726,36 @@ function makePig(p) {
   if (L >= 20) add(new THREE.TorusGeometry(.28, .03, 8, 30), new THREE.MeshBasicMaterial({ color: 0xfff6b0 }), .5, 1.55, 0).rotation.x = Math.PI / 2;
   g.userData.rainbow = L === 16 || L >= 20 ? mat : null;
   g.userData.mat = mat;
+  // Fold the skin shades and small details into two vertex-coloured materials so a pig costs a few draw calls, not ~45
+  mat.vertexColors = true;
+  const detail = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, metalness: metal ? .3 : 0 }), hex = c => new THREE.Color(c);
+  bake(g, new Map([[dark, [mat, .7]], [snoutM, [mat, .88]], [mat, [mat, 1]], [holeM, [detail, hex(0x1a0505)]], [whiteM, [detail, hex(0xf4efe8)]],
+    [glintM, [detail, hex(0xffffff)]], [hoofM, [detail, hex(0x2a1c16)]]]));
   return g;
 }
+// Merge every static mesh under g into one mesh per material; fold maps a material to [target material, vertex colour or grey multiplier]
+function bake(g, fold = new Map()) {
+  g.updateMatrixWorld(true);
+  const keep = new Set([g.userData.wisp]); for (const w of g.userData.wings || []) w.traverse(o => keep.add(o));
+  const buckets = new Map(), dead = [];
+  g.traverse(o => { if (!o.isMesh || keep.has(o)) return; dead.push(o);
+    const [m, c] = fold.get(o.material) || [o.material, 1];
+    const geo = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(o.matrixWorld);
+    if (!buckets.has(m)) buckets.set(m, []); buckets.get(m).push([geo, c]); });
+  for (const o of dead) { o.parent.remove(o); o.geometry.dispose(); if (!buckets.has(o.material)) o.material.dispose(); }
+  const tmp = new THREE.Color();
+  for (const [m, list] of buckets) {
+    const n = list.reduce((a, [geo]) => a + geo.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = m.vertexColors && new Float32Array(n * 3);
+    let i = 0;
+    for (const [geo, c] of list) { const k = geo.attributes.position.count; pos.set(geo.attributes.position.array, i * 3); nor.set(geo.attributes.normal.array, i * 3);
+      if (col) { typeof c === "number" ? tmp.setRGB(c, c, c) : tmp.copy(c); for (let j = 0; j < k; j++) tmp.toArray(col, (i + j) * 3); }
+      i += k; geo.dispose(); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3)); geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    if (col) geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    g.add(new THREE.Mesh(geo, m));
+  }
+}
+function disposePig(g) { g.traverse(o => { o.geometry?.dispose(); if (o.material) o.material.dispose(); }); } // textures (AURA) are shared and kept
 function tickPig(g, t) {
   const u = g.userData;
   if (u.aura) u.aura.material.opacity = .4 + .2 * Math.sin(t * 3);
@@ -652,19 +769,19 @@ function tickPig(g, t) {
 const slots = new Map();
 function placePig(key, p, parent, pos, scale) {
   const o0 = slots.get(key);
-  if (!p) { if (o0) { o0.group.parent.remove(o0.group); slots.delete(key); } return; }
+  if (!p) { if (o0) { o0.group.parent.remove(o0.group); disposePig(o0.group); slots.delete(key); } return; }
   const sig = `${p.id}:${p.lvl}:${p.peak}:${p.heated}`; let o = o0;
-  if (!o || o.sig !== sig) { if (o) o.group.parent.remove(o.group); o = { sig, group: makePig(p) }; slots.set(key, o); parent.add(o.group); }
+  if (!o || o.sig !== sig) { if (o) { o.group.parent.remove(o.group); disposePig(o.group); } o = { sig, group: makePig(p) }; slots.set(key, o); parent.add(o.group); }
   o.group.position.copy(pos); o.group.scale.setScalar(scale);
   o.group.rotation.y = parent === scene ? Math.atan2(pos.z, -pos.x) : -Math.PI / 2; // turn the snout toward the viewer
 }
-let hideAnvilPig = false;
+let hideAnvilPig = false, hideTribute = false;
 function sync() {
   const used = new Set(["anvil", "hand"]);
   placePig("anvil", hideAnvilPig ? null : S.anvil, scene, anvilPos.clone().setY(.72), .32);
   placePig("hand", S.hand, cam, new THREE.Vector3(.3, .2, -.9), .12);
   S.pen.slice(0, 12).forEach((p, i) => { if (flying.has(p.id)) return; const k = "pen" + i; used.add(k); placePig(k, p, scene, penSlot(i), .25); });
-  S.tribute.slice(0, 8).forEach((p, i) => { const k = "tr" + i; used.add(k); placePig(k, p, scene, at(-70 + (i % 4 - 1.5) * 7, 2.85 + Math.floor(i / 4) * .3, .55), .19); });
+  if (!hideTribute) S.tribute.slice(0, 8).forEach((p, i) => { const k = "tr" + i; used.add(k); placePig(k, p, scene, at(-70 + (i % 4 - 1.5) * 7, 2.85 + Math.floor(i / 4) * .3, .55), .19); });
   for (const k of [...slots.keys()]) if (!used.has(k)) placePig(k, null);
   ghost.visible = !!S.merchant;
 }
@@ -674,11 +791,13 @@ const flying = new Set(), flights = [];
 let rageT = 0;
 const penSlot = i => at(110 + (i % 4 - 1.5) * 8, 2.15 + Math.floor(i / 4) * .45, 0);
 async function rage(born) {
-  rageT = 2.6; shakeT = .8; sfx.play("error-sharp-alert", "warning-buzz"); buzz([200, 80, 200]);
+  rageT = 2.6; shakeT = .8; sfx.play("roar", "chain"); buzz([200, 80, 200]);
   born.forEach(p => flying.add(p.id)); sync();
+  const gate = hatch.userData.gate; tween(300, k => gate.scale.y = 1 - .93 * k);
+  setTimeout(() => tween(400, k => gate.scale.y = .07 + .93 * k), 1400 + born.length * 380);
   st = 2; ui(); await sleep(reduced ? 200 : 900); // turn to the pen to watch them land
   born.forEach((p, i) => setTimeout(() => {
-    const m = makePig(p); m.scale.setScalar(.25); scene.add(m); sfx.play("whoosh-short");
+    const m = makePig(p); m.scale.setScalar(.25); scene.add(m); sfx.play("swish");
     flights.push({ m, p, from: at(-70, 3.2, 1.3), to: penSlot(Math.max(0, S.pen.indexOf(p))), t0: performance.now(), dur: reduced ? 300 : 950 });
   }, i * 380));
 }
@@ -708,7 +827,7 @@ canvas.addEventListener("pointerup", e => {
 });
 addEventListener("keydown", e => { if (e.code === "Space" && STATIONS[st].id === "anvil") { e.preventDefault(); doStrike(); } if (e.code === "ArrowLeft") go(-1); if (e.code === "ArrowRight") go(1); });
 // ▶ turns right (yaw decreases); swipe right turns left
-function go(d) { st = (st - d + STATIONS.length) % STATIONS.length; confirmBell = false; ui(); }
+function go(d) { st = (st - d + STATIONS.length) % STATIONS.length; confirmBell = false; sfx.play("step"); setTimeout(() => sfx.play("step"), 170); ui(); }
 
 let last = performance.now(), wasFrenzy = false;
 function loop(now) {
@@ -721,6 +840,9 @@ function loop(now) {
   cam.rotation.set(0, 0, 0); cam.rotateY(yaw * Math.PI / 180); cam.rotateX(pitch);
   cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 4); cam.updateProjectionMatrix();
   fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; tickFire(dt, t);
+  { const d = Math.abs(((yaw - 55) % 360 + 540) % 360 - 180); sfx.ambience(.05 + Math.max(0, 1 - d / 75) * .45); } // crackle louder facing the furnace
+  // drop render resolution a step while frames run slow (phones with 3x screens)
+  if ((frameN = (frameN + 1) % 90) === 0) { if (slowT / 90 > 1 / 45 && pixR > 1) { pixR = Math.max(1, pixR - .25); R.setPixelRatio(pixR); resize(); } slowT = 0; } slowT += dt;
   ghost.position.y = .2 + Math.sin(t * 2) * .06;
   rageT = Math.max(0, rageT - dt);
   for (const e of hatch.userData.eyes) e.scale.setScalar(rageT > 0 ? 2.6 + Math.sin(t * 40) * .6 : S.anger ? 1 + S.anger * .35 + Math.sin(t * 8) * .1 : .7);
@@ -728,7 +850,7 @@ function loop(now) {
     const f = flights[i], k = Math.min(1, (now - f.t0) / f.dur);
     f.m.position.lerpVectors(f.from, f.to, k); f.m.position.y += Math.sin(k * Math.PI) * 1.4; f.m.rotation.set(k * 9, 0, k * 5);
     tickPig(f.m, t);
-    if (k >= 1) { scene.remove(f.m); flights.splice(i, 1); flying.delete(f.p.id); sync(); sfx.play("click-deep", "invalid-thunk"); shakeT = .25; sparkBurst(f.to.clone().setY(.25), 0xb08060, 18); }
+    if (k >= 1) { scene.remove(f.m); flights.splice(i, 1); flying.delete(f.p.id); disposePig(f.m); sync(); sfx.play("thud"); shakeT = .25; sparkBurst(f.to.clone().setY(.25), 0xb08060, 18); }
   }
   for (const c of bank.children) if (c.userData.orb !== undefined) c.position.y = -.15 + Math.sin(t * 3 + c.userData.orb) * .03;
   swing = Math.max(0, swing - dt * 4); hammer.rotation.z = HAMMER_UP * (1 - Math.sin(swing * Math.PI));
@@ -744,7 +866,7 @@ function loop(now) {
   const fz = inFrenzy();
   $("frenzyBar").hidden = !fz;
   if (fz) $("frenzyBar").style.transform = `scaleX(${(frenzyUntil - now) / 7000})`;
-  if (wasFrenzy && !fz) { if (has("hbell") && S.anvil) { S.anvil.lvl++; banner("+1강", "머리 없는 종", "s"); sfx.play("xp-up"); } ui(); }
+  if (wasFrenzy && !fz) { if (has("hbell") && S.anvil) { S.anvil.lvl++; banner("+1강", "머리 없는 종", "s"); sfx.play("ok"); } ui(); }
   wasFrenzy = fz;
   R.render(scene, cam);
   requestAnimationFrame(loop);
@@ -760,16 +882,16 @@ function flash(a = .9) { const f = $("flash"); f.style.transition = "none"; f.st
 async function doStrike() {
   const p = S.anvil, now = performance.now();
   if (!p || busy || now < nextStrikeAt) return;
-  if (!p.heated) return banner("차갑다", "화로에서 먼저 달구세요", "h");
+  if (!p.heated) { sfx.play("error"); return banner("차갑다", "화로에서 먼저 달구세요", "h"); }
   const big = p.lvl >= 15 && !inFrenzy() && p.charge < 10, before = p.lvl, pos = anvilPos.clone().setY(.9);
   busy = true; lastSnap = { pig: JSON.parse(JSON.stringify(p)), armed: { ...S.armed }, fence: S.fenceUsed, gold: S.gold };
   ui();
   if (big) { // FIFA-style build-up from +15
-    fovTarget = 32; $("ring").hidden = $("ringText").hidden = false; sfx.play("whoosh-short");
+    fovTarget = 32; $("ring").hidden = $("ringText").hidden = false; sfx.play("swish");
     const dur = reduced ? 700 : 2400, t0 = performance.now();
     let cue = 0;
     for (let k = 0; k < 1; k = (performance.now() - t0) / dur) {
-      if (cue < 2 && k > [.45, .85][cue]) { sfx.play(cue ? "whoosh-short" : "tap-ui-tick", "whoosh-short"); cue++; }
+      if (cue < 2 && k > [.45, .85][cue]) { sfx.play("tick", cue ? "swish" : "tick"); cue++; }
       $("ring").style.setProperty("--p", k); $("ringText").textContent = `+${before} ▶ +${before + 1}   ${(dur / 1000 * (1 - k)).toFixed(1)}s`;
       if (k > .7) shakeT = .05; await sleep(30);
     }
@@ -777,20 +899,20 @@ async function doStrike() {
   }
   swing = 1; await sleep(big ? 60 : 110);
   const fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
-  clangAlt = !clangAlt; const clang = clangAlt ? "anvil-ting" : "anvil-clang"; // 낑, 깡, 낑, 깡…
-  if (big) sfx.play(clang, "invalid-thunk"); else sfx.play(clang);
+  clangAlt = !clangAlt; const clang = clangAlt ? "ting" : "clang"; // 낑, 깡, 낑, 깡…
+  if (big) sfx.play(clang, "heavy"); else sfx.play(clang);
   buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
   const fzNow = inFrenzy(), spd = 1 + (!fzNow && has("loop") ? .2 : 0) + (has("grip") ? .15 : 0) + (fzNow && has("bellows") ? .3 : 0);
   nextStrikeAt = performance.now() + 560 / spd;
   if (res === "b") await breakFx(p, before, big);
   else {
-    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pigName(p)}`, "g"); if (big) sfx.play("level-up", "success-celebrate", "coin-double"); else sfx.play("level-up"); }
-    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pigName(p)}`, "s"); if (big) sfx.play("xp-up", "achievement"); else sfx.play("xp-up"); }
-    if (res === "h") { banner("유지", saved || "아무 일도 없었다", "h"); sfx.play(big ? "error-soft-thud" : "tap-ui-tick"); }
-    if (res === "d") { shakeT = .25; crackT = .2; banner("손상", saved || `+${before} → +${p.lvl}`, "d"); if (big) sfx.play("error-soft-thud", "warning-buzz"); else sfx.play("error-soft-thud"); }
-    if (twin) setTimeout(() => { banner("쌍둥이!", "똑같은 돼지가 우리에 생겼어요", "f"); sfx.play("coin-double"); }, 400);
-    if (mastered) setTimeout(() => { banner("걸작 해금!", `${RB[FAMS[mastered].mw].name} · 이제 유물 진열장에 나와요`, "g"); sfx.play("achievement"); }, 900);
-    if (frenzyStarted) setTimeout(() => { banner("광란!", "잠깐 동안 깨지지 않아요", "f"); sfx.play("achievement"); }, 350);
+    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pigName(p)}`, "g"); if (big) sfx.play("great", "jgreat", "coinsBig"); else sfx.play("great", "jgreat"); }
+    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pigName(p)}`, "s"); if (big) sfx.play("ok", "spell"); else sfx.play("ok"); }
+    if (res === "h") { banner("유지", saved || "아무 일도 없었다", "h"); sfx.play("hold"); }
+    if (res === "d") { shakeT = .25; crackT = .2; banner("손상", saved || `+${before} → +${p.lvl}`, "d"); if (big) sfx.play("damage", "dent", "crack"); else sfx.play("damage", "dent"); }
+    if (twin) setTimeout(() => { banner("쌍둥이!", "똑같은 돼지가 우리에 생겼어요", "f"); sfx.play("plop", "coins"); }, 400);
+    if (mastered) setTimeout(() => { banner("걸작 해금!", `${RB[FAMS[mastered].mw].name} · 이제 유물 진열장에 나와요`, "g"); sfx.play("jach"); }, 900);
+    if (frenzyStarted) setTimeout(() => { banner("광란!", "잠깐 동안 깨지지 않아요", "f"); sfx.play("jfrenzy", "spell"); }, 350);
     if (big) { await sleep(700); fovTarget = 62; }
   }
   busy = false; ui(); flushToasts(mastered || twin ? 2600 : 1200);
@@ -798,11 +920,11 @@ async function doStrike() {
 async function breakFx(p, before, big) {
   const pos = anvilPos.clone().setY(.9), color = new THREE.Color().setHSL(HSL[Math.min(20, before)][0] / 360, .6, .6);
   if (Math.random() < .5) { // pretends to succeed, then breaks
-    p.lvl = before + 1; ui(); sparkBurst(pos, 0x4dabf7, 40); banner("성공!", `+${p.lvl} ${pigName(p)}`, "s"); sfx.play("success-warm-chime");
+    p.lvl = before + 1; ui(); sparkBurst(pos, 0x4dabf7, 40); banner("성공!", `+${p.lvl} ${pigName(p)}`, "s"); sfx.play("ok");
     await sleep(reduced ? 400 : 1000); banner("…은 구라", "", "fake"); await sleep(350);
   }
-  shakeT = .6; crackT = .65; sfx.play("invalid-thunk"); await sleep(650);
-  hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); flash(1); shakeT = .5; sfx.play("trash-crumple", "error-sharp-alert"); if (big) sfx.play("warning-buzz", "invalid-thunk"); buzz([80, 40, 160]);
+  shakeT = .6; crackT = .65; sfx.play("crack"); await sleep(650);
+  hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); flash(1); shakeT = .5; sfx.play("shatter", "shards"); if (big) sfx.play("heavy", "roar"); buzz([80, 40, 160]);
   banner("파사삭", `+${before} ${pigName(p, before)} 파괴`, "b"); ui();
   await sleep(big ? 1300 : 900); hideAnvilPig = false; fovTarget = 62;
 }
@@ -877,16 +999,16 @@ function ui() {
     if (S.carry) h += `<p class="label">군주의 잔돈으로 공물 ${G(S.carry)} 깎임</p>`;
     if (S.tribute.length) h += `<div class="list">${S.tribute.map((p, i) => pigLine(p, `<button class="ghost" data-take="${i}" ${S.hand ? "disabled" : ""}>꺼내기</button>`)).join("")}</div>`;
     h += `<p class="label">종을 치면 하루가 끝나요. 공물은 돼지로만 낼 수 있어요. 모자라면 분노가 쌓이고, 3번이면 끝이에요. 바친 돼지 가치는 완납이든 아니든 전부 골드로 돌려받아요.</p>
-      <button id="bell" class="${confirmBell ? "hot" : ""}">${confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
+      <button id="bell" class="${confirmBell ? "hot" : ""}" ${collecting ? "disabled" : ""}>${collecting ? "공물을 가져가는 중…" : confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
   }
   $("panel").innerHTML = h; save();
 }
 $("panel").addEventListener("click", async e => {
-  const b = e.target.closest("button"); if (!b || b.disabled) return;
+  const b = e.target.closest("button"); if (!b || b.disabled || collecting) return;
   const d = b.dataset, id = b.id;
   if (id !== "bell") confirmBell = false;
   if (id === "strike") return doStrike();
-  if (["lift", "place", "drop", "offer"].includes(id) || d.pick || d.take) sfx.play("tap-ui-tick");
+  if (id === "lift" || d.pick || d.take) sfx.play("pick"); if (id === "place" || id === "drop") sfx.play("place"); if (id === "offer") sfx.play("offer");
   if (id === "lift") { S.hand = S.anvil; S.anvil = null; lastSnap = null; }
   if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null;
     const a = S.anvil; if (typeof S.inherit === "number") S.inherit = { lvl: S.inherit, charge: 4 };
@@ -894,12 +1016,12 @@ $("panel").addEventListener("click", async e => {
       if (S.inherit) { a.lvl = a.peak = S.inherit.lvl; a.charge = Math.min(10, a.charge + S.inherit.charge); banner(`+${S.inherit.lvl} 계승`, `광란 +${S.inherit.charge}`, "f"); S.inherit = null; }
       if (S.molar) { a.tk = { ...(a.tk || {}), s: ((a.tk || {}).s || 0) + 4 }; S.molar = false; banner("굶주린 어금니", "이 돼지는 성공 티켓 +4", "f"); }
     } }
-  if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; sfx.play("whoosh-short"); const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); sfx.play("pop-bubble"); }
+  if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; sfx.play("fireWhoosh"); const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); sfx.play("fireDone"); }
   if (id === "drop") { S.pen.push(S.hand); S.hand = null; }
   if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
-  if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().setY(1.5), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coin-collect"); }
-  if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); sfx.play("confirm-unlock"); }
-  if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("swipe");
+  if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().setY(1.5), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coins", "gem"); }
+  if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); sfx.play("gem", "jach"); }
+  if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("shuffle");
     if (has("hook") && !S.hookUsed) { const i = S.pen.findIndex(p => p.lvl === 0 && p.strikes === 0); if (i >= 0) { S.pen.splice(i, 1); S.credits += 2; S.hookUsed = true; banner("+2 크레딧", "수집가의 갈고리가 +0 돼지를 가져갔어요", "f"); } } }
   if (d.toss) S.relics = S.relics.filter(x => x !== d.toss);
   if (id === "gift") return pickGift();
@@ -908,16 +1030,16 @@ $("panel").addEventListener("click", async e => {
     else if (d.shop === "incense") { S.anger = Math.max(0, S.anger - 1); S.incenseUsed = true; } else S.items[d.shop] = (S.items[d.shop] || 0) + 1;
     if (Object.values(S.merchant).every(x => !x.left)) achieve("soldout");
     flushToasts(1400);
-    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coin-double"); }
+    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coins"); }
   if (d.use) { const k = d.use;
-    if (k === "star") { if (inFrenzy()) return banner("안 돼요", "광란 중엔 못 써요", "h"); S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
+    if (k === "star") { if (inFrenzy()) { sfx.play("error"); return banner("안 돼요", "광란 중엔 못 써요", "h"); } S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
     else if (S.armed[k]) { delete S.armed[k]; S.items[k] = (S.items[k] || 0) + 1; }
     else { S.armed[k] = true; S.items[k]--; banner(ITEMS[k].name, "다음 타격에 적용", "f"); } }
   if (id === "undo" && lastSnap) { S.items.clock--; if (S.anvil) Object.assign(S.anvil, lastSnap.pig); else S.anvil = lastSnap.pig;
     S.armed = lastSnap.armed; S.fenceUsed = lastSnap.fence; S.gold = lastSnap.gold; lastSnap = null; banner("되감기", "마지막 타격을 없던 일로", "f"); }
   if (id === "offer") { S.tribute.push(S.hand); S.hand = null; }
   if (d.take) S.hand = S.tribute.splice(+d.take, 1)[0];
-  if (id === "bell") { if (!confirmBell) { confirmBell = true; return ui(); } confirmBell = false; sfx.play("notification-gentle-bell"); bell.rotation.z = .5; setTimeout(() => bell.rotation.z = 0, 300); return ringBell(); }
+  if (id === "bell") { if (!confirmBell) { confirmBell = true; return ui(); } confirmBell = false; return collectTribute(); }
   ui();
 });
 
@@ -926,7 +1048,7 @@ function closeModal() { $("modal").hidden = true; ui(); }
 function pickGift() {
   const opts = RELICS.filter(r => r.gift).sort(() => Math.random() - .5).slice(0, 3);
   showModal(`<h2>첫날 선물</h2><p>하나만 가져갈 수 있어요. 나머지는 사라져요.</p><div class="list">${opts.map(r => `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-g="${r.id}">선택</button></div>`).join("")}</div>`,
-    () => $("modalBody").querySelectorAll("[data-g]").forEach(b => b.onclick = () => { S.relics.push(b.dataset.g); S.gift = b.dataset.g; closeModal(); banner(RB[b.dataset.g].name, "선물을 받았어요", "g"); sfx.play("confirm-unlock"); }));
+    () => $("modalBody").querySelectorAll("[data-g]").forEach(b => b.onclick = () => { S.relics.push(b.dataset.g); S.gift = b.dataset.g; closeModal(); banner(RB[b.dataset.g].name, "선물을 받았어요", "g"); sfx.play("gem"); }));
 }
 function restart() { S = fresh(); uid = 1; morning(); st = 2; closeModal(); pickGift(); }
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
