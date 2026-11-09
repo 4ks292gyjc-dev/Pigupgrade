@@ -9,13 +9,14 @@
 <meta name="apple-mobile-web-app-title" content="돼지강화">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 <style>
 /* Layout: full-screen 3D barn forge; HUD top (day/tribute), station panel bottom */
 :root{
   --bg:#120d0a; --panel:rgba(28,20,15,.88); --line:#4a3a2c; --text:#f6ead8; --muted:#b29e88; --ember:#ff8a3d;
   --break:#ff4d4d; --dmg:#ff9f43; --hold:#9aa0a8; --ok:#4dabf7; --great:#ffd43b; --frenzy:#ff3df2;
-  --display:"Jua","Gowun Dodum",system-ui,sans-serif; --body:"Gowun Dodum",system-ui,sans-serif;
+  --display:"Black Han Sans","Noto Sans KR",system-ui,sans-serif; --body:"Noto Sans KR",system-ui,sans-serif;
+  --frame:#6b5236; --parch-hi:#f5e6c8; --parch-lo:#d4b98c;
   color-scheme:dark;
 }
 html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-text-size-adjust:100%}
@@ -23,7 +24,7 @@ html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;touch-ac
 button{touch-action:manipulation}
 #gl{touch-action:none}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;font-weight:500;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .num{font-variant-numeric:tabular-nums}
 .hud{position:fixed;left:0;right:0;z-index:2;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));pointer-events:none}
@@ -31,9 +32,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14
 #top,#bottom{max-width:520px;margin-inline:auto}
 #top{top:0;padding-top:calc(8px + env(safe-area-inset-top,0px));display:grid;gap:6px}
 #bottom{bottom:0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;gap:6px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.card{background:linear-gradient(180deg,rgba(44,32,23,.94),rgba(22,15,11,.94));border:1px solid var(--frame);border-radius:4px;padding:8px 10px;
+  box-shadow:inset 0 1px 0 rgba(255,214,160,.12),inset 0 0 0 1px rgba(0,0,0,.6),0 6px 16px rgba(0,0,0,.55)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.label{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em}
 .big{font-family:var(--display);font-size:20px}
 .gold{color:var(--great)} .bad{color:var(--break)}
 .anger span{font-family:var(--display);font-size:16px;opacity:.25} .anger span.on{opacity:1;color:var(--break)}
@@ -41,34 +43,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14
 #panel p{margin:0}
 #nav{display:grid;grid-template-columns:48px 1fr 48px;gap:6px;align-items:center}
 #nav b{font-family:var(--display);font-weight:400;font-size:18px;text-align:center;text-shadow:0 2px 4px #000}
-button{font-family:var(--display);font-size:16px;border:0;border-radius:10px;padding:10px;cursor:pointer;color:#1a120c;background:var(--text);min-height:44px}
-button small{display:block;font-family:var(--body);font-size:11px;opacity:.75}
+button{font-family:var(--display);font-size:16px;letter-spacing:.02em;border:1px solid #4a3220;border-radius:4px;padding:10px;cursor:pointer;color:#2a1a0e;min-height:44px;
+  background:linear-gradient(180deg,var(--parch-hi),var(--parch-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 2px 0 #3a2616,0 3px 6px rgba(0,0,0,.4)}
+button:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 #3a2616}
+button small{display:block;font-family:var(--body);font-weight:500;font-size:11px;letter-spacing:0;opacity:.75}
 button:focus-visible{outline:3px solid var(--great);outline-offset:2px}
 button:disabled{opacity:.35;cursor:not-allowed}
-button.ghost{background:var(--panel);color:var(--text);border:1px solid var(--line)}
-button.hot{background:linear-gradient(180deg,#ffb06b,var(--ember))}
+button.ghost{background:linear-gradient(180deg,#3a2a1e,#241912);color:var(--text);border-color:var(--frame);box-shadow:inset 0 1px 0 rgba(255,214,160,.14),0 2px 0 #0d0805}
+button.hot{background:linear-gradient(180deg,#ffc27a,#f07a2a 55%,#c9531a);border-color:#6a2a0c;color:#2a0e02;box-shadow:inset 0 1px 0 rgba(255,240,200,.7),0 3px 0 #5a2208,0 4px 10px rgba(255,120,40,.3)}
 button.armed{outline:3px solid var(--great)}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
 .btns>button{flex:1 1 30%}
 #strike{font-size:24px;flex-basis:100%;min-height:58px}
 .odds{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:2px}
-.odds span{font-size:11px;color:var(--muted)} .odds b{display:block;font-size:14px;font-weight:400}
+.odds span{font-size:11px;font-weight:700;color:var(--muted)} .odds b{display:block;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)} .stack i{display:block;height:100%}
 .charges{display:grid;grid-template-columns:repeat(10,1fr);gap:3px} .charges i{height:8px;border-radius:2px;background:var(--line)} .charges i.on{background:var(--frenzy)}
 .list{display:grid;gap:6px}
-.item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:rgba(255,255,255,.04);border-radius:10px;padding:6px 8px;text-align:left}
+.item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:rgba(0,0,0,.25);border:1px solid rgba(107,82,54,.45);border-radius:3px;padding:6px 8px;text-align:left}
 .item p{margin:0;font-size:12px;color:var(--muted)}
 .item b{font-family:var(--display);font-weight:400;font-size:15px}
-.tag{font-size:10px;padding:1px 6px;border-radius:6px;background:var(--line);color:var(--text);margin-left:4px}
+.tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:2px;background:var(--line);color:var(--text);margin-left:4px}
 #banner{position:fixed;left:50%;top:32%;z-index:5;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%)}
 #banner.show{animation:bIn .45s cubic-bezier(.2,1.6,.4,1) forwards,bOut .4s ease-in 1.8s forwards}
 @keyframes bOut{to{opacity:0}}
-#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(48px,16vw,110px);line-height:1;text-shadow:0 0 28px currentColor,0 5px 0 #000}
-#banner small{display:block;font-size:17px;color:var(--text);text-shadow:0 2px 4px #000;margin-top:6px}
-#banner.g b{color:var(--great);animation:hue 1s linear infinite} #banner.s b{color:var(--ok)} #banner.h b{color:var(--hold)} #banner.d b{color:var(--dmg)}
+#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(48px,16vw,110px);line-height:1.05;letter-spacing:-.01em;
+  background:linear-gradient(180deg,#fff 8%,currentColor 48%,color-mix(in srgb,currentColor 55%,#000) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 5px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px color-mix(in srgb,currentColor 35%,transparent))}
+#banner small{display:block;font-size:16px;font-weight:700;letter-spacing:.04em;color:var(--text);text-shadow:0 1px 0 #000,0 0 6px #000;margin-top:8px}
+#banner.g b{color:var(--great)} #banner.s b{color:var(--ok)} #banner.h b{color:var(--hold)} #banner.d b{color:var(--dmg)}
 #banner.b b,#banner.fake b{color:var(--break);animation:jit .07s infinite} #banner.f b{color:var(--frenzy)}
 @keyframes bIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-@keyframes hue{to{filter:hue-rotate(360deg)}}
 @keyframes jit{25%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(4px,-2px) skewX(-8deg)}}
 #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
 #ring{position:fixed;left:50%;top:40%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:3;pointer-events:none;
@@ -452,7 +457,25 @@ const STATIONS = [
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
 const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
-function box(w, h, d, mat, pos) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.copy(pos); m.lookAt(0, pos.y, 0); scene.add(m); return m; }
+// Box with bevelled, rounded edges so nothing reads as a bare cube
+function rbox(w, h, d, r = Math.min(w, h, d) * .12) {
+  const s = new THREE.Shape(), x = w / 2 - r, y = h / 2 - r;
+  s.moveTo(-x, -y); s.lineTo(x, -y); s.lineTo(x, y); s.lineTo(-x, y);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(.001, d - 2 * r), bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3, curveSegments: 4 });
+  g.center(); g.computeVertexNormals(); return g;
+}
+function box(w, h, d, mat, pos) { const m = new THREE.Mesh(rbox(w, h, d), mat); m.position.copy(pos); m.lookAt(0, pos.y, 0); scene.add(m); return m; }
+function canvasTex(draw, n = 256) { const c = document.createElement("canvas"); c.width = c.height = n; draw(c.getContext("2d"), n); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+const GRAIN = canvasTex((x, n) => { x.fillStyle = "#d8d0c4"; x.fillRect(0, 0, n, n);
+  for (let i = 0; i < 70; i++) { x.strokeStyle = `rgba(60,35,15,${.08 + Math.random() * .22})`; x.lineWidth = .5 + Math.random() * 2; x.beginPath();
+    const y0 = Math.random() * n; x.moveTo(0, y0); for (let k = 0; k <= n; k += 16) x.lineTo(k, y0 + Math.sin(k * .03 + i) * 4); x.stroke(); } });
+const BRICK = canvasTex((x, n) => { x.fillStyle = "#2a1610"; x.fillRect(0, 0, n, n);
+  for (let r = 0; r < 8; r++) for (let c = -1; c < 4; c++) { const l = 28 + Math.random() * 14;
+    x.fillStyle = `hsl(${10 + Math.random() * 12},${35 + Math.random() * 20}%,${l}%)`; x.fillRect(c * 64 + (r % 2) * 32 + 3, r * 32 + 3, 58, 26); } });
+const STRAW = canvasTex((x, n) => { x.fillStyle = "#b08a3a"; x.fillRect(0, 0, n, n);
+  for (let i = 0; i < 400; i++) { x.strokeStyle = `hsla(${40 + Math.random() * 12},60%,${35 + Math.random() * 35}%,.8)`; x.lineWidth = 1 + Math.random(); x.beginPath();
+    const a = (Math.random() - .5) * .5, X = Math.random() * n, Y = Math.random() * n; x.moveTo(X, Y); x.lineTo(X + Math.cos(a) * 40, Y + Math.sin(a) * 40); x.stroke(); } });
+const wood = c => M(c, { map: GRAIN, bumpMap: GRAIN, bumpScale: .01 });
 function plankTex(base, line) {
   const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
   x.fillStyle = base; x.fillRect(0, 0, 256, 256);
@@ -461,31 +484,69 @@ function plankTex(base, line) {
 }
 { // barn room
   const ft = plankTex("#5a3a22", "#2a1a0e"); ft.repeat.set(6, 6);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xffffff, { map: ft })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xffffff, { map: ft, bumpMap: ft, bumpScale: .03 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
   const wt = plankTex("#4a2e1a", "#1e1209"); wt.repeat.set(10, 2);
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xffffff, { map: wt, side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
-  for (let i = 0; i < 6; i++) box(.25, 4, .25, M(0x2b1a0e), at(i * 60 + 30, 4.05, 2));
-  const hay = M(0xc9a24a, { roughness: 1 });
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xffffff, { map: wt, bumpMap: wt, bumpScale: .03, side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
+  for (let i = 0; i < 6; i++) box(.25, 4, .25, wood(0x5a3a22), at(i * 60 + 30, 4.05, 2));
+  const hay = M(0xffffff, { map: STRAW, bumpMap: STRAW, bumpScale: .03, roughness: 1 });
   for (const y of [25, 85, 135]) box(.8, .4, .5, hay, at(y, 3.6, .2));
 }
 // Anvil + hammer
 const anvilPos = at(0, 1.6, 0);
-box(.5, .5, .4, M(0x2a2420), anvilPos.clone().setY(.25));
-box(.42, .22, .9, M(0x55585e, { metalness: .8, roughness: .35 }), anvilPos.clone().setY(.61));
+{ const stump = new THREE.Mesh(new THREE.CylinderGeometry(.27, .31, .3, 24), wood(0x6b4a30)); stump.position.copy(anvilPos).setY(.15); scene.add(stump);
+  const top = new THREE.Mesh(new THREE.CircleGeometry(.27, 24), M(0x8a6a48, { map: GRAIN })); top.rotation.x = -Math.PI / 2; top.position.copy(anvilPos).setY(.301); scene.add(top);
+  const s = new THREE.Shape(); // side profile, x = left/right, y up from stump top
+  s.moveTo(-.3, 0); s.lineTo(.3, 0); s.lineTo(.28, .05); s.quadraticCurveTo(.13, .08, .12, .2); s.quadraticCurveTo(.14, .28, .3, .3);
+  s.lineTo(.32, .42); s.lineTo(-.3, .42); s.quadraticCurveTo(-.5, .42, -.66, .37); s.quadraticCurveTo(-.45, .3, -.25, .29);
+  s.quadraticCurveTo(-.13, .27, -.12, .2); s.quadraticCurveTo(-.13, .08, -.28, .05); s.lineTo(-.3, 0);
+  const g = new THREE.ExtrudeGeometry(s, { depth: .22, bevelEnabled: true, bevelThickness: .02, bevelSize: .015, bevelSegments: 3, curveSegments: 18 });
+  g.translate(0, 0, -.11);
+  const body = new THREE.Mesh(g, M(0x3c3f44, { metalness: .85, roughness: .45 })); body.position.copy(anvilPos).setY(.3); scene.add(body);
+  const face = new THREE.Mesh(rbox(.6, .02, .25, .006), M(0xb8bec6, { metalness: .6, roughness: .3 })); face.position.copy(anvilPos).add(new THREE.Vector3(.01, .735, 0)); scene.add(face);
+  const hardy = new THREE.Mesh(new THREE.BoxGeometry(.04, .005, .04), M(0x050505)); hardy.position.copy(anvilPos).add(new THREE.Vector3(.24, .746, 0)); scene.add(hardy); }
 // Pivot sits right of the pig at pig-top height; rotation.z = 0 puts the head flat on the pig, negative lifts it overhead
 const hammer = new THREE.Group(); hammer.position.copy(anvilPos).add(new THREE.Vector3(.62, 1.13, 0)); scene.add(hammer);
-{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .62), M(0x6b4423)); h.rotation.z = Math.PI / 2; h.position.x = -.31; hammer.add(h);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(.18, .15, .3), M(0x777b82, { metalness: .9, roughness: .3 })); head.position.x = -.62; hammer.add(head); }
+{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.022, .032, .64, 16), wood(0x8a5a32)); h.rotation.z = Math.PI / 2; h.position.x = -.31; hammer.add(h);
+  // Lathe-turned head: flat striking face down, tapered peen up
+  const prof = [[0, -.08], [.05, -.08], [.068, -.065], [.068, .09], [.05, .14], [.022, .19], [0, .19]].map(([r, y]) => new THREE.Vector2(r, y));
+  const steel = M(0x9aa0a8, { metalness: .7, roughness: .3 });
+  const head = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), steel); head.position.x = -.62; hammer.add(head);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.036, .012, 8, 20), steel); collar.rotation.y = Math.PI / 2; collar.position.x = -.56; hammer.add(collar); }
 const HAMMER_UP = -1.05;
 // Furnace
 const furnPos = at(55, 2.3);
-box(1.1, 1.3, .8, M(0x7a3b2a), furnPos.clone().setY(.65));
-const fire = new THREE.Mesh(new THREE.PlaneGeometry(.6, .45), new THREE.MeshBasicMaterial({ color: 0xff7a1a }));
-fire.position.copy(at(55, 1.88, .55)); fire.lookAt(0, .55, 0); scene.add(fire);
+box(1.1, 1.3, .8, M(0xa07868, { map: BRICK, bumpMap: BRICK, bumpScale: .04, roughness: .95 }), furnPos.clone().setY(.65));
+const chim = new THREE.Mesh(new THREE.CylinderGeometry(.16, .26, 2.2, 20), M(0xa07868, { map: BRICK, roughness: .95 })); chim.position.copy(at(55, 2.45, 2.4)); scene.add(chim);
+const fireG = new THREE.Group(); fireG.position.copy(at(55, 1.89)); fireG.lookAt(0, 0, 0); scene.add(fireG);
+{ const s = new THREE.Shape(); s.moveTo(-.3, .28); s.lineTo(.3, .28); s.lineTo(.3, .6); s.absarc(0, .6, .3, 0, Math.PI, false); s.lineTo(-.3, .28);
+  const mouth = new THREE.Mesh(new THREE.ShapeGeometry(s, 24), new THREE.MeshBasicMaterial({ color: 0x1a0603 })); fireG.add(mouth);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.33, .04, 8, 24, Math.PI), M(0x5a2a1c, { roughness: 1 })); rim.position.y = .6; fireG.add(rim);
+  for (let i = 0; i < 14; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.035 + Math.random() * .03), new THREE.MeshStandardMaterial({ color: 0x220800, emissive: 0xff4a10, emissiveIntensity: .6 + Math.random() * .8, roughness: 1 }));
+    c.position.set((Math.random() - .5) * .5, .3 + Math.random() * .04, .02); c.rotation.set(Math.random() * 3, Math.random() * 3, 0); fireG.add(c); } }
+const FLAME = canvasTex((x, n) => { const g = x.createRadialGradient(n / 2, n * .6, 2, n / 2, n * .55, n / 2);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.35, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); }, 64);
+// Flame particles: born white-yellow at the coals, rise, cool through orange to deep red and fade
+const flames = Array.from({ length: 46 }, () => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sp.userData = { life: 0, max: 1, seed: Math.random() * 9 }; fireG.add(sp); return sp; });
+const embers = Array.from({ length: 10 }, () => { const e = new THREE.Mesh(new THREE.SphereGeometry(.008, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb040, transparent: true }));
+  e.userData = { life: 0, v: new THREE.Vector3() }; fireG.add(e); return e; });
+const fireCol = new THREE.Color();
+function tickFire(dt, t) {
+  for (const f of flames) { const u = f.userData; u.life -= dt;
+    if (u.life <= 0) { u.max = u.life = .45 + Math.random() * .5; u.x = (Math.random() - .5) * .44; u.vy = .35 + Math.random() * .35; u.s = .12 + Math.random() * .12; f.position.set(u.x, .3, .04 + Math.random() * .03); }
+    const k = 1 - u.life / u.max; // 0 at birth → 1 at death
+    f.position.y += u.vy * dt; f.position.x = u.x * (1 - k * .7) + Math.sin(t * 9 + u.seed) * .025 * k;
+    if (f.position.y > .82) u.life = 0; // keep inside the arch
+    const sc = u.s * (1 + k * .6) * (1 - k * k * .7); f.scale.set(sc * .8, sc * 1.4, 1);
+    fireCol.setHSL(.13 - k * .12, 1, .75 - k * .4); f.material.color.copy(fireCol); f.material.opacity = Math.min(1, (1 - k) * 1.6) * .85; }
+  for (const e of embers) { const u = e.userData; u.life -= dt;
+    if (u.life <= 0 && Math.random() < dt * 3) { u.life = .8 + Math.random(); e.position.set((Math.random() - .5) * .4, .35, .06); u.v.set((Math.random() - .5) * .2, .5 + Math.random() * .4, .15); }
+    e.visible = u.life > 0; if (e.visible) { e.position.addScaledVector(u.v, dt); e.material.opacity = Math.min(1, u.life); } }
+}
 const fireLight = new THREE.PointLight(0xff7a2a, 2.2, 6, 2); fireLight.position.copy(at(55, 1.6, .9)); scene.add(fireLight);
 // Pen fences
-for (const dy of [-14, 14]) box(.06, .35, 1.6, M(0x8a5a32), at(110 + dy, 2.3, .2));
-box(1.4, .35, .06, M(0x8a5a32), at(110, 2.95, .2));
+for (const dy of [-14, 14]) box(.06, .35, 1.6, wood(0xa06a3a), at(110 + dy, 2.3, .2));
+box(1.4, .35, .06, wood(0xa06a3a), at(110, 2.95, .2));
 // Piggy-bank relic machine
 const bankPos = at(165, 2.4);
 const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.lookAt(0, .95, 0); scene.add(bank);
@@ -495,7 +556,7 @@ const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.look
   const slot = new THREE.Mesh(new THREE.BoxGeometry(.3, .03, .06), M(0x111111)); slot.position.y = .55; bank.add(slot);
   for (let i = 0; i < 3; i++) { const o = new THREE.Mesh(new THREE.SphereGeometry(.09, 12, 8), new THREE.MeshBasicMaterial({ color: [0x4dabf7, 0xffd43b, 0xff3df2][i] }));
     o.position.set(-.3 + i * .3, -.15, .52); o.userData.orb = i; bank.add(o); }
-  box(.9, .4, .9, M(0x3a2a1e), bankPos.clone().setY(.2)); }
+  box(.9, .4, .9, wood(0x5a3e28), bankPos.clone().setY(.2)); }
 // Ghost merchant: a sheet ghost with a lantern
 const ghostPos = at(-140, 2.4);
 const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.lookAt(0, .2, 0); scene.add(ghost);
@@ -505,14 +566,14 @@ const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.l
   for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0x111111 })); e.position.set(x, 1.4, .34); ghost.add(e); }
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0x9ff7d8 })); lamp.position.set(.45, 1, .2); ghost.add(lamp);
   const gl = new THREE.PointLight(0x9ff7d8, 1.2, 3); gl.position.copy(lamp.position); ghost.add(gl); }
-box(1.1, .7, .5, M(0x5a3a22), at(-140, 1.95, .35));
+box(1.1, .7, .5, wood(0x7a5030), at(-140, 1.95, .35));
 // Tribute hatch: bars and the boar lord's eyes
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
-  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3), M(0x3a3a3a, { metalness: .8 })); bar.position.set(i * .22, 0, .05); hatch.add(bar); }
+  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3, 12), M(0x3a3a3a, { metalness: .8, roughness: .5 })); bar.position.set(i * .22, 0, .05); hatch.add(bar); }
   hatch.userData.eyes = [-.25, .25].map(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); e.position.set(x, .2, .01); hatch.add(e); return e; }); }
-box(.6, .1, 1.8, M(0x5a3a22), at(-70, 2.9, .5));
-const bell = new THREE.Mesh(new THREE.ConeGeometry(.16, .26, 16, 1, true), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
+box(.6, .1, 1.8, wood(0x7a5030), at(-70, 2.9, .5));
+const bell = new THREE.Mesh(new THREE.LatheGeometry([[.17, -.13], [.15, -.11], [.11, -.02], [.09, .08], [.07, .12], [.03, .14], [0, .14]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
 bell.position.copy(at(-48, 2.6, 1.5)); scene.add(bell);
 for (const y of [30, 140, -100]) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
   const b = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd08a })); b.position.copy(l.position); scene.add(b); }
@@ -529,15 +590,32 @@ function makePig(p) {
     emissive: p.heated ? 0xff5a10 : L >= 13 ? col : 0x000000, emissiveIntensity: p.heated ? .45 : L >= 13 ? .25 : 0 });
   const dark = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.7), metalness: mat.metalness, roughness: mat.roughness });
   const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
-  add(new THREE.SphereGeometry(.5, 24, 16), mat, 0, .55, 0, 1.3, 1, 1);
-  add(new THREE.SphereGeometry(.36, 20, 14), mat, .62, .72, 0);
-  add(new THREE.CylinderGeometry(.15, .15, .14, 16), dark, .96, .66, 0).rotation.z = Math.PI / 2;
-  for (const z of [-.06, .06]) add(new THREE.SphereGeometry(.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x220000 }), 1.03, .67, z);
-  const eyeM = new THREE.MeshBasicMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x111111 });
-  for (const z of [-.15, .15]) add(new THREE.SphereGeometry(.05, 10, 8), eyeM, .88, .84, z);
-  for (const z of [-.18, .18]) add(new THREE.ConeGeometry(.11, .22, 4), dark, .55, 1.08, z).rotation.x = z > 0 ? .4 : -.4;
-  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) add(new THREE.CylinderGeometry(.08, .07, .3, 10), dark, x, .15, z);
-  add(new THREE.TorusGeometry(.08, .025, 6, 12, 5), dark, -.68, .7, 0).rotation.y = Math.PI / 2;
+  // Body, rump and neck overlap so the silhouette reads as one soft barrel instead of two balls
+  add(new THREE.SphereGeometry(.5, 36, 26), mat, 0, .55, 0, 1.3, 1, 1);
+  add(new THREE.SphereGeometry(.42, 28, 20), mat, -.32, .58, 0, 1, 1, 1.08);
+  add(new THREE.SphereGeometry(.34, 28, 20), mat, .42, .63, 0, 1, .92, 1.1);
+  add(new THREE.SphereGeometry(.36, 32, 24), mat, .62, .72, 0, 1, .95, 1.05);
+  for (const z of [-.17, .17]) add(new THREE.SphereGeometry(.14, 20, 14), mat, .78, .62, z);
+  const snoutM = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.88), metalness: mat.metalness, roughness: mat.roughness * .9 });
+  const snout = add(new THREE.LatheGeometry([[0, 0], [.13, 0], [.155, .02], [.165, .08], [.155, .13], [.12, .155], [0, .155]].map(([r, y]) => new THREE.Vector2(r, y)), 28), snoutM, .9, .66, 0);
+  snout.rotation.z = -Math.PI / 2;
+  const holeM = new THREE.MeshBasicMaterial({ color: 0x1a0505 });
+  for (const z of [-.05, .05]) add(new THREE.SphereGeometry(.03, 12, 8), holeM, 1.052, .665, z, .35, 1.3, 1);
+  const eyeM = new THREE.MeshStandardMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x1a1210, roughness: .15, emissive: L >= 7 ? (L >= 12 ? 0x6a4a00 : 0x5a0000) : 0 });
+  const whiteM = new THREE.MeshStandardMaterial({ color: 0xf4efe8, roughness: .3 }), glintM = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (const z of [-.16, .16]) { add(new THREE.SphereGeometry(.06, 16, 12), whiteM, .9, .83, z, .7, 1, 1);
+    add(new THREE.SphereGeometry(.038, 14, 10), eyeM, .935, .83, z * 1.02); add(new THREE.SphereGeometry(.012, 8, 6), glintM, .968, .847, z * .95);
+    add(new THREE.SphereGeometry(.065, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.4), mat, .9, .835, z, .75, .9, 1.05).rotation.z = -.35; } // upper lid
+  // Ears: soft extruded leaf shape, tipped forward and outward on a pivot
+  const earShape = new THREE.Shape(); earShape.moveTo(-.11, 0); earShape.quadraticCurveTo(-.11, .2, .01, .3); earShape.quadraticCurveTo(.11, .19, .11, 0); earShape.quadraticCurveTo(0, -.03, -.11, 0);
+  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: .015, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 3, curveSegments: 14 });
+  for (const side of [-1, 1]) { const piv = new THREE.Group(); piv.position.set(.55, 1, side * .2); piv.rotation.set(side * .5, 0, -.55); g.add(piv);
+    const ear = new THREE.Mesh(earGeo, dark); ear.rotation.y = Math.PI / 2; piv.add(ear); }
+  const hoofM = new THREE.MeshStandardMaterial({ color: 0x2a1c16, roughness: .5, metalness: metal ? .6 : 0 });
+  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) { add(new THREE.CylinderGeometry(.09, .07, .26, 18), dark, x, .19, z);
+    add(new THREE.CylinderGeometry(.068, .078, .07, 18), hoofM, x, .035, z); add(new THREE.BoxGeometry(.16, .06, .012), holeM, x + .02, .035, z); } // cloven split
+  const tail = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 3.4, r = .07 * (1 - i / 34); tail.push(new THREE.Vector3(-.64 - i * .007, .74 + Math.sin(a) * r, Math.cos(a) * r - .07)); }
+  add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tail), 60, .018, 8), dark, 0, 0, 0);
   if (p.fam === "tree") for (const [x, z, r] of [[-.2, -.15, .5], [0, .1, -.3], [.2, -.05, .2]]) { const leaf = add(new THREE.ConeGeometry(.09, .32, 5), new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: .6 }), x, 1.1, z); leaf.rotation.set(r, 0, r); }
   if (p.fam === "fish") add(new THREE.ConeGeometry(.22, .4, 3), new THREE.MeshStandardMaterial({ color: 0x2ec4b6, metalness: .4, roughness: .3 }), -.1, 1.1, 0, .4, 1, 1.4);
   if (p.fam === "grave") { g.userData.wisp = add(new THREE.SphereGeometry(.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb98cff }), .1, 1.45, .25); }
@@ -642,7 +720,7 @@ function loop(now) {
   if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
   cam.rotation.set(0, 0, 0); cam.rotateY(yaw * Math.PI / 180); cam.rotateX(pitch);
   cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 4); cam.updateProjectionMatrix();
-  fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; fire.material.color.setHSL(.07 + Math.random() * .02, 1, .55);
+  fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; tickFire(dt, t);
   ghost.position.y = .2 + Math.sin(t * 2) * .06;
   rageT = Math.max(0, rageT - dt);
   for (const e of hatch.userData.eyes) e.scale.setScalar(rageT > 0 ? 2.6 + Math.sin(t * 40) * .6 : S.anger ? 1 + S.anger * .35 + Math.sin(t * 8) * .1 : .7);
@@ -675,7 +753,7 @@ function loop(now) {
 // ===== Strike flow =====
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-let busy = false, nextStrikeAt = 0, lastSnap = null;
+let busy = false, nextStrikeAt = 0, lastSnap = null, clangAlt = false;
 function banner(main, sub = "", cls = "") { const b = $("banner"); b.className = ""; void b.offsetWidth; b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls; }
 function flash(a = .9) { const f = $("flash"); f.style.transition = "none"; f.style.opacity = a; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = "opacity .6s"; f.style.opacity = 0; })); }
 
@@ -699,7 +777,8 @@ async function doStrike() {
   }
   swing = 1; await sleep(big ? 60 : 110);
   const fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
-  if (big) sfx.play("click-deep", "invalid-thunk"); else sfx.play("click-deep");
+  clangAlt = !clangAlt; const clang = clangAlt ? "anvil-ting" : "anvil-clang"; // 낑, 깡, 낑, 깡…
+  if (big) sfx.play(clang, "invalid-thunk"); else sfx.play(clang);
   buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
   const fzNow = inFrenzy(), spd = 1 + (!fzNow && has("loop") ? .2 : 0) + (has("grip") ? .15 : 0) + (fzNow && has("bellows") ? .3 : 0);
   nextStrikeAt = performance.now() + 560 / spd;
