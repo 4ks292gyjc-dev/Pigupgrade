@@ -138,16 +138,19 @@ const RELICS = [
   ["apron","기운 앞치마","손상",2,1,"손상마다 가치 +140G"],["splice","금간 이음새","손상",3,2,"손상마다 이 돼지 파괴 확률 -15% (최대 -60%)",1],
   ["crown","금간 왕관","손상",3,1,"손상으로 잃는 가치의 50%를 지킴"],["watch","금간 손목시계","손상",3,1,"광란 밖 손상마다 광란 +1"],["oath","꺾이지 않는 맹세","손상",4,2,"손상마다 70% 확률로 +1강"],
   ["bknot","검은 매듭","방어",2,1,"파괴 확률 ×0.9",1],["hoop","쇠테","방어",3,1,"파괴 티켓 -2"],["fence","철사 울타리","방어",4,2,"하루의 첫 파괴를 손상으로 바꿈"],
-  ["tongs","멧돼지 집게","방어",5,2,"+6 이상에서 파괴 확률 ×0.75"],["phoenix","불사조 재","방어",6,3,"돼지마다 1번, 가치 40%를 내고 파괴를 막음"],["stone","굳센 주춧돌","방어",7,4,"돼지마다 첫 파괴를 손상으로 바꿈"],
+  ["tongs","멧돼지 집게","방어",5,2,"+6 이상에서 파괴 확률 ×0.75"],["phoenix","불사조 재","방어",6,3,"돼지마다 1번, 가치 40%를 내고 파괴를 막음"],["stone","굳센 주춧돌","걸작",7,4,"돼지마다 첫 파괴를 손상으로 바꿈",0,1],
   ["sieve","잿빛 체","파괴",2,1,"파괴될 때 +500G"],
   ["loop","가죽 고리","광란",2,1,"광란 밖 타격 속도 +20%",1],["locket","불씨 목걸이","광란",4,2,"돼지마다 첫 타격에 광란 +2"],["glass","유리 모래시계","광란",5,2,"광란 중 대성공 +3강"],
   ["hbell","머리 없는 종","광란",6,2,"광란이 끝날 때 +1강"],["collar","방울 목줄","광란",6,2,"광란 중 타격마다 가치 +5%"],["redsand","붉은 모래시계","광란",6,2,"광란 +1초"],
-  ["core","완벽한 마나 핵","광란",7,4,"광란 중 대성공 티켓 +6"],["wick","꺼지지 않는 심지","광란",8,4,"광란 +2초"],
+  ["core","완벽한 마나 핵","걸작",7,4,"광란 중 대성공 티켓 +6",0,1],["wick","꺼지지 않는 심지","광란",8,4,"광란 +2초"],
   ["pouch","숯 주머니","가치",2,1,"기본 가치 +80G"],["signet","쇠 인장","가치",2,1,"가치 +15%"],["iron","검은 쇳돌","가치",5,2,"+8 이상에서 가치 +30%"],
-  ["lheart","군주의 심장","가치",8,4,"+7 이상에서 성공/대성공마다 가치 +15%"],["lseal","군주의 인장","가치",9,3,"+12 이상에서 가치 +50%"],
+  ["lheart","군주의 심장","걸작",8,4,"+7 이상에서 성공/대성공마다 가치 +15%",0,1],["lseal","군주의 인장","가치",9,3,"+12 이상에서 가치 +50%"],
   ["rebate","봉인된 환급증","경제",5,2,"공물 요구량 -10%"],["tally","세금 장부","경제",5,3,"공물 완납마다 크레딧 +1"],["voucher","낡은 쿠폰","경제",3,2,"매일 무료 리롤 1번"],
   ["permit","공급 허가증","경제",8,4,"매일 돼지 +1"],
-].map(([id, name, cat, day, cost, desc, gift]) => ({ id, name, cat, day, cost, desc, gift: !!gift }));
+  ["dawn","새벽의 칼집","걸작",6,3,"파괴된 돼지 강화의 40%를 다음 +0 돼지가 이어받고 광란 +4",0,1],["shaft","멈추지 않는 굴대","걸작",7,4,"성공 2번마다 +1강",0,1],
+  ["twins","쌍둥이 인장","걸작",8,4,"살아남은 타격마다 2% 확률로 똑같은 돼지가 하나 더 생김",0,1],["seed","영원의 씨앗","걸작",7,4,"유지 티켓 +6, 유지마다 기본 가치 +40G",0,1],
+  ["pearl","심연의 진주","걸작",7,4,"손상 티켓 +3, 돼지마다 첫 손상 2번은 등급이 안 내려감",0,1],["ledger","장의사의 장부","걸작",8,4,"+7 이상 돼지가 파괴되면 다음 날 돼지 +1 (하루 최대 2)",0,1],
+].map(([id, name, cat, day, cost, desc, gift, mw]) => ({ id, name, cat, day, cost, desc, gift: !!gift, mw: !!mw }));
 const RB = Object.fromEntries(RELICS.map(r => [r.id, r]));
 
 // Merchant consumables: price as a share of the day's tribute (derived from the source price table)
@@ -175,11 +178,31 @@ const sfx = (() => {
   };
 })();
 
+// Pig families: six regular lines (picked at delivery) and three special lines sold by the merchant.
+// Forging a pig of a family to +20 unlocks that family's masterwork in the relic shop for good.
+const FAMS = {
+  citadel: { name: "성채", mw: "stone" }, holy: { name: "성스러운", mw: "dawn" }, saw: { name: "톱니", mw: "shaft" },
+  fang: { name: "용송곳니", mw: "lheart" }, rune: { name: "룬", mw: "core" }, split: { name: "쌍갈래", mw: "twins" },
+  tree: { name: "세계수", mw: "seed", special: true, hue: 110, forms: ["낙엽","새싹","어린 가지","덩굴","이끼","고목","꽃피는","열매 맺는","숲의","대지의","세계수"] },
+  fish: { name: "바다", mw: "pearl", special: true, hue: 185, forms: ["미역 감긴","조개","비늘","지느러미","산호","진주","해파리","심해","해일","크라켄","리바이어던"] },
+  grave: { name: "장례", mw: "ledger", special: true, hue: 275, forms: ["녹슨 관못","묘지기","비석","수의","해골","망령","도깨비불","사신","명부","저승문","저승 열쇠"] },
+};
+const REGULAR = Object.keys(FAMS).filter(k => !FAMS[k].special), SPECIAL = Object.keys(FAMS).filter(k => FAMS[k].special);
+let unlocks = []; try { unlocks = JSON.parse(localStorage.getItem("pigforge-unlocks")) || []; } catch {}
+const unlocked = fam => unlocks.includes(fam);
+function unlock(fam) { if (unlocked(fam)) return false; unlocks.push(fam); try { localStorage.setItem("pigforge-unlocks", JSON.stringify(unlocks)); } catch {} return true; }
+function pigName(p, L = p.lvl) {
+  const f = FAMS[p.fam], look = Math.max(L, p.peak || 0);
+  if (f?.special) return `${f.forms[Math.min(10, look >> 1)]} 돼지`;
+  return f && L >= 10 ? `${f.name} ${pname(L)}` : pname(L);
+}
+
 // ===== State =====
 let uid = 1, S = null;
 const has = id => !!S && S.relics.includes(id);
-const newPig = (lvl = 0) => ({ id: uid++, lvl, base: 320 + (has("pouch") ? 80 : 0), mult: 1, flat: 0, heated: false, charge: 0, strikes: 0,
-  run: 0, holdRun: 0, heart: 0, splice: 0, scorch: 0, nbm: 1, phoenix: false, stone: false });
+const newPig = (lvl = 0, fam = REGULAR[Math.floor(Math.random() * REGULAR.length)]) => ({ id: uid++, lvl, peak: lvl, fam,
+  base: (FAMS[fam].special ? 640 : 320) + (has("pouch") ? 80 : 0), mult: 1, flat: 0, heated: false, charge: 0, strikes: 0,
+  run: 0, holdRun: 0, heart: 0, splice: 0, scorch: 0, nbm: 1, phoenix: false, stone: false, sCount: 0, pearl: 0 });
 const fresh = () => ({ day: 1, gold: 0, credits: 0, anger: 0, pen: [], hand: null, anvil: null, tribute: [], relics: [], shop: [], items: {},
   armed: {}, merchant: null, extra: 0, fenceUsed: false, freeReroll: false, incenseUsed: false, pays: 0, contract: false, gift: null, uid: 1 });
 function load() { try { const d = JSON.parse(localStorage.getItem("pigforge")); if (d && d.day) { S = d; uid = d.uid || 1000; return true; } } catch {} return false; }
@@ -197,7 +220,7 @@ function odds(p, frenzy = inFrenzy(), armed = S.armed) {
   const add = (k, n) => c[k] += n;
   if (has("bent")) add("s", 4); if (has("spike")) add("s", 6); if (has("whet")) { add("h", -2); add("s", 2); } if (has("mallet")) { add("d", -1); add("s", 1); }
   if (has("coal")) add("g", 1); if (has("gnail")) add("g", 2); if (has("die")) add("g", 4); if (has("seal")) add("h", 2); if (has("weight")) add("h", 3);
-  if (has("core") && frenzy) add("g", 6); if (has("hoop")) bt -= 2;
+  if (has("core") && frenzy) add("g", 6); if (has("hoop")) bt -= 2; if (has("seed")) add("h", 6); if (has("pearl")) add("d", 3);
   for (const k in c) c[k] = Math.max(0, c[k]);
   if (armed.chalk) c.g *= 2;
   const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100;
@@ -233,11 +256,16 @@ function strike(p) {
   if (res === "b" && has("fence") && !S.fenceUsed) { S.fenceUsed = true; res = "d"; saved = "철사 울타리가 막았다"; }
   if (res === "b" && has("stone") && !p.stone) { p.stone = true; res = "d"; saved = "굳센 주춧돌이 막았다"; }
   if (res === "b" && has("phoenix") && !p.phoenix) { p.phoenix = true; p.mult *= .6; res = "h"; saved = "불사조 재 (가치 -40%)"; }
-  if (res === "b") { if (has("sieve")) S.gold += 500; return { res, frenzyStarted }; }
+  if (res === "b") {
+    if (has("sieve")) S.gold += 500;
+    if (has("dawn")) S.inherit = Math.floor(p.lvl * .4);
+    if (has("ledger") && p.lvl >= 7 && (S.ledgerToday || 0) < 2) { S.ledgerToday = (S.ledgerToday || 0) + 1; S.extra++; }
+    return { res, frenzyStarted };
+  }
   const first = p.strikes === 0, up = res === "s" || res === "g";
   if (res === "g") { p.lvl += 2; p.mult *= 2.5 / 2.25; }
   if (res === "s") p.lvl += 1;
-  if (res === "d" && p.lvl > 0) { p.lvl -= 1; if (has("crown")) p.mult *= 1.25; }
+  if (res === "d" && p.lvl > 0) { if (has("pearl") && p.pearl < 2) p.pearl++; else { p.lvl -= 1; if (has("crown")) p.mult *= 1.25; } }
   if (up) {
     p.run++; p.holdRun = 0;
     if (has("stamp")) p.flat += 100;
@@ -248,6 +276,7 @@ function strike(p) {
     if (has("lheart") && p.lvl >= 7) p.mult *= 1.15;
   } else p.run = 0;
   if (res === "s" && has("cog")) p.base += 30;
+  if (res === "s" && has("shaft") && ++p.sCount % 2 === 0) p.lvl += 1;
   if (res === "g") {
     if (has("cbell")) p.mult *= 1.2;
     if (!fz && has("lmark")) p.nbm *= .6;
@@ -258,7 +287,7 @@ function strike(p) {
   if (res === "h") {
     p.holdRun++;
     if (has("seal") && p.holdRun % 2 === 0) p.lvl += 1;
-    if (has("paper")) p.flat += 180; if (has("tea")) p.mult *= 1.06;
+    if (has("paper")) p.flat += 180; if (has("tea")) p.mult *= 1.06; if (has("seed")) p.base += 40;
     if (has("sleep") && Math.random() < .7) p.lvl += 1;
     if (has("thread")) p.nbm *= .8;
     if (has("heart")) p.heart = Math.min(4, p.heart + 1);
@@ -269,23 +298,28 @@ function strike(p) {
   }
   if (fz && has("collar")) p.mult *= 1.05;
   if (!fz) { p.charge++; if (first && has("locket")) p.charge += 2; }
-  p.charge = Math.min(10, p.charge); p.strikes++;
-  return { res, frenzyStarted, saved };
+  p.charge = Math.min(10, p.charge); p.strikes++; p.peak = Math.max(p.peak || 0, p.lvl);
+  let twin = false, mastered = null;
+  if (has("twins") && Math.random() < .02) { S.pen.push({ ...JSON.parse(JSON.stringify(p)), id: uid++ }); twin = true; }
+  if (p.lvl >= 20 && unlock(p.fam)) mastered = p.fam;
+  return { res, frenzyStarted, saved, twin, mastered };
 }
 
 // ===== Day cycle =====
 function morning() {
   const n = 3 + (has("permit") ? 1 : 0) + S.extra; S.extra = 0;
   for (let i = 0; i < n; i++) S.pen.push(newPig());
-  S.fenceUsed = false; S.freeReroll = has("voucher"); S.armed = {};
+  S.fenceUsed = false; S.freeReroll = has("voucher"); S.armed = {}; S.ledgerToday = 0;
   S.shop = S.day >= 2 ? rollShop() : [];
   S.merchant = S.day % 3 === 0 ? makeMerchant() : null;
 }
 function rollShop() {
-  return RELICS.filter(r => r.day <= S.day && !S.relics.includes(r.id)).sort(() => Math.random() - .5).slice(0, 3).map(r => r.id);
+  return RELICS.filter(r => r.day <= S.day && !S.relics.includes(r.id) && (!r.mw || unlocks.some(k => FAMS[k].mw === r.id))).sort(() => Math.random() - .5).slice(0, 3).map(r => r.id);
 }
 function makeMerchant() {
   const v = S.day / 3, q = quota(S.day), stock = { pig: { left: [2,3,3,4,4,4,4][v - 1] ?? 5, price: Math.max(700, Math.round(.4 * q / 10) * 10) } };
+  const g = S.day < 9 ? 0 : S.day < 15 ? 2 : 4; // special pig grade by day; price ×1.6 / ×2.4 for +2 / +4 matches the source table
+  stock.special = { left: 1, fam: SPECIAL[Math.floor(Math.random() * 3)], lvl: g, price: Math.max(1100, Math.round(1.75 * .65 * q * [1, 1.6, 2.4][g / 2] / 10) * 10) };
   for (const [id, it] of Object.entries(ITEMS)) {
     if (it.day > S.day || (id === "incense" && (S.anger === 0 || S.incenseUsed))) continue;
     stock[id] = { left: it.stock, price: Math.round(it.k * q / 10) * 10 };
@@ -394,7 +428,8 @@ function auraTex() { const c = document.createElement("canvas"); c.width = c.hei
   const g = x.createRadialGradient(64, 64, 4, 64, 64, 64); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); }
 const AURA = auraTex();
 function makePig(p) {
-  const L = p.lvl, [h, s, l] = HSL[Math.min(20, L)], col = new THREE.Color().setHSL(h / 360, s / 100, l / 100);
+  const L = Math.max(p.lvl, p.peak || 0), F = FAMS[p.fam], [h, s, l] = HSL[Math.min(20, L)];
+  const col = F?.special ? new THREE.Color().setHSL(F.hue / 360, .55, Math.min(.72, .4 + L * .016)) : new THREE.Color().setHSL(h / 360, s / 100, l / 100);
   const g = new THREE.Group(), metal = L >= 7;
   const mat = new THREE.MeshStandardMaterial({ color: col, metalness: metal ? .75 : .05, roughness: metal ? .28 : .65,
     emissive: p.heated ? 0xff5a10 : L >= 13 ? col : 0x000000, emissiveIntensity: p.heated ? .45 : L >= 13 ? .25 : 0 });
@@ -409,6 +444,9 @@ function makePig(p) {
   for (const z of [-.18, .18]) add(new THREE.ConeGeometry(.11, .22, 4), dark, .55, 1.08, z).rotation.x = z > 0 ? .4 : -.4;
   for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) add(new THREE.CylinderGeometry(.08, .07, .3, 10), dark, x, .15, z);
   add(new THREE.TorusGeometry(.08, .025, 6, 12, 5), dark, -.68, .7, 0).rotation.y = Math.PI / 2;
+  if (p.fam === "tree") for (const [x, z, r] of [[-.2, -.15, .5], [0, .1, -.3], [.2, -.05, .2]]) { const leaf = add(new THREE.ConeGeometry(.09, .32, 5), new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: .6 }), x, 1.1, z); leaf.rotation.set(r, 0, r); }
+  if (p.fam === "fish") add(new THREE.ConeGeometry(.22, .4, 3), new THREE.MeshStandardMaterial({ color: 0x2ec4b6, metalness: .4, roughness: .3 }), -.1, 1.1, 0, .4, 1, 1.4);
+  if (p.fam === "grave") { g.userData.wisp = add(new THREE.SphereGeometry(.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb98cff }), .1, 1.45, .25); }
   if (L >= 5 && L <= 9) add(new THREE.TorusGeometry(.5, .04, 8, 24), new THREE.MeshStandardMaterial({ color: 0xcfd3d8, metalness: .9, roughness: .2 }), 0, .55, 0, 1, 1, 1.3).rotation.y = Math.PI / 2;
   if (L >= 10) {
     const gold = new THREE.MeshStandardMaterial({ color: 0xffd43b, metalness: 1, roughness: .2, emissive: 0x6a4a00 });
@@ -435,6 +473,7 @@ function tickPig(g, t) {
   if (u.wings) for (const w of u.wings) w.rotation.x = Math.sin(t * 7) * .35 * w.userData.side;
   if (u.stars) u.stars.rotation.y = t * .6;
   if (u.rainbow) u.rainbow.color.setHSL((t * .25) % 1, .9, .62);
+  if (u.wisp) u.wisp.position.y = 1.45 + Math.sin(t * 3) * .08;
 }
 
 // Keep the 3D pigs in sync with state
@@ -442,7 +481,7 @@ const slots = new Map();
 function placePig(key, p, parent, pos, scale) {
   const o0 = slots.get(key);
   if (!p) { if (o0) { o0.group.parent.remove(o0.group); slots.delete(key); } return; }
-  const sig = `${p.id}:${p.lvl}:${p.heated}`; let o = o0;
+  const sig = `${p.id}:${p.lvl}:${p.peak}:${p.heated}`; let o = o0;
   if (!o || o.sig !== sig) { if (o) o.group.parent.remove(o.group); o = { sig, group: makePig(p) }; slots.set(key, o); parent.add(o.group); }
   o.group.position.copy(pos); o.group.scale.setScalar(scale);
   o.group.rotation.y = parent === scene ? Math.atan2(pos.z, -pos.x) : -Math.PI / 2; // turn the snout toward the viewer
@@ -482,7 +521,8 @@ canvas.addEventListener("pointerup", e => {
   else if (STATIONS[st].id === "anvil" && S.anvil) doStrike();
 });
 addEventListener("keydown", e => { if (e.code === "Space" && STATIONS[st].id === "anvil") { e.preventDefault(); doStrike(); } if (e.code === "ArrowLeft") go(-1); if (e.code === "ArrowRight") go(1); });
-function go(d) { st = (st + d + STATIONS.length) % STATIONS.length; confirmBell = false; ui(); }
+// ▶ turns right (yaw decreases); swipe right turns left
+function go(d) { st = (st - d + STATIONS.length) % STATIONS.length; confirmBell = false; ui(); }
 
 let last = performance.now(), wasFrenzy = false;
 function loop(now) {
@@ -541,15 +581,17 @@ async function doStrike() {
     $("ring").hidden = $("ringText").hidden = true; flash(.8);
   }
   swing = 1; await sleep(big ? 60 : 110);
-  const fzBefore = inFrenzy(), { res, frenzyStarted, saved } = strike(p);
+  const fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
   sfx.play("click-deep"); buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
   nextStrikeAt = performance.now() + (fzBefore || frenzyStarted || !has("loop") ? 560 : 560 / 1.2);
   if (res === "b") await breakFx(p, before, big);
   else {
-    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pname(p.lvl)}`, "g"); sfx.play("level-up"); }
-    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pname(p.lvl)}`, "s"); sfx.play("xp-up"); }
+    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pigName(p)}`, "g"); sfx.play("level-up"); }
+    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pigName(p)}`, "s"); sfx.play("xp-up"); }
     if (res === "h") { banner("유지", saved || "아무 일도 없었다", "h"); sfx.play("tap-ui-tick"); }
     if (res === "d") { shakeT = .25; crackT = .2; banner("손상", saved || `+${before} → +${p.lvl}`, "d"); sfx.play("error-soft-thud"); }
+    if (twin) setTimeout(() => { banner("쌍둥이!", "똑같은 돼지가 우리에 생겼어요", "f"); sfx.play("coin-double"); }, 400);
+    if (mastered) setTimeout(() => { banner("걸작 해금!", `${RB[FAMS[mastered].mw].name} · 이제 유물 진열장에 나와요`, "g"); sfx.play("achievement"); }, 900);
     if (frenzyStarted) setTimeout(() => { banner("광란!", "잠깐 동안 깨지지 않아요", "f"); sfx.play("achievement"); }, 350);
     if (big) { await sleep(700); fovTarget = 62; }
   }
@@ -558,12 +600,12 @@ async function doStrike() {
 async function breakFx(p, before, big) {
   const pos = anvilPos.clone().setY(.9), color = new THREE.Color().setHSL(HSL[Math.min(20, before)][0] / 360, .6, .6);
   if (Math.random() < .5) { // pretends to succeed, then breaks
-    p.lvl = before + 1; ui(); sparkBurst(pos, 0x4dabf7, 40); banner("성공!", `+${p.lvl} ${pname(p.lvl)}`, "s"); sfx.play("success-warm-chime");
+    p.lvl = before + 1; ui(); sparkBurst(pos, 0x4dabf7, 40); banner("성공!", `+${p.lvl} ${pigName(p)}`, "s"); sfx.play("success-warm-chime");
     await sleep(reduced ? 400 : 1000); banner("…은 구라", "", "fake"); await sleep(350);
   }
   shakeT = .6; crackT = .65; sfx.play("invalid-thunk"); await sleep(650);
   hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); flash(1); shakeT = .5; sfx.play("trash-crumple", "error-sharp-alert"); buzz([80, 40, 160]);
-  banner("파사삭", `+${before} ${pname(before)} 파괴`, "b"); ui();
+  banner("파사삭", `+${before} ${pigName(p, before)} 파괴`, "b"); ui();
   await sleep(big ? 1300 : 900); hideAnvilPig = false; fovTarget = 62;
 }
 
@@ -571,7 +613,7 @@ async function breakFx(p, before, big) {
 const OUT = { b: ["파괴", "var(--break)"], d: ["손상", "var(--dmg)"], h: ["유지", "var(--hold)"], s: ["성공", "var(--ok)"], g: ["대성공", "var(--great)"] };
 const pct = x => (x * 100).toFixed(1) + "%";
 const rerollCost = () => Math.round(.15 * quota(S.day) / 10) * 10; // shortcut: real reroll price unpublished, 15% of tribute is a guess
-function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pname(p.lvl)}</b>${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 광란 ${p.charge}/10</p></div>${btn}</div>`; }
+function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pigName(p)}</b>${FAMS[p.fam]?.special ? '<span class="tag" style="background:var(--frenzy);color:#1a120c">특수</span>' : ""}${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 광란 ${p.charge}/10</p></div>${btn}</div>`; }
 let confirmBell = false;
 function ui() {
   sync();
@@ -580,14 +622,14 @@ function ui() {
   $("mute").textContent = sfx.muted ? "소리 끔" : "소리 켬"; $("mute").setAttribute("aria-pressed", String(!sfx.muted));
   $("anger").innerHTML = [0, 1, 2].map(i => `<span class="${i < S.anger ? "on" : ""}">✕</span>`).join("");
   $("gold").textContent = G(S.gold); $("credits").textContent = S.credits;
-  $("handInfo").textContent = S.hand ? `손: +${S.hand.lvl} ${pname(S.hand.lvl)}` : "손: 비어 있음";
+  $("handInfo").textContent = S.hand ? `손: +${S.hand.lvl} ${pigName(S.hand)}` : "손: 비어 있음";
   $("station").textContent = STATIONS[st].name;
   let h = "";
   if (s === "anvil") {
     const p = S.anvil;
     if (p) {
       const o = odds(p);
-      h += `<div class="row"><b class="big">+${p.lvl} ${pname(p.lvl)}</b><span class="big num gold">${G(V(p))}</span></div>
+      h += `<div class="row"><b class="big">+${p.lvl} ${pigName(p)}</b><span class="big num gold">${G(V(p))}</span></div>
         <div class="odds num">${Object.keys(OUT).map(k => `<span>${OUT[k][0]}<b style="color:${OUT[k][1]}">${pct(o[k])}</b></span>`).join("")}</div>
         <div class="stack">${Object.keys(OUT).map(k => `<i style="width:${o[k] * 100}%;background:${OUT[k][1]}"></i>`).join("")}</div>
         <div class="charges" aria-label="광란 게이지 ${p.charge}/10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < p.charge ? "on" : ""}"></i>`).join("")}</div>
@@ -609,13 +651,16 @@ function ui() {
     if (S.shop.length) h += `<div class="list">${S.shop.map(id => { const r = RB[id]; return `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-buy="${id}" ${S.credits < r.cost || S.relics.length >= 8 ? "disabled" : ""}>${r.cost}크레딧</button></div>`; }).join("")}</div>`;
     else if (S.day >= 2) h += `<p class="label">오늘 진열장이 비었어요.</p>`; else h += `<p class="label">진열장은 Day 2부터 열려요.</p>`;
     if (S.day >= 2) h += `<button class="ghost" id="reroll" ${S.freeReroll || S.gold >= rerollCost() ? "" : "disabled"}>진열장 바꾸기 · ${S.freeReroll ? "무료" : G(rerollCost())}</button>`;
+    h += `<details><summary class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 해금</summary><div class="list" style="margin-top:6px">${Object.entries(FAMS).map(([k, f]) =>
+      `<div class="item"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b><span class="tag">${f.name}${f.special ? " · 특수" : ""}</span><p>${unlocked(k) ? RB[f.mw].desc : `${f.name} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("")}</div></details>`;
     h += `<p class="label">내 유물 ${S.relics.length}/8</p>` + (S.relics.length ? `<div class="list">${S.relics.map(id => `<div class="item"><div><b>${RB[id].name}</b><p>${RB[id].desc}</p></div><button class="ghost" data-toss="${id}">버리기</button></div>`).join("")}</div>` : "");
   }
   if (s === "ghost") {
     if (!S.merchant) h += `<p class="label">유령 상인은 3일마다 와요. 다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}</p>`;
     else h += `<p>“흐흐… 오늘은 뭘 사겠나?”</p><div class="list">${Object.entries(S.merchant).map(([id, o]) => {
-      const nm = id === "pig" ? "기본 돼지 (+0)" : ITEMS[id].name, ds = id === "pig" ? "우리에 바로 들어가요" : ITEMS[id].desc;
-      return `<div class="item"><div><b>${nm}</b><span class="tag">남음 ${o.left}</span><p>${ds}</p></div><button data-shop="${id}" ${o.left && S.gold >= o.price ? "" : "disabled"}>${G(o.price)}</button></div>`; }).join("")}</div>
+      const sp = id === "special", nm = id === "pig" ? "기본 돼지 (+0)" : sp ? `${FAMS[o.fam].name} 특수 돼지 (+${o.lvl})` : ITEMS[id].name;
+      const ds = id === "pig" ? "우리에 바로 들어가요" : sp ? "기본 가치 2배 · 사면 바로 손에 들려요 (손이 비어 있어야 해요)" : ITEMS[id].desc;
+      return `<div class="item"><div><b>${nm}</b><span class="tag">남음 ${o.left}</span><p>${ds}</p></div><button data-shop="${id}" ${o.left && S.gold >= o.price && !(sp && S.hand) ? "" : "disabled"}>${G(o.price)}</button></div>`; }).join("")}</div>
       <p class="label">같은 물건을 또 사면 값이 3배가 돼요.</p>`;
   }
   if (s === "tribute") {
@@ -635,7 +680,8 @@ $("panel").addEventListener("click", async e => {
   if (id === "strike") return doStrike();
   if (["lift", "place", "drop", "offer"].includes(id) || d.pick || d.take) sfx.play("tap-ui-tick");
   if (id === "lift") { S.hand = S.anvil; S.anvil = null; lastSnap = null; }
-  if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null; }
+  if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null;
+    const a = S.anvil; if (S.inherit && a.lvl === 0 && a.strikes === 0) { a.lvl = a.peak = S.inherit; a.charge = Math.min(10, a.charge + 4); banner(`+${S.inherit} 계승`, "새벽의 칼집", "f"); S.inherit = 0; } }
   if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; sfx.play("whoosh-short"); const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); sfx.play("pop-bubble"); }
   if (id === "drop") { S.pen.push(S.hand); S.hand = null; }
   if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
@@ -645,9 +691,9 @@ $("panel").addEventListener("click", async e => {
   if (d.toss) S.relics = S.relics.filter(x => x !== d.toss);
   if (id === "gift") return pickGift();
   if (d.shop) { const o = S.merchant[d.shop]; S.gold -= o.price; o.left--; o.price *= 3;
-    if (d.shop === "pig") S.pen.push(newPig()); else if (d.shop === "note") S.extra += 2;
+    if (d.shop === "pig") S.pen.push(newPig()); else if (d.shop === "special") S.hand = newPig(o.lvl, o.fam); else if (d.shop === "note") S.extra += 2;
     else if (d.shop === "incense") { S.anger = Math.max(0, S.anger - 1); S.incenseUsed = true; } else S.items[d.shop] = (S.items[d.shop] || 0) + 1;
-    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : ITEMS[d.shop].name, "s"); sfx.play("coin-double"); }
+    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coin-double"); }
   if (d.use) { const k = d.use;
     if (k === "star") { if (inFrenzy()) return banner("안 돼요", "광란 중엔 못 써요", "h"); S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
     else if (S.armed[k]) { delete S.armed[k]; S.items[k] = (S.items[k] || 0) + 1; }
