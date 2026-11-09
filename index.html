@@ -2,199 +2,382 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
 <style>
-/* Layout: one-column market chalkboard — deadline bar, pig stage, action buttons, log */
+/* Layout: one column in a sooty forge — calendar deadline, item panel, pig on the anvil, actions */
 :root{
-  --bg:#1f2a24; --board:#26332c; --line:#3b4a41; --chalk:#eef0e6; --muted:#a9b3a6;
-  --pink:#f4a6b7; --gold:#f2c14e; --bad:#ff7a6b; --good:#8fd694;
+  --bg:#15110f; --panel:#221b17; --line:#3a2f28; --text:#f3e9dc; --muted:#a8988a; --ember:#ff8a3d;
+  --break:#ff4d4d; --dmg:#ff9f43; --keep:#8a8f98; --ok:#4dabf7; --great:#ffd43b;
   --display:"Jua","Gowun Dodum",system-ui,sans-serif;
   --body:"Gowun Dodum",system-ui,sans-serif;
   color-scheme:dark;
 }
 html,body{height:100%}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--chalk);font-family:var(--body);font-size:15px;
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;overflow-x:hidden;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
-main{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
-h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0;text-align:center;letter-spacing:.02em}
+main{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+main.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translate(-9px,4px)}40%{transform:translate(8px,-5px)}60%{transform:translate(-6px,-3px)}80%{transform:translate(5px,3px)}}
 .num{font-variant-numeric:tabular-nums}
-.deadline{background:var(--board);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px}
 .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
-.label{font-size:12px;color:var(--muted);letter-spacing:.06em}
-.big{font-family:var(--display);font-size:22px}
-.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
-.bar>i{display:block;height:100%;background:var(--gold);transition:width .3s}
-.bar.urgent>i{background:var(--bad)}
-.stage{text-align:center;padding-block:8px;position:relative}
-#pig{width:min(220px,60vw);height:auto;transition:transform .25s}
-#pig.up{animation:pop .45s}
-#pig.fail{animation:shake .4s}
-#pig.boom{animation:boom .6s}
-@keyframes pop{50%{transform:scale(1.18)}}
-@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-@keyframes boom{50%{transform:scale(.4) rotate(20deg);opacity:.2}}
-@media (prefers-reduced-motion:reduce){#pig{animation:none!important}}
-.lvl{font-family:var(--display);font-size:26px;color:var(--gold)}
-.name{font-family:var(--display);font-size:20px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
-.stats div{background:var(--board);border-radius:8px;padding:6px 4px}
-.stats b{display:block;font-family:var(--display);font-weight:400;font-size:17px}
+h1{font-family:var(--display);font-weight:400;font-size:26px;margin:0}
+.gold{color:var(--great)}
+.label{font-size:12px;color:var(--muted);letter-spacing:.05em}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
+.cal{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.cal span{aspect-ratio:1;display:grid;place-items:center;font-size:10px;color:var(--muted);background:#2b231e;border-radius:3px;position:relative}
+.cal span.x::after{content:"";position:absolute;inset:3px;background:
+  linear-gradient(45deg,transparent 44%,var(--break) 44% 56%,transparent 56%),
+  linear-gradient(-45deg,transparent 44%,var(--break) 44% 56%,transparent 56%)}
+.cal span.today{outline:2px solid var(--ember)}
+.iname{font-family:var(--display);font-size:20px}
+.ilvl{font-family:var(--display);font-size:24px;color:var(--great)}
+.value{font-family:var(--display);font-size:26px}
+.odds{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:2px}
+.odds span{font-size:11px;color:var(--muted)}
+.odds b{display:block;font-size:14px;font-weight:400}
+.stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)}
+.stack i{display:block;height:100%;transition:width .3s}
+#stage{width:100%;max-width:320px;aspect-ratio:1;margin:0 auto;display:block}
+#stage.hit{animation:hit .3s}
+@keyframes hit{30%{transform:scale(.9) rotate(-3deg)}60%{transform:scale(1.06)}}
+#ghost{display:flex;gap:8px;align-items:center;font-family:var(--display);font-size:17px;color:#cfe8e4}
+#ghost svg{flex:none}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-button{font-family:var(--display);font-size:18px;border:0;border-radius:10px;padding:14px 8px;cursor:pointer;color:#1f2a24;background:var(--chalk)}
+button{font-family:var(--display);font-size:18px;border:0;border-radius:10px;padding:14px 8px;cursor:pointer;color:#1a1410;background:var(--text)}
 button small{display:block;font-family:var(--body);font-size:12px;opacity:.75}
-button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:focus-visible{outline:3px solid var(--great);outline-offset:2px}
 button:disabled{opacity:.35;cursor:not-allowed}
-#enhance{grid-column:1/-1;background:var(--pink);font-size:22px}
-#sell{background:var(--gold)}
-#submit{background:var(--good)}
-#buy{grid-column:1/-1;background:var(--board);color:var(--chalk);border:1px solid var(--line);font-size:15px;padding:10px}
-#msg{min-height:1.4em;text-align:center;font-family:var(--display);font-size:18px}
-.good{color:var(--good)} .bad{color:var(--bad)} .gold{color:var(--gold)}
-#log{list-style:none;margin:0;padding:0;font-size:13px;color:var(--muted);display:grid;gap:2px;max-height:110px;overflow:auto}
-.over{position:fixed;inset:0;background:rgba(15,20,17,.92);display:grid;place-items:center;padding:24px;text-align:center;z-index:5}
-.over div{display:grid;gap:12px;max-width:320px}
-.over h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0;color:var(--bad)}
+#enhance{grid-column:1/-1;background:linear-gradient(180deg,#ffb06b,var(--ember));font-size:24px}
+#sell{background:var(--great)}
+#submit{background:#9be39f}
 details{font-size:13px;color:var(--muted)}
 details p{margin:.4em 0}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
+#banner{position:fixed;left:50%;top:40%;z-index:6;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%)}
+#banner.show{animation:bannerIn .45s cubic-bezier(.2,1.6,.4,1) forwards}
+#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(52px,17vw,104px);line-height:1;text-shadow:0 0 28px currentColor,0 5px 0 #000}
+#banner small{display:block;font-size:17px;color:var(--text);text-shadow:0 2px 4px #000;margin-top:6px}
+#banner.great b{color:var(--great);animation:hue 1s linear infinite}
+#banner.ok b{color:var(--ok)} #banner.keep b{color:var(--keep)} #banner.dmg b{color:var(--dmg)}
+#banner.boom b,#banner.fake b{color:var(--break);animation:jit .07s infinite}
+@keyframes bannerIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+@keyframes jit{25%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(4px,-2px) skewX(-8deg)}}
+.over{position:fixed;inset:0;background:rgba(10,8,7,.94);display:grid;place-items:center;padding:24px;text-align:center;z-index:8}
+.over div{display:grid;gap:12px;max-width:320px}
+.over h2{font-family:var(--display);font-weight:400;font-size:34px;margin:0;color:var(--break)}
+@media (prefers-reduced-motion:reduce){main.shake,#stage.hit,#banner b{animation:none!important}}
 </style>
 
-<main>
-  <h1>돼지 강화하기</h1>
+<main id="main">
+  <div class="row"><h1>돼지 강화하기</h1><span class="value num gold" id="money"></span></div>
 
-  <section class="deadline" aria-label="마감">
-    <div class="row"><span class="label">ROUND <b id="round" class="num">1</b> 상납금</span><span class="big num gold" id="quota"></span></div>
-    <div class="bar" id="bar"><i id="barFill"></i></div>
-    <div class="row"><span class="label">마감까지 남은 강화 횟수</span><span class="num" id="turns"></span></div>
+  <section class="box" aria-label="마감 달력">
+    <div class="row"><span><b id="month" class="num"></b>월 용의 공물 <b class="gold num" id="quota"></b></span><span class="label num" id="left"></span></div>
+    <div class="cal" id="cal"></div>
   </section>
 
-  <section class="stage" aria-live="polite">
-    <svg id="pig" viewBox="0 0 200 170" role="img" aria-label="돼지">
-      <g id="crown" hidden><path d="M70 30 L80 5 L100 25 L120 5 L130 30 Z" fill="var(--gold)"/></g>
-      <ellipse cx="100" cy="100" rx="78" ry="58" id="body" fill="var(--pink)"/>
-      <path d="M45 55 L40 20 L75 45 Z M155 55 L160 20 L125 45 Z" id="ears" fill="var(--pink)"/>
-      <ellipse cx="100" cy="112" rx="30" ry="20" fill="#000" opacity=".15"/>
-      <circle cx="90" cy="112" r="5" fill="#000" opacity=".5"/><circle cx="110" cy="112" r="5" fill="#000" opacity=".5"/>
-      <circle cx="72" cy="82" r="7" fill="#1f2a24"/><circle cx="128" cy="82" r="7" fill="#1f2a24"/>
-      <circle cx="74" cy="80" r="2" fill="#fff"/><circle cx="130" cy="80" r="2" fill="#fff"/>
-    </svg>
-    <div class="lvl num" id="lvl"></div>
-    <div class="name" id="name"></div>
+  <section class="box" aria-label="강화 정보">
+    <div class="row"><span class="iname" id="name"></span><span class="ilvl num" id="lvl"></span></div>
+    <div class="row"><span class="label">판매 가치</span><span class="value num" id="value"></span></div>
+    <div class="row"><span class="label">성공 시</span><span class="num" id="gain"></span></div>
+    <div class="row"><span class="label">광란 게이지</span><span class="num" id="frenzy"></span></div>
+    <div class="odds num" id="odds"></div>
+    <div class="stack" id="stack"></div>
   </section>
 
-  <div class="stats">
-    <div><span class="label">보유 돈</span><b class="num" id="money"></b></div>
-    <div><span class="label">성공 / 파괴</span><b class="num" id="odds"></b></div>
-    <div><span class="label">판매가</span><b class="num" id="price"></b></div>
+  <canvas id="stage" aria-label="강화 중인 돼지" role="img"></canvas>
+
+  <div id="ghost" hidden>
+    <svg width="34" height="40" viewBox="0 0 34 40" aria-hidden="true"><path d="M17 2C8 2 3 9 3 18v20l5-4 4 4 5-4 5 4 4-4 5 4V18C31 9 26 2 17 2Z" fill="#cfe8e4" opacity=".85"/><ellipse cx="12" cy="17" rx="2.5" ry="4" fill="#15110f"/><ellipse cx="22" cy="17" rx="2.5" ry="4" fill="#15110f"/></svg>
+    <span id="ghostText"></span>
   </div>
-
-  <div id="msg"></div>
 
   <div class="actions">
-    <button id="enhance">강화하기<small id="cost"></small></button>
-    <button id="sell">돼지 팔기<small id="sellSub"></small></button>
-    <button id="submit">상납금 제출<small>남은 횟수 이월</small></button>
-    <button id="buy"></button>
+    <button id="enhance">강화<small id="cost"></small></button>
+    <button id="sell">유령에게 팔기<small id="sellSub"></small></button>
+    <button id="submit">공물 바치기<small>남은 날 이월</small></button>
   </div>
-
-  <ul id="log"></ul>
 
   <details>
     <summary>규칙</summary>
-    <p>돈을 내고 돼지를 강화해요. 성공하면 등급이 오르고, 실패하면 그대로예요. 5강부터는 실패할 때 돼지가 도망갈(파괴) 수 있어요.</p>
-    <p>돼지를 팔면 등급에 따라 돈을 받고 새 아기돼지가 와요.</p>
-    <p>강화 1번에 마감 횟수가 1 줄어요. 횟수가 0이 되면 상납금을 자동으로 내야 하고, 돈이 모자라면 게임 오버예요. 미리 제출하면 남은 횟수는 다음 라운드로 넘어가요.</p>
-    <p>도망 방지권은 파괴될 때 자동으로 1장 써서 돼지를 지켜요.</p>
+    <p>강화할 때마다 비용을 내고 하루가 지나요. 결과는 다섯 가지예요: 대성공(+2), 성공(+1), 유지, 손상(-1), 파괴. 10강까지는 파괴되지 않아요.</p>
+    <p>돼지 가치는 등급이 하나 오를 때마다 1.5배가 돼요. 유령 손님에게 언제든 팔 수 있고, 팔면 새 아기돼지가 와요.</p>
+    <p>같은 돼지를 10번 강화하면 광란이 충전되고, 다음 강화 때 발동해요. 광란 중 6초 동안은 돼지가 파괴되지 않아요. 팔거나 파괴되면 게이지가 초기화돼요.</p>
+    <p>달력이 다 차면 용에게 공물을 바쳐야 해요. 돈이 모자라면 돼지를 급매하고, 그래도 모자라면 파산이에요. 미리 내면 남은 날이 다음 달로 넘어가요.</p>
+    <p>15강부터는 강화 연출이 나와요. 화면을 누르면 넘어가요.</p>
   </details>
 </main>
 
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="banner" aria-live="assertive"><b></b><small></small></div>
+
 <div class="over" id="over" hidden>
-  <div>
-    <h2>파산!</h2>
-    <p id="overText"></p>
-    <button id="restart">다시 시작</button>
-  </div>
+  <div><h2>파산!</h2><p id="overText"></p><button id="restart">다시 시작</button></div>
 </div>
 
 <script>
-// Balance (tuned by simulation: "enhance to N then sell" pays best around 11–13강)
-const MAX = 20, TURNS = 25, TICKET = 500;
+// Numbers matched to the reference video's +10 panel: 파괴 0 / 손상 3.8 / 유지 38.5 / 성공 50 / 대성공 7.7, value ×1.5 per level
+const MAX = 20, DAYS = 30, FRENZY_AT = 10, FRENZY_MS = 6000;
 const NAMES = ["아기돼지","꿀꿀이","통통돼지","분홍돼지","흙돼지","씨름돼지","근육돼지","철갑돼지","은빛돼지","금빛돼지",
   "왕돼지","장군돼지","용돼지","번개돼지","불꽃돼지","얼음돼지","무지개돼지","천상돼지","우주돼지","전설의 돼지","돼지신"];
-const COLORS = ["#f4a6b7","#f39bb0","#ee8fa6","#e9809b","#b98a6a","#d9a07a","#e07a5f","#9aa5b1","#c9d1d9","#f2c14e",
-  "#f7d774","#d96c4f","#5fb38a","#ffe066","#ff8c42","#8ecae6","#c084fc","#fef3c7","#6366f1","#fbbf24","#ffffff"];
-const P = L => Math.max(0.1, 0.95 - L * 0.045);
-const COST = L => Math.round(10 * 1.45 ** L);
-const PRICE = L => L === 0 ? 0 : Math.round(15 * 1.9 ** L);
-const BREAK = L => L < 5 ? 0 : Math.min(0.6, 0.1 + (L - 5) * 0.05);
-const QUOTA = r => Math.round(500 * 2.2 ** (r - 1) / 10) * 10;
-const won = n => n.toLocaleString("ko-KR") + "원";
+const HSL = [[350,80,82],[350,75,78],[345,70,74],[340,70,70],[25,35,55],[20,55,60],[10,65,58],[210,10,62],[210,15,80],[45,85,60],
+  [48,95,65],[5,70,50],[150,55,45],[55,100,60],[20,100,55],[195,80,75],[0,90,65],[45,60,92],[250,60,35],[280,70,55],[50,100,96]];
+const ODDS = L => { const base = Math.max(15, 95 - 4.5 * L), g = base * 0.154, b = L < 11 ? 0 : Math.min(40, (L - 10) * 3),
+  d = L < 5 ? 0 : Math.min(25, (L - 4) * 0.63), s = Math.min(base, 100 - g - b - d); return { b, d, k: 100 - s - g - b - d, s, g }; };
+const VALUE = L => Math.round(355 * 1.5 ** L);
+const COST = L => Math.max(30, Math.round(VALUE(L) * 0.07));
+const QUOTA = m => Math.round(5000 * 2.5 ** (m - 1) / 100) * 100;
+const roll = L => { const o = ODDS(L); let r = Math.random() * 100;
+  for (const k of ["b","d","k","s","g"]) if ((r -= o[k]) < 0) return k; return "s"; };
+const G = n => n.toLocaleString("ko-KR") + " G";
+console.assert(Array.from({ length: MAX + 1 }, (_, L) => ODDS(L)).every(o => o.k >= 0) && Math.abs(ODDS(10).k - 38.5) < 0.1 && ODDS(10).b === 0 && VALUE(10) > 20000, "odds/value drifted from reference");
 
-const fresh = () => ({ money: 200, level: 0, round: 1, turns: TURNS, tickets: 0 });
-let s = (() => { try { return JSON.parse(localStorage.getItem("pig")) || fresh(); } catch { return fresh(); } })();
-const save = () => { try { localStorage.setItem("pig", JSON.stringify(s)); } catch {} };
+const fresh = () => ({ money: 1000, level: 0, month: 1, used: 0, days: DAYS, streak: 0 });
+let s = (() => { try { return JSON.parse(localStorage.getItem("pig2")) || fresh(); } catch { return fresh(); } })();
+const save = () => { try { localStorage.setItem("pig2", JSON.stringify(s)); } catch {} };
 window.claude?.hot?.snapshot?.(() => s);
 
 const $ = id => document.getElementById(id);
-function say(text, cls = "") { $("msg").textContent = text; $("msg").className = cls;
-  const li = document.createElement("li"); li.textContent = `R${s.round} · ${text}`; $("log").prepend(li); }
-function anim(cls) { const p = $("pig"); p.classList.remove("up","fail","boom"); void p.offsetWidth; p.classList.add(cls); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let busy = false, shownLevel = null, frenzyUntil = 0;
+const frenzyOn = () => performance.now() < frenzyUntil;
 
-function render() {
-  const L = s.level, q = QUOTA(s.round);
-  $("round").textContent = s.round; $("quota").textContent = won(q);
-  $("turns").textContent = s.turns + "회";
-  $("barFill").style.width = (s.turns / TURNS * 100) + "%";
-  $("bar").classList.toggle("urgent", s.turns <= 5);
-  $("lvl").textContent = "+" + L; $("name").textContent = NAMES[L];
-  $("body").setAttribute("fill", COLORS[L]); $("ears").setAttribute("fill", COLORS[L]);
-  $("pig").style.transform = `scale(${0.8 + L * 0.015})`;
-  $("crown").toggleAttribute("hidden", L < 10);
-  $("money").textContent = won(s.money);
-  $("odds").textContent = L >= MAX ? "MAX" : `${Math.round(P(L)*100)}% / ${Math.round((1-P(L))*BREAK(L)*100)}%`;
-  $("price").textContent = won(PRICE(L));
-  $("cost").textContent = L >= MAX ? "최대 등급" : won(COST(L));
-  $("sellSub").textContent = L ? won(PRICE(L)) : "아기돼지는 못 팔아요";
-  $("buy").textContent = `도망 방지권 구매 ${won(TICKET)} · 보유 ${s.tickets}장`;
-  $("enhance").disabled = L >= MAX || s.money < COST(L);
-  $("sell").disabled = L === 0;
-  $("submit").disabled = s.money < q;
-  $("buy").disabled = s.money < TICKET;
+// ---------- UI ----------
+function ui() {
+  const L = shownLevel ?? s.level, o = ODDS(L), q = QUOTA(s.month);
+  $("money").textContent = G(s.money);
+  $("month").textContent = s.month; $("quota").textContent = G(q);
+  $("left").textContent = `남은 날 ${s.days - s.used}일`;
+  $("cal").innerHTML = Array.from({ length: s.days }, (_, i) =>
+    `<span class="${i < s.used ? "x" : i === s.used ? "today" : ""}">${i + 1}</span>`).join("");
+  $("name").textContent = NAMES[L]; $("lvl").textContent = "+" + L;
+  $("value").textContent = G(VALUE(L));
+  $("gain").textContent = L >= MAX ? "최대 강화" : `+${G(VALUE(L + 1) - VALUE(L))} · 1.5배`;
+  const cols = { b: "var(--break)", d: "var(--dmg)", k: "var(--keep)", s: "var(--ok)", g: "var(--great)" };
+  const lab = { b: "파괴", d: "손상", k: "유지", s: "성공", g: "대성공" };
+  $("odds").innerHTML = Object.keys(lab).map(k => `<span>${lab[k]}<b style="color:${cols[k]}">${o[k].toFixed(1)}%</b></span>`).join("");
+  $("stack").innerHTML = Object.keys(lab).map(k => `<i style="width:${o[k]}%;background:${cols[k]}"></i>`).join("");
+  $("cost").textContent = s.level >= MAX ? "최대 강화" : `${G(COST(s.level))} · 하루 소모`;
+  $("sellSub").textContent = s.level ? G(VALUE(s.level)) : "아기돼지는 안 사요";
+  $("enhance").disabled = busy || s.level >= MAX || s.money < COST(s.level);
+  $("sell").disabled = busy || s.level === 0;
+  $("submit").disabled = busy || s.money < q;
   save();
 }
+function banner(main, sub = "", cls = "") {
+  const b = $("banner"); b.className = ""; void b.offsetWidth;
+  b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls;
+}
+const hideBanner = () => $("banner").className = "";
+function shake() { const m = $("main"); m.classList.remove("shake"); void m.offsetWidth; m.classList.add("shake"); if (navigator.vibrate) try { navigator.vibrate(120); } catch {} }
 
-function nextRound(carry) {
-  s.money -= QUOTA(s.round); s.round++; s.turns = TURNS + carry;
-  say(`상납 완료! 다음 상납금 ${won(QUOTA(s.round))}`, "good");
+// ---------- Drawing ----------
+const stage = $("stage"), sc = stage.getContext("2d"), fx = $("fx"), fc = fx.getContext("2d");
+function fit() { const d = devicePixelRatio || 1;
+  for (const c of [stage, fx]) { const r = c.getBoundingClientRect(); c.width = r.width * d; c.height = r.height * d; c.getContext("2d").setTransform(d, 0, 0, d, 0, 0); } }
+addEventListener("resize", fit);
+
+const hsl = (L, dl = 0, a = 1) => { const [h, sa, l] = HSL[L]; return `hsla(${h},${sa}%,${Math.max(0, Math.min(100, l + dl))}%,${a})`; };
+const STARS = Array.from({ length: 40 }, () => [Math.random() * 160 - 80, Math.random() * 120 - 50, Math.random() * 1.8 + .4]);
+
+function drawPig(c, x, y, sz, L, t) {
+  c.save(); c.translate(x, y); c.scale(sz, sz);
+  const rainbow = h => `hsl(${(t * 90 + h) % 360},95%,62%)`;
+  if (L >= 10) { // aura
+    const r = 120 + Math.sin(t * 3) * 8, g = c.createRadialGradient(0, 10, 30, 0, 10, r);
+    g.addColorStop(0, L >= 16 ? rainbow(0).replace("hsl", "hsla").replace(")", ",.55)") : hsl(L, 10, .5)); g.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(0, 10, r, 0, 7); c.fill();
+  }
+  if (L >= 15) { // god rays
+    c.save(); c.rotate(t * .5);
+    for (let i = 0; i < 12; i++) { c.rotate(Math.PI / 6); c.fillStyle = L >= 16 ? `hsla(${(t * 90 + i * 30) % 360},100%,70%,.13)` : "rgba(255,240,200,.12)";
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(-14, -170); c.lineTo(14, -170); c.fill(); }
+    c.restore();
+    for (const side of [-1, 1]) { // wings
+      c.save(); c.scale(side, 1); c.rotate(Math.sin(t * 6) * .12);
+      c.fillStyle = L >= 18 ? "rgba(180,160,255,.9)" : "rgba(255,255,255,.92)";
+      for (let f = 0; f < 4; f++) { c.beginPath(); c.moveTo(55, -10); c.quadraticCurveTo(110 + f * 8, -70 + f * 18, 135 - f * 6, -20 + f * 16); c.quadraticCurveTo(100, -5 + f * 6, 55, 10); c.fill(); }
+      c.restore();
+    }
+  }
+  c.fillStyle = hsl(L, -25); // legs + tail
+  for (const lx of [-50, -22, 22, 50]) c.fillRect(lx - 9, 50, 18, 24);
+  c.strokeStyle = hsl(L, -15); c.lineWidth = 5; c.beginPath(); c.arc(-88, 0, 9, 0, 5); c.stroke();
+  let body; // body
+  if (L === 16) { body = c.createLinearGradient(-80, -50, 80, 70); for (let i = 0; i < 6; i++) body.addColorStop(i / 5, rainbow(i * 60)); }
+  else { body = c.createRadialGradient(-25, -15, 10, 0, 10, 95); body.addColorStop(0, hsl(L, 15)); body.addColorStop(.6, hsl(L)); body.addColorStop(1, hsl(L, -22)); }
+  c.fillStyle = body; c.beginPath(); c.ellipse(0, 10, 80, 60, 0, 0, 7); c.fill();
+  if (L >= 18) { c.save(); c.clip(); for (const [sx, sy, r] of STARS) { c.fillStyle = `rgba(255,255,255,${.5 + .5 * Math.sin(t * 4 + sx)})`; c.beginPath(); c.arc(sx, sy, r, 0, 7); c.fill(); } c.restore(); }
+  if (L >= 5 && L <= 9 || L === 11) { c.strokeStyle = L === 11 ? "#ffd43b" : "rgba(255,255,255,.35)"; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 10, 80, 22, 0, .2, Math.PI - .2); c.stroke(); }
+  if (L >= 7) { c.fillStyle = "rgba(255,255,255,.35)"; c.beginPath(); c.ellipse(-35, -22, 22, 9, -.5, 0, 7); c.fill(); } // metallic sheen
+  c.fillStyle = L === 16 ? rainbow(200) : hsl(L, -8); // ears
+  c.beginPath(); c.moveTo(-55, -35); c.lineTo(-62, -78); c.lineTo(-25, -48); c.moveTo(55, -35); c.lineTo(62, -78); c.lineTo(25, -48); c.fill();
+  const eye = L >= 12 ? "#ffd43b" : L >= 7 ? "#ff5a5a" : "#1a1410"; // eyes
+  if (L >= 7) { c.shadowColor = eye; c.shadowBlur = 14; }
+  c.fillStyle = eye; c.beginPath(); c.arc(-28, -8, 7, 0, 7); c.arc(28, -8, 7, 0, 7); c.fill(); c.shadowBlur = 0;
+  c.fillStyle = "#fff"; c.beginPath(); c.arc(-26, -10, 2.2, 0, 7); c.arc(30, -10, 2.2, 0, 7); c.fill();
+  c.fillStyle = hsl(L, -12); c.beginPath(); c.ellipse(0, 20, 26, 17, 0, 0, 7); c.fill(); // snout
+  c.fillStyle = "rgba(0,0,0,.55)"; c.beginPath(); c.ellipse(-8, 20, 4, 6, 0, 0, 7); c.ellipse(8, 20, 4, 6, 0, 0, 7); c.fill();
+  if (L >= 10) { // crown
+    c.fillStyle = "#ffd43b"; c.strokeStyle = "#b8860b"; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(-32, -50); c.lineTo(-38, -88); c.lineTo(-16, -66); c.lineTo(0, -96); c.lineTo(16, -66); c.lineTo(38, -88); c.lineTo(32, -50); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = "#ff4d6d"; c.beginPath(); c.arc(0, -62, 5, 0, 7); c.fill();
+  }
+  if (L >= 20) { c.strokeStyle = "#fff6b0"; c.lineWidth = 5; c.shadowColor = "#fff6b0"; c.shadowBlur = 20; c.beginPath(); c.ellipse(0, -112, 42, 10, 0, 0, 7); c.stroke(); c.shadowBlur = 0; }
+  if (L >= 13) for (let i = 0; i < 8; i++) { // orbiting sparkles
+    const a = t * 1.6 + i * Math.PI / 4, px = Math.cos(a) * 112, py = 10 + Math.sin(a) * 74, r = 4 + 2 * Math.sin(t * 5 + i);
+    c.fillStyle = L >= 16 ? rainbow(i * 45) : "#fff6b0";
+    c.beginPath(); c.moveTo(px, py - r * 2); c.lineTo(px + r * .5, py); c.lineTo(px, py + r * 2); c.lineTo(px - r * .5, py); c.moveTo(px - r * 2, py); c.lineTo(px, py + r * .5); c.lineTo(px + r * 2, py); c.lineTo(px, py - r * .5); c.fill();
+  }
+  if (L >= 18 && Math.random() < .25) { // lightning
+    c.strokeStyle = "#c9b8ff"; c.lineWidth = 2.5; c.shadowColor = "#fff"; c.shadowBlur = 10; c.beginPath();
+    let lx = (Math.random() - .5) * 200, ly = -130; c.moveTo(lx, ly); while (ly < 60) { lx += (Math.random() - .5) * 40; ly += 22; c.lineTo(lx, ly); } c.stroke(); c.shadowBlur = 0;
+  }
+  c.restore();
 }
 
-function deadlineCheck() {
-  // No pig to sell and no money to enhance = stuck, so it counts as bankrupt too
-  const stuck = s.level === 0 && s.money < COST(0) && s.money < QUOTA(s.round);
-  if (s.turns > 0 && !stuck) return;
-  if (s.money >= QUOTA(s.round)) return nextRound(0);
-  // Last chance: auto-sell the pig before declaring bankruptcy
-  if (s.level && s.money + PRICE(s.level) >= QUOTA(s.round)) {
-    s.money += PRICE(s.level); say(`마감! ${NAMES[s.level]}를 급매했어요`, "gold"); s.level = 0; return nextRound(0);
+// ---------- Effects ----------
+let pigHidden = false, cine = null, shards = [], sparks = [], cracks = null, flash = 0, last = performance.now();
+const stageScale = L => stage.getBoundingClientRect().width / 260 * (.85 + L * .012);
+function pigPos() {
+  if (cine) return { x: innerWidth / 2, y: innerHeight * .45, s: Math.min(innerWidth, innerHeight) / 330 };
+  const r = stage.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 + 6, s: stageScale(shownLevel ?? s.level) };
+}
+function burst(p, color, n) {
+  for (let i = 0; i < n; i++) { const a = Math.random() * 7, v = 150 + Math.random() * 450;
+    sparks.push({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, life: 1, color: color === "rainbow" ? `hsl(${Math.random() * 360},100%,65%)` : color, r: 2 + Math.random() * 3 }); }
+}
+function crack(p, dur, branches) {
+  const paths = Array.from({ length: branches }, () => { let x = (Math.random() - .5) * 20, y = (Math.random() - .5) * 20, a = Math.random() * 7; const pts = [[x, y]];
+    for (let i = 0; i < 6; i++) { a += (Math.random() - .5) * 1.1; x += Math.cos(a) * 16; y += Math.sin(a) * 13; pts.push([x, y]); } return pts; });
+  cracks = { p, start: performance.now(), dur, paths };
+}
+function shatter(p, L) {
+  const size = 300 * p.s, d = devicePixelRatio || 1, off = document.createElement("canvas");
+  off.width = off.height = size * d; const oc = off.getContext("2d"); oc.setTransform(d, 0, 0, d, 0, 0);
+  drawPig(oc, size / 2, size / 2, p.s, L, performance.now() / 1000);
+  const N = 7, cell = size / N, pt = [];
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) { const edge = i % N === 0 || j % N === 0;
+    pt.push([i * cell + (edge ? 0 : (Math.random() - .5) * cell * .8), j * cell + (edge ? 0 : (Math.random() - .5) * cell * .8)]); }
+  const P = (i, j) => pt[j * (N + 1) + i];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) for (const tri of [[P(i, j), P(i + 1, j), P(i, j + 1)], [P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)]]) {
+    const cx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3, cy = (tri[0][1] + tri[1][1] + tri[2][1]) / 3, dx = cx - size / 2, dy = cy - size / 2;
+    shards.push({ off, size, cx, cy, pts: tri.map(([a, b]) => [a - cx, b - cy]), x: p.x - size / 2 + cx, y: p.y - size / 2 + cy,
+      vx: dx * 6 + (Math.random() - .5) * 260, vy: dy * 6 - 250 - Math.random() * 250, rot: 0, vr: (Math.random() - .5) * 14, life: 1 });
   }
-  $("overText").textContent = `상납금 ${won(QUOTA(s.round))}을 못 냈어요. ${s.round - 1}라운드 생존.`;
+  burst(p, "#fff", 40); burst(p, hsl(L), 40);
+}
+
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000), t = now / 1000; last = now;
+  $("frenzy").textContent = frenzyOn() ? `광란 중! ${((frenzyUntil - now) / 1000).toFixed(1)}s` : s.streak >= FRENZY_AT ? "충전 완료 · 다음 강화 때 발동" : `${s.streak || 0} / ${FRENZY_AT}`;
+  $("frenzy").style.color = frenzyOn() || s.streak >= FRENZY_AT ? "var(--ember)" : "";
+  const r = stage.getBoundingClientRect(), L = shownLevel ?? s.level;
+  sc.clearRect(0, 0, r.width, r.height);
+  if (!pigHidden && !cine) drawPig(sc, r.width / 2, r.height / 2 + 6, stageScale(L), L, t);
+  fc.clearRect(0, 0, innerWidth, innerHeight);
+  if (cine) { // FIFA-style enhancement scene
+    const p = pigPos(), age = now - cine.start;
+    fc.fillStyle = `rgba(8,6,5,${Math.min(.92, age / 350)})`; fc.fillRect(0, 0, innerWidth, innerHeight);
+    if (cine.charging) {
+      const k = Math.min(1, age / cine.dur), jit = k > .7 ? (Math.random() - .5) * 10 * k : 0;
+      fc.save(); fc.translate(p.x, p.y);
+      fc.lineWidth = 10; fc.strokeStyle = "rgba(255,255,255,.12)"; fc.beginPath(); fc.arc(0, 0, 150 * p.s, 0, 7); fc.stroke();
+      const g = fc.createLinearGradient(-150 * p.s, 0, 150 * p.s, 0); g.addColorStop(0, "#ff8a3d"); g.addColorStop(1, "#ffd43b");
+      fc.strokeStyle = g; fc.shadowColor = "#ffd43b"; fc.shadowBlur = 20 * k; fc.beginPath(); fc.arc(0, 0, 150 * p.s, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); fc.stroke(); fc.shadowBlur = 0;
+      fc.restore();
+      if (!pigHidden) drawPig(fc, p.x + jit, p.y + jit, p.s * (1 + k * .12), L, t * (1 + k * 3));
+      fc.textAlign = "center"; fc.fillStyle = "#fff"; fc.font = `${Math.round(30 * p.s + 10)}px Jua, sans-serif`;
+      fc.fillText(`+${cine.L}  ▶  +${cine.L + 1}`, p.x, p.y - 175 * p.s);
+      fc.font = `${Math.round(18 * p.s + 8)}px Jua, sans-serif`; fc.fillStyle = "#ffd43b";
+      fc.fillText(`${(cine.dur / 1000 * (1 - k)).toFixed(1)}s`, p.x, p.y + 185 * p.s);
+    } else if (!pigHidden) drawPig(fc, p.x, p.y, p.s, L, t);
+  }
+  if (cracks) {
+    const k = Math.min(1, (now - cracks.start) / cracks.dur), { p } = cracks;
+    fc.save(); fc.translate(p.x, p.y + 10 * p.s); fc.scale(p.s, p.s); fc.lineCap = "round";
+    for (const [w, col] of [[6, "rgba(0,0,0,.7)"], [2.5, "#fff"]]) { fc.lineWidth = w; fc.strokeStyle = col;
+      for (const path of cracks.paths) { const n = Math.ceil(k * (path.length - 1)); fc.beginPath(); fc.moveTo(...path[0]); for (let i = 1; i <= n; i++) fc.lineTo(...path[i]); fc.stroke(); } }
+    fc.restore();
+  }
+  shards = shards.filter(o => o.life > 0 && o.y < innerHeight + 200);
+  for (const o of shards) {
+    o.vy += 1100 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.rot += o.vr * dt; o.life -= dt * .55;
+    fc.save(); fc.globalAlpha = Math.max(0, o.life); fc.translate(o.x, o.y); fc.rotate(o.rot);
+    fc.beginPath(); fc.moveTo(...o.pts[0]); fc.lineTo(...o.pts[1]); fc.lineTo(...o.pts[2]); fc.closePath(); fc.clip();
+    fc.drawImage(o.off, -o.cx, -o.cy, o.size, o.size); fc.restore();
+  }
+  sparks = sparks.filter(o => o.life > 0);
+  for (const o of sparks) { o.vy += 500 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.life -= dt * 1.1;
+    fc.globalAlpha = Math.max(0, o.life); fc.fillStyle = o.color; fc.beginPath(); fc.arc(o.x, o.y, o.r, 0, 7); fc.fill(); }
+  fc.globalAlpha = 1;
+  if (flash > 0) { fc.fillStyle = `rgba(255,255,255,${flash})`; fc.fillRect(0, 0, innerWidth, innerHeight); flash -= dt * 2.2; }
+  requestAnimationFrame(frame);
+}
+
+// ---------- Game flow ----------
+function tapOrWait(ms) { return new Promise(res => { const done = () => { clearTimeout(id); removeEventListener("pointerdown", done); res(); };
+  const id = setTimeout(done, ms); setTimeout(() => addEventListener("pointerdown", done), 250); }); }
+
+async function destroy(L, p) {
+  if (Math.random() < .5) { // pretend it worked
+    shownLevel = Math.min(MAX, L + 1); ui(); burst(p, "#4dabf7", 45);
+    banner("성공!", `+${shownLevel} ${NAMES[shownLevel]}`, "ok"); await sleep(1100);
+    banner("…은 구라", "", "fake"); await sleep(450);
+  }
+  shake(); crack(p, 650, 9); await sleep(700);
+  const broke = shownLevel ?? L; cracks = null; pigHidden = true;
+  shatter(p, broke); flash = 1; shake();
+  banner("파사삭", `+${broke} ${NAMES[broke]} 파괴`, "boom");
+  shownLevel = null; s.level = 0; s.streak = 0; ui();
+  await sleep(1500); pigHidden = false;
+}
+
+async function enhance() {
+  const L = s.level; if (busy || L >= MAX || s.money < COST(L)) return;
+  busy = true; s.money -= COST(L); s.used++; hideBanner(); $("ghost").hidden = true; ui();
+  if (s.streak >= FRENZY_AT) { s.streak = 0; frenzyUntil = performance.now() + FRENZY_MS; flash = .5; banner("광란!", "6초 동안 파괴 없음", "great"); await sleep(700); }
+  else if (!frenzyOn()) s.streak = (s.streak || 0) + 1;
+  let res = roll(L); const big = L >= 15, saved = res === "b" && frenzyOn();
+  if (saved) res = "k";
+  if (big) { cine = { start: performance.now(), dur: reduced || frenzyOn() ? 800 : 2500, charging: true, L }; await sleep(cine.dur); cine.charging = false; flash = .9; }
+  else { stage.classList.remove("hit"); void stage.offsetWidth; stage.classList.add("hit"); await sleep(300); }
+  const p = pigPos();
+  if (res === "g") { s.level = Math.min(MAX, L + 2); burst(p, "rainbow", 120); flash = Math.max(flash, .6); banner("대성공!!", `+${L} → +${s.level} ${NAMES[s.level]}`, "great"); }
+  else if (res === "s") { s.level = L + 1; burst(p, "#ffd43b", 60); banner("성공!", `+${s.level} ${NAMES[s.level]}`, "ok"); }
+  else if (res === "k") banner("유지", saved ? "광란이 파괴를 막았다" : "아무 일도 없었다", "keep");
+  else if (res === "d") { shake(); crack(p, 300, 3); await sleep(400); cracks = null; s.level = L - 1; banner("손상", `+${L} → +${s.level}`, "dmg"); }
+  else await destroy(L, p);
+  ui();
+  if (big) { await tapOrWait(2200); cine = null; }
+  busy = false; deadlineCheck(); ui();
+}
+
+const GHOST = [[3, ["이걸 돈 받고 판다고?", "…귀엽긴 하네", "간식값은 쳐줄게"]], [9, ["반가움", "괜찮은 돼지군", "흥정은 안 해"]],
+  [14, ["합리적 의심", "이거 진짜 네가 키웠어?", "…소문 내지 마"]], [MAX, ["말도 안 돼", "유령인 내가 소름 돋았어", "전설이 되겠군"]]];
+function sell() {
+  if (busy || !s.level) return;
+  const lines = GHOST.find(([max]) => s.level <= max)[1];
+  $("ghostText").textContent = `“${lines[Math.floor(Math.random() * lines.length)]}”  +${G(VALUE(s.level))}`; $("ghost").hidden = false;
+  burst(pigPos(), "#ffd43b", 40); s.money += VALUE(s.level); s.level = 0; s.streak = 0; hideBanner(); deadlineCheck(); ui();
+}
+
+function nextMonth(carry) { s.money -= QUOTA(s.month); s.month++; s.used = 0; s.days = DAYS + carry; banner("공물 완료", `다음 달 공물 ${G(QUOTA(s.month))}`, "ok"); }
+function deadlineCheck() {
+  const stuck = s.level === 0 && s.money < COST(0) && s.money < QUOTA(s.month); // nothing to sell, nothing to enhance with
+  if (s.used < s.days && !stuck) return;
+  if (s.money >= QUOTA(s.month)) return nextMonth(0);
+  if (s.level && s.money + VALUE(s.level) >= QUOTA(s.month)) { s.money += VALUE(s.level); s.level = 0; s.streak = 0; return nextMonth(0); }
+  $("overText").textContent = `${s.month}월 용의 공물 ${G(QUOTA(s.month))}을 못 바쳤어요. ${s.month - 1}달 버텼어요.`;
   $("over").hidden = false;
 }
 
-$("enhance").onclick = () => {
-  const L = s.level; if (L >= MAX || s.money < COST(L)) return;
-  s.money -= COST(L); s.turns--;
-  if (Math.random() < P(L)) { s.level++; anim("up"); say(`강화 성공! +${s.level} ${NAMES[s.level]}`, "good"); }
-  else if (Math.random() < BREAK(L)) {
-    if (s.tickets) { s.tickets--; anim("fail"); say("방지권으로 도망을 막았어요", "gold"); }
-    else { s.level = 0; anim("boom"); say(`${NAMES[L]}가 도망갔어요…`, "bad"); }
-  } else { anim("fail"); say("강화 실패. 등급 유지", ""); }
-  deadlineCheck(); render();
-};
-$("sell").onclick = () => { if (!s.level) return;
-  s.money += PRICE(s.level); say(`${NAMES[s.level]} 판매 +${won(PRICE(s.level))}`, "gold"); s.level = 0; deadlineCheck(); render(); };
-$("submit").onclick = () => { if (s.money < QUOTA(s.round)) return; nextRound(s.turns); render(); };
-$("buy").onclick = () => { if (s.money < TICKET) return; s.money -= TICKET; s.tickets++; deadlineCheck(); render(); };
-$("restart").onclick = () => { s = fresh(); $("over").hidden = true; $("log").innerHTML = ""; say("새 아기돼지가 왔어요"); render(); };
+$("enhance").onclick = enhance;
+$("sell").onclick = sell;
+$("submit").onclick = () => { if (busy || s.money < QUOTA(s.month)) return; nextMonth(s.days - s.used); ui(); };
+$("restart").onclick = () => { s = fresh(); $("over").hidden = true; hideBanner(); $("ghost").hidden = true; ui(); };
 
-deadlineCheck();
-render();
+fit(); deadlineCheck(); ui(); requestAnimationFrame(frame);
 </script>
