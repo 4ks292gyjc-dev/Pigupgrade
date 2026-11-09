@@ -452,7 +452,25 @@ const STATIONS = [
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
 const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
-function box(w, h, d, mat, pos) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.copy(pos); m.lookAt(0, pos.y, 0); scene.add(m); return m; }
+// Box with bevelled, rounded edges so nothing reads as a bare cube
+function rbox(w, h, d, r = Math.min(w, h, d) * .12) {
+  const s = new THREE.Shape(), x = w / 2 - r, y = h / 2 - r;
+  s.moveTo(-x, -y); s.lineTo(x, -y); s.lineTo(x, y); s.lineTo(-x, y);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(.001, d - 2 * r), bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3, curveSegments: 4 });
+  g.center(); g.computeVertexNormals(); return g;
+}
+function box(w, h, d, mat, pos) { const m = new THREE.Mesh(rbox(w, h, d), mat); m.position.copy(pos); m.lookAt(0, pos.y, 0); scene.add(m); return m; }
+function canvasTex(draw, n = 256) { const c = document.createElement("canvas"); c.width = c.height = n; draw(c.getContext("2d"), n); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; }
+const GRAIN = canvasTex((x, n) => { x.fillStyle = "#d8d0c4"; x.fillRect(0, 0, n, n);
+  for (let i = 0; i < 70; i++) { x.strokeStyle = `rgba(60,35,15,${.08 + Math.random() * .22})`; x.lineWidth = .5 + Math.random() * 2; x.beginPath();
+    const y0 = Math.random() * n; x.moveTo(0, y0); for (let k = 0; k <= n; k += 16) x.lineTo(k, y0 + Math.sin(k * .03 + i) * 4); x.stroke(); } });
+const BRICK = canvasTex((x, n) => { x.fillStyle = "#2a1610"; x.fillRect(0, 0, n, n);
+  for (let r = 0; r < 8; r++) for (let c = -1; c < 4; c++) { const l = 28 + Math.random() * 14;
+    x.fillStyle = `hsl(${10 + Math.random() * 12},${35 + Math.random() * 20}%,${l}%)`; x.fillRect(c * 64 + (r % 2) * 32 + 3, r * 32 + 3, 58, 26); } });
+const STRAW = canvasTex((x, n) => { x.fillStyle = "#b08a3a"; x.fillRect(0, 0, n, n);
+  for (let i = 0; i < 400; i++) { x.strokeStyle = `hsla(${40 + Math.random() * 12},60%,${35 + Math.random() * 35}%,.8)`; x.lineWidth = 1 + Math.random(); x.beginPath();
+    const a = (Math.random() - .5) * .5, X = Math.random() * n, Y = Math.random() * n; x.moveTo(X, Y); x.lineTo(X + Math.cos(a) * 40, Y + Math.sin(a) * 40); x.stroke(); } });
+const wood = c => M(c, { map: GRAIN, bumpMap: GRAIN, bumpScale: .01 });
 function plankTex(base, line) {
   const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
   x.fillStyle = base; x.fillRect(0, 0, 256, 256);
@@ -461,31 +479,69 @@ function plankTex(base, line) {
 }
 { // barn room
   const ft = plankTex("#5a3a22", "#2a1a0e"); ft.repeat.set(6, 6);
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xffffff, { map: ft })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xffffff, { map: ft, bumpMap: ft, bumpScale: .03 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
   const wt = plankTex("#4a2e1a", "#1e1209"); wt.repeat.set(10, 2);
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xffffff, { map: wt, side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
-  for (let i = 0; i < 6; i++) box(.25, 4, .25, M(0x2b1a0e), at(i * 60 + 30, 4.05, 2));
-  const hay = M(0xc9a24a, { roughness: 1 });
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xffffff, { map: wt, bumpMap: wt, bumpScale: .03, side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
+  for (let i = 0; i < 6; i++) box(.25, 4, .25, wood(0x5a3a22), at(i * 60 + 30, 4.05, 2));
+  const hay = M(0xffffff, { map: STRAW, bumpMap: STRAW, bumpScale: .03, roughness: 1 });
   for (const y of [25, 85, 135]) box(.8, .4, .5, hay, at(y, 3.6, .2));
 }
 // Anvil + hammer
 const anvilPos = at(0, 1.6, 0);
-box(.5, .5, .4, M(0x2a2420), anvilPos.clone().setY(.25));
-box(.42, .22, .9, M(0x55585e, { metalness: .8, roughness: .35 }), anvilPos.clone().setY(.61));
+{ const stump = new THREE.Mesh(new THREE.CylinderGeometry(.27, .31, .3, 24), wood(0x6b4a30)); stump.position.copy(anvilPos).setY(.15); scene.add(stump);
+  const top = new THREE.Mesh(new THREE.CircleGeometry(.27, 24), M(0x8a6a48, { map: GRAIN })); top.rotation.x = -Math.PI / 2; top.position.copy(anvilPos).setY(.301); scene.add(top);
+  const s = new THREE.Shape(); // side profile, x = left/right, y up from stump top
+  s.moveTo(-.3, 0); s.lineTo(.3, 0); s.lineTo(.28, .05); s.quadraticCurveTo(.13, .08, .12, .2); s.quadraticCurveTo(.14, .28, .3, .3);
+  s.lineTo(.32, .42); s.lineTo(-.3, .42); s.quadraticCurveTo(-.5, .42, -.66, .37); s.quadraticCurveTo(-.45, .3, -.25, .29);
+  s.quadraticCurveTo(-.13, .27, -.12, .2); s.quadraticCurveTo(-.13, .08, -.28, .05); s.lineTo(-.3, 0);
+  const g = new THREE.ExtrudeGeometry(s, { depth: .22, bevelEnabled: true, bevelThickness: .02, bevelSize: .015, bevelSegments: 3, curveSegments: 18 });
+  g.translate(0, 0, -.11);
+  const body = new THREE.Mesh(g, M(0x3c3f44, { metalness: .85, roughness: .45 })); body.position.copy(anvilPos).setY(.3); scene.add(body);
+  const face = new THREE.Mesh(rbox(.6, .02, .25, .006), M(0xb8bec6, { metalness: .6, roughness: .3 })); face.position.copy(anvilPos).add(new THREE.Vector3(.01, .735, 0)); scene.add(face);
+  const hardy = new THREE.Mesh(new THREE.BoxGeometry(.04, .005, .04), M(0x050505)); hardy.position.copy(anvilPos).add(new THREE.Vector3(.24, .746, 0)); scene.add(hardy); }
 // Pivot sits right of the pig at pig-top height; rotation.z = 0 puts the head flat on the pig, negative lifts it overhead
 const hammer = new THREE.Group(); hammer.position.copy(anvilPos).add(new THREE.Vector3(.62, 1.13, 0)); scene.add(hammer);
-{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .62), M(0x6b4423)); h.rotation.z = Math.PI / 2; h.position.x = -.31; hammer.add(h);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(.18, .15, .3), M(0x777b82, { metalness: .9, roughness: .3 })); head.position.x = -.62; hammer.add(head); }
+{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.022, .032, .64, 16), wood(0x8a5a32)); h.rotation.z = Math.PI / 2; h.position.x = -.31; hammer.add(h);
+  // Lathe-turned head: flat striking face down, tapered peen up
+  const prof = [[0, -.08], [.05, -.08], [.068, -.065], [.068, .09], [.05, .14], [.022, .19], [0, .19]].map(([r, y]) => new THREE.Vector2(r, y));
+  const steel = M(0x9aa0a8, { metalness: .7, roughness: .3 });
+  const head = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), steel); head.position.x = -.62; hammer.add(head);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.036, .012, 8, 20), steel); collar.rotation.y = Math.PI / 2; collar.position.x = -.56; hammer.add(collar); }
 const HAMMER_UP = -1.05;
 // Furnace
 const furnPos = at(55, 2.3);
-box(1.1, 1.3, .8, M(0x7a3b2a), furnPos.clone().setY(.65));
-const fire = new THREE.Mesh(new THREE.PlaneGeometry(.6, .45), new THREE.MeshBasicMaterial({ color: 0xff7a1a }));
-fire.position.copy(at(55, 1.88, .55)); fire.lookAt(0, .55, 0); scene.add(fire);
+box(1.1, 1.3, .8, M(0xa07868, { map: BRICK, bumpMap: BRICK, bumpScale: .04, roughness: .95 }), furnPos.clone().setY(.65));
+const chim = new THREE.Mesh(new THREE.CylinderGeometry(.16, .26, 2.2, 20), M(0xa07868, { map: BRICK, roughness: .95 })); chim.position.copy(at(55, 2.45, 2.4)); scene.add(chim);
+const fireG = new THREE.Group(); fireG.position.copy(at(55, 1.89)); fireG.lookAt(0, 0, 0); scene.add(fireG);
+{ const s = new THREE.Shape(); s.moveTo(-.3, .28); s.lineTo(.3, .28); s.lineTo(.3, .6); s.absarc(0, .6, .3, 0, Math.PI, false); s.lineTo(-.3, .28);
+  const mouth = new THREE.Mesh(new THREE.ShapeGeometry(s, 24), new THREE.MeshBasicMaterial({ color: 0x1a0603 })); fireG.add(mouth);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.33, .04, 8, 24, Math.PI), M(0x5a2a1c, { roughness: 1 })); rim.position.y = .6; fireG.add(rim);
+  for (let i = 0; i < 14; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.035 + Math.random() * .03), new THREE.MeshStandardMaterial({ color: 0x220800, emissive: 0xff4a10, emissiveIntensity: .6 + Math.random() * .8, roughness: 1 }));
+    c.position.set((Math.random() - .5) * .5, .3 + Math.random() * .04, .02); c.rotation.set(Math.random() * 3, Math.random() * 3, 0); fireG.add(c); } }
+const FLAME = canvasTex((x, n) => { const g = x.createRadialGradient(n / 2, n * .6, 2, n / 2, n * .55, n / 2);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.35, "rgba(255,255,255,.55)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); }, 64);
+// Flame particles: born white-yellow at the coals, rise, cool through orange to deep red and fade
+const flames = Array.from({ length: 46 }, () => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sp.userData = { life: 0, max: 1, seed: Math.random() * 9 }; fireG.add(sp); return sp; });
+const embers = Array.from({ length: 10 }, () => { const e = new THREE.Mesh(new THREE.SphereGeometry(.008, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffb040, transparent: true }));
+  e.userData = { life: 0, v: new THREE.Vector3() }; fireG.add(e); return e; });
+const fireCol = new THREE.Color();
+function tickFire(dt, t) {
+  for (const f of flames) { const u = f.userData; u.life -= dt;
+    if (u.life <= 0) { u.max = u.life = .45 + Math.random() * .5; u.x = (Math.random() - .5) * .44; u.vy = .35 + Math.random() * .35; u.s = .12 + Math.random() * .12; f.position.set(u.x, .3, .04 + Math.random() * .03); }
+    const k = 1 - u.life / u.max; // 0 at birth → 1 at death
+    f.position.y += u.vy * dt; f.position.x = u.x * (1 - k * .7) + Math.sin(t * 9 + u.seed) * .025 * k;
+    if (f.position.y > .82) u.life = 0; // keep inside the arch
+    const sc = u.s * (1 + k * .6) * (1 - k * k * .7); f.scale.set(sc * .8, sc * 1.4, 1);
+    fireCol.setHSL(.13 - k * .12, 1, .75 - k * .4); f.material.color.copy(fireCol); f.material.opacity = Math.min(1, (1 - k) * 1.6) * .85; }
+  for (const e of embers) { const u = e.userData; u.life -= dt;
+    if (u.life <= 0 && Math.random() < dt * 3) { u.life = .8 + Math.random(); e.position.set((Math.random() - .5) * .4, .35, .06); u.v.set((Math.random() - .5) * .2, .5 + Math.random() * .4, .15); }
+    e.visible = u.life > 0; if (e.visible) { e.position.addScaledVector(u.v, dt); e.material.opacity = Math.min(1, u.life); } }
+}
 const fireLight = new THREE.PointLight(0xff7a2a, 2.2, 6, 2); fireLight.position.copy(at(55, 1.6, .9)); scene.add(fireLight);
 // Pen fences
-for (const dy of [-14, 14]) box(.06, .35, 1.6, M(0x8a5a32), at(110 + dy, 2.3, .2));
-box(1.4, .35, .06, M(0x8a5a32), at(110, 2.95, .2));
+for (const dy of [-14, 14]) box(.06, .35, 1.6, wood(0xa06a3a), at(110 + dy, 2.3, .2));
+box(1.4, .35, .06, wood(0xa06a3a), at(110, 2.95, .2));
 // Piggy-bank relic machine
 const bankPos = at(165, 2.4);
 const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.lookAt(0, .95, 0); scene.add(bank);
@@ -495,7 +551,7 @@ const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.look
   const slot = new THREE.Mesh(new THREE.BoxGeometry(.3, .03, .06), M(0x111111)); slot.position.y = .55; bank.add(slot);
   for (let i = 0; i < 3; i++) { const o = new THREE.Mesh(new THREE.SphereGeometry(.09, 12, 8), new THREE.MeshBasicMaterial({ color: [0x4dabf7, 0xffd43b, 0xff3df2][i] }));
     o.position.set(-.3 + i * .3, -.15, .52); o.userData.orb = i; bank.add(o); }
-  box(.9, .4, .9, M(0x3a2a1e), bankPos.clone().setY(.2)); }
+  box(.9, .4, .9, wood(0x5a3e28), bankPos.clone().setY(.2)); }
 // Ghost merchant: a sheet ghost with a lantern
 const ghostPos = at(-140, 2.4);
 const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.lookAt(0, .2, 0); scene.add(ghost);
@@ -505,14 +561,14 @@ const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.l
   for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0x111111 })); e.position.set(x, 1.4, .34); ghost.add(e); }
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0x9ff7d8 })); lamp.position.set(.45, 1, .2); ghost.add(lamp);
   const gl = new THREE.PointLight(0x9ff7d8, 1.2, 3); gl.position.copy(lamp.position); ghost.add(gl); }
-box(1.1, .7, .5, M(0x5a3a22), at(-140, 1.95, .35));
+box(1.1, .7, .5, wood(0x7a5030), at(-140, 1.95, .35));
 // Tribute hatch: bars and the boar lord's eyes
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
-  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3), M(0x3a3a3a, { metalness: .8 })); bar.position.set(i * .22, 0, .05); hatch.add(bar); }
+  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3, 12), M(0x3a3a3a, { metalness: .8, roughness: .5 })); bar.position.set(i * .22, 0, .05); hatch.add(bar); }
   hatch.userData.eyes = [-.25, .25].map(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); e.position.set(x, .2, .01); hatch.add(e); return e; }); }
-box(.6, .1, 1.8, M(0x5a3a22), at(-70, 2.9, .5));
-const bell = new THREE.Mesh(new THREE.ConeGeometry(.16, .26, 16, 1, true), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
+box(.6, .1, 1.8, wood(0x7a5030), at(-70, 2.9, .5));
+const bell = new THREE.Mesh(new THREE.LatheGeometry([[.17, -.13], [.15, -.11], [.11, -.02], [.09, .08], [.07, .12], [.03, .14], [0, .14]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
 bell.position.copy(at(-48, 2.6, 1.5)); scene.add(bell);
 for (const y of [30, 140, -100]) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
   const b = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd08a })); b.position.copy(l.position); scene.add(b); }
@@ -642,7 +698,7 @@ function loop(now) {
   if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
   cam.rotation.set(0, 0, 0); cam.rotateY(yaw * Math.PI / 180); cam.rotateX(pitch);
   cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 4); cam.updateProjectionMatrix();
-  fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; fire.material.color.setHSL(.07 + Math.random() * .02, 1, .55);
+  fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; tickFire(dt, t);
   ghost.position.y = .2 + Math.sin(t * 2) * .06;
   rageT = Math.max(0, rageT - dt);
   for (const e of hatch.userData.eyes) e.scale.setScalar(rageT > 0 ? 2.6 + Math.sin(t * 40) * .6 : S.anger ? 1 + S.anger * .35 + Math.sin(t * 8) * .1 : .7);
@@ -675,7 +731,7 @@ function loop(now) {
 // ===== Strike flow =====
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-let busy = false, nextStrikeAt = 0, lastSnap = null;
+let busy = false, nextStrikeAt = 0, lastSnap = null, clangAlt = false;
 function banner(main, sub = "", cls = "") { const b = $("banner"); b.className = ""; void b.offsetWidth; b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls; }
 function flash(a = .9) { const f = $("flash"); f.style.transition = "none"; f.style.opacity = a; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = "opacity .6s"; f.style.opacity = 0; })); }
 
@@ -699,7 +755,8 @@ async function doStrike() {
   }
   swing = 1; await sleep(big ? 60 : 110);
   const fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
-  if (big) sfx.play("click-deep", "invalid-thunk"); else sfx.play("click-deep");
+  clangAlt = !clangAlt; const clang = clangAlt ? "anvil-ting" : "anvil-clang"; // 낑, 깡, 낑, 깡…
+  if (big) sfx.play(clang, "invalid-thunk"); else sfx.play(clang);
   buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
   const fzNow = inFrenzy(), spd = 1 + (!fzNow && has("loop") ? .2 : 0) + (has("grip") ? .15 : 0) + (fzNow && has("bellows") ? .3 : 0);
   nextStrikeAt = performance.now() + 560 / spd;
