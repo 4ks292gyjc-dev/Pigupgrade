@@ -1,0 +1,200 @@
+<title>돼지 강화하기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: one-column market chalkboard — deadline bar, pig stage, action buttons, log */
+:root{
+  --bg:#1f2a24; --board:#26332c; --line:#3b4a41; --chalk:#eef0e6; --muted:#a9b3a6;
+  --pink:#f4a6b7; --gold:#f2c14e; --bad:#ff7a6b; --good:#8fd694;
+  --display:"Jua","Gowun Dodum",system-ui,sans-serif;
+  --body:"Gowun Dodum",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--chalk);font-family:var(--body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+main{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0;text-align:center;letter-spacing:.02em}
+.num{font-variant-numeric:tabular-nums}
+.deadline{background:var(--board);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.label{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.big{font-family:var(--display);font-size:22px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--gold);transition:width .3s}
+.bar.urgent>i{background:var(--bad)}
+.stage{text-align:center;padding-block:8px;position:relative}
+#pig{width:min(220px,60vw);height:auto;transition:transform .25s}
+#pig.up{animation:pop .45s}
+#pig.fail{animation:shake .4s}
+#pig.boom{animation:boom .6s}
+@keyframes pop{50%{transform:scale(1.18)}}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes boom{50%{transform:scale(.4) rotate(20deg);opacity:.2}}
+@media (prefers-reduced-motion:reduce){#pig{animation:none!important}}
+.lvl{font-family:var(--display);font-size:26px;color:var(--gold)}
+.name{font-family:var(--display);font-size:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.stats div{background:var(--board);border-radius:8px;padding:6px 4px}
+.stats b{display:block;font-family:var(--display);font-weight:400;font-size:17px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font-family:var(--display);font-size:18px;border:0;border-radius:10px;padding:14px 8px;cursor:pointer;color:#1f2a24;background:var(--chalk)}
+button small{display:block;font-family:var(--body);font-size:12px;opacity:.75}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.35;cursor:not-allowed}
+#enhance{grid-column:1/-1;background:var(--pink);font-size:22px}
+#sell{background:var(--gold)}
+#submit{background:var(--good)}
+#buy{grid-column:1/-1;background:var(--board);color:var(--chalk);border:1px solid var(--line);font-size:15px;padding:10px}
+#msg{min-height:1.4em;text-align:center;font-family:var(--display);font-size:18px}
+.good{color:var(--good)} .bad{color:var(--bad)} .gold{color:var(--gold)}
+#log{list-style:none;margin:0;padding:0;font-size:13px;color:var(--muted);display:grid;gap:2px;max-height:110px;overflow:auto}
+.over{position:fixed;inset:0;background:rgba(15,20,17,.92);display:grid;place-items:center;padding:24px;text-align:center;z-index:5}
+.over div{display:grid;gap:12px;max-width:320px}
+.over h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0;color:var(--bad)}
+details{font-size:13px;color:var(--muted)}
+details p{margin:.4em 0}
+</style>
+
+<main>
+  <h1>돼지 강화하기</h1>
+
+  <section class="deadline" aria-label="마감">
+    <div class="row"><span class="label">ROUND <b id="round" class="num">1</b> 상납금</span><span class="big num gold" id="quota"></span></div>
+    <div class="bar" id="bar"><i id="barFill"></i></div>
+    <div class="row"><span class="label">마감까지 남은 강화 횟수</span><span class="num" id="turns"></span></div>
+  </section>
+
+  <section class="stage" aria-live="polite">
+    <svg id="pig" viewBox="0 0 200 170" role="img" aria-label="돼지">
+      <g id="crown" hidden><path d="M70 30 L80 5 L100 25 L120 5 L130 30 Z" fill="var(--gold)"/></g>
+      <ellipse cx="100" cy="100" rx="78" ry="58" id="body" fill="var(--pink)"/>
+      <path d="M45 55 L40 20 L75 45 Z M155 55 L160 20 L125 45 Z" id="ears" fill="var(--pink)"/>
+      <ellipse cx="100" cy="112" rx="30" ry="20" fill="#000" opacity=".15"/>
+      <circle cx="90" cy="112" r="5" fill="#000" opacity=".5"/><circle cx="110" cy="112" r="5" fill="#000" opacity=".5"/>
+      <circle cx="72" cy="82" r="7" fill="#1f2a24"/><circle cx="128" cy="82" r="7" fill="#1f2a24"/>
+      <circle cx="74" cy="80" r="2" fill="#fff"/><circle cx="130" cy="80" r="2" fill="#fff"/>
+    </svg>
+    <div class="lvl num" id="lvl"></div>
+    <div class="name" id="name"></div>
+  </section>
+
+  <div class="stats">
+    <div><span class="label">보유 돈</span><b class="num" id="money"></b></div>
+    <div><span class="label">성공 / 파괴</span><b class="num" id="odds"></b></div>
+    <div><span class="label">판매가</span><b class="num" id="price"></b></div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="actions">
+    <button id="enhance">강화하기<small id="cost"></small></button>
+    <button id="sell">돼지 팔기<small id="sellSub"></small></button>
+    <button id="submit">상납금 제출<small>남은 횟수 이월</small></button>
+    <button id="buy"></button>
+  </div>
+
+  <ul id="log"></ul>
+
+  <details>
+    <summary>규칙</summary>
+    <p>돈을 내고 돼지를 강화해요. 성공하면 등급이 오르고, 실패하면 그대로예요. 5강부터는 실패할 때 돼지가 도망갈(파괴) 수 있어요.</p>
+    <p>돼지를 팔면 등급에 따라 돈을 받고 새 아기돼지가 와요.</p>
+    <p>강화 1번에 마감 횟수가 1 줄어요. 횟수가 0이 되면 상납금을 자동으로 내야 하고, 돈이 모자라면 게임 오버예요. 미리 제출하면 남은 횟수는 다음 라운드로 넘어가요.</p>
+    <p>도망 방지권은 파괴될 때 자동으로 1장 써서 돼지를 지켜요.</p>
+  </details>
+</main>
+
+<div class="over" id="over" hidden>
+  <div>
+    <h2>파산!</h2>
+    <p id="overText"></p>
+    <button id="restart">다시 시작</button>
+  </div>
+</div>
+
+<script>
+// Balance (tuned by simulation: "enhance to N then sell" pays best around 11–13강)
+const MAX = 20, TURNS = 25, TICKET = 500;
+const NAMES = ["아기돼지","꿀꿀이","통통돼지","분홍돼지","흙돼지","씨름돼지","근육돼지","철갑돼지","은빛돼지","금빛돼지",
+  "왕돼지","장군돼지","용돼지","번개돼지","불꽃돼지","얼음돼지","무지개돼지","천상돼지","우주돼지","전설의 돼지","돼지신"];
+const COLORS = ["#f4a6b7","#f39bb0","#ee8fa6","#e9809b","#b98a6a","#d9a07a","#e07a5f","#9aa5b1","#c9d1d9","#f2c14e",
+  "#f7d774","#d96c4f","#5fb38a","#ffe066","#ff8c42","#8ecae6","#c084fc","#fef3c7","#6366f1","#fbbf24","#ffffff"];
+const P = L => Math.max(0.1, 0.95 - L * 0.045);
+const COST = L => Math.round(10 * 1.45 ** L);
+const PRICE = L => L === 0 ? 0 : Math.round(15 * 1.9 ** L);
+const BREAK = L => L < 5 ? 0 : Math.min(0.6, 0.1 + (L - 5) * 0.05);
+const QUOTA = r => Math.round(500 * 2.2 ** (r - 1) / 10) * 10;
+const won = n => n.toLocaleString("ko-KR") + "원";
+
+const fresh = () => ({ money: 200, level: 0, round: 1, turns: TURNS, tickets: 0 });
+let s = (() => { try { return JSON.parse(localStorage.getItem("pig")) || fresh(); } catch { return fresh(); } })();
+const save = () => { try { localStorage.setItem("pig", JSON.stringify(s)); } catch {} };
+window.claude?.hot?.snapshot?.(() => s);
+
+const $ = id => document.getElementById(id);
+function say(text, cls = "") { $("msg").textContent = text; $("msg").className = cls;
+  const li = document.createElement("li"); li.textContent = `R${s.round} · ${text}`; $("log").prepend(li); }
+function anim(cls) { const p = $("pig"); p.classList.remove("up","fail","boom"); void p.offsetWidth; p.classList.add(cls); }
+
+function render() {
+  const L = s.level, q = QUOTA(s.round);
+  $("round").textContent = s.round; $("quota").textContent = won(q);
+  $("turns").textContent = s.turns + "회";
+  $("barFill").style.width = (s.turns / TURNS * 100) + "%";
+  $("bar").classList.toggle("urgent", s.turns <= 5);
+  $("lvl").textContent = "+" + L; $("name").textContent = NAMES[L];
+  $("body").setAttribute("fill", COLORS[L]); $("ears").setAttribute("fill", COLORS[L]);
+  $("pig").style.transform = `scale(${0.8 + L * 0.015})`;
+  $("crown").toggleAttribute("hidden", L < 10);
+  $("money").textContent = won(s.money);
+  $("odds").textContent = L >= MAX ? "MAX" : `${Math.round(P(L)*100)}% / ${Math.round((1-P(L))*BREAK(L)*100)}%`;
+  $("price").textContent = won(PRICE(L));
+  $("cost").textContent = L >= MAX ? "최대 등급" : won(COST(L));
+  $("sellSub").textContent = L ? won(PRICE(L)) : "아기돼지는 못 팔아요";
+  $("buy").textContent = `도망 방지권 구매 ${won(TICKET)} · 보유 ${s.tickets}장`;
+  $("enhance").disabled = L >= MAX || s.money < COST(L);
+  $("sell").disabled = L === 0;
+  $("submit").disabled = s.money < q;
+  $("buy").disabled = s.money < TICKET;
+  save();
+}
+
+function nextRound(carry) {
+  s.money -= QUOTA(s.round); s.round++; s.turns = TURNS + carry;
+  say(`상납 완료! 다음 상납금 ${won(QUOTA(s.round))}`, "good");
+}
+
+function deadlineCheck() {
+  // No pig to sell and no money to enhance = stuck, so it counts as bankrupt too
+  const stuck = s.level === 0 && s.money < COST(0) && s.money < QUOTA(s.round);
+  if (s.turns > 0 && !stuck) return;
+  if (s.money >= QUOTA(s.round)) return nextRound(0);
+  // Last chance: auto-sell the pig before declaring bankruptcy
+  if (s.level && s.money + PRICE(s.level) >= QUOTA(s.round)) {
+    s.money += PRICE(s.level); say(`마감! ${NAMES[s.level]}를 급매했어요`, "gold"); s.level = 0; return nextRound(0);
+  }
+  $("overText").textContent = `상납금 ${won(QUOTA(s.round))}을 못 냈어요. ${s.round - 1}라운드 생존.`;
+  $("over").hidden = false;
+}
+
+$("enhance").onclick = () => {
+  const L = s.level; if (L >= MAX || s.money < COST(L)) return;
+  s.money -= COST(L); s.turns--;
+  if (Math.random() < P(L)) { s.level++; anim("up"); say(`강화 성공! +${s.level} ${NAMES[s.level]}`, "good"); }
+  else if (Math.random() < BREAK(L)) {
+    if (s.tickets) { s.tickets--; anim("fail"); say("방지권으로 도망을 막았어요", "gold"); }
+    else { s.level = 0; anim("boom"); say(`${NAMES[L]}가 도망갔어요…`, "bad"); }
+  } else { anim("fail"); say("강화 실패. 등급 유지", ""); }
+  deadlineCheck(); render();
+};
+$("sell").onclick = () => { if (!s.level) return;
+  s.money += PRICE(s.level); say(`${NAMES[s.level]} 판매 +${won(PRICE(s.level))}`, "gold"); s.level = 0; deadlineCheck(); render(); };
+$("submit").onclick = () => { if (s.money < QUOTA(s.round)) return; nextRound(s.turns); render(); };
+$("buy").onclick = () => { if (s.money < TICKET) return; s.money -= TICKET; s.tickets++; deadlineCheck(); render(); };
+$("restart").onclick = () => { s = fresh(); $("over").hidden = true; $("log").innerHTML = ""; say("새 아기돼지가 왔어요"); render(); };
+
+deadlineCheck();
+render();
+</script>
