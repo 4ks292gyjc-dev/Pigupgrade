@@ -140,11 +140,29 @@ const RELICS = [
   ["sieve","잿빛 체","파괴",2,1,"파괴될 때 +500G"],
   ["loop","가죽 고리","광란",2,1,"광란 밖 타격 속도 +20%",1],["locket","불씨 목걸이","광란",4,2,"돼지마다 첫 타격에 광란 +2"],["glass","유리 모래시계","광란",5,2,"광란 중 대성공 +3강"],
   ["hbell","머리 없는 종","광란",6,2,"광란이 끝날 때 +1강"],["collar","방울 목줄","광란",6,2,"광란 중 타격마다 가치 +5%"],["redsand","붉은 모래시계","광란",6,2,"광란 +1초"],
-  ["core","완벽한 마나 핵","걸작",7,4,"광란 중 대성공 티켓 +6",0,1],["wick","꺼지지 않는 심지","광란",8,4,"광란 +2초"],
+  ["core","완벽한 마나 핵","걸작",7,4,"광란 중 대성공 티켓 +6",0,1],["wick","꺼지지 않는 심지","업적",8,4,"광란 +2초"],
   ["pouch","숯 주머니","가치",2,1,"기본 가치 +80G"],["signet","쇠 인장","가치",2,1,"가치 +15%"],["iron","검은 쇳돌","가치",5,2,"+8 이상에서 가치 +30%"],
   ["lheart","군주의 심장","걸작",8,4,"+7 이상에서 성공/대성공마다 가치 +15%",0,1],["lseal","군주의 인장","가치",9,3,"+12 이상에서 가치 +50%"],
   ["rebate","봉인된 환급증","경제",5,2,"공물 요구량 -10%"],["tally","세금 장부","경제",5,3,"공물 완납마다 크레딧 +1"],["voucher","낡은 쿠폰","경제",3,2,"매일 무료 리롤 1번"],
   ["permit","공급 허가증","경제",8,4,"매일 돼지 +1"],
+  ["bronze","청동 톱니","성공",5,3,"성공마다 이 돼지에 성공 티켓 +1"],["obsid","흑요석 눈","대성공",6,2,"+8 이상에서 성공 티켓 2장을 대성공으로 바꿈"],
+  ["chain","사슬 모래시계","유지",3,1,"광란 밖 유지마다 50% 확률로 광란 +1"],["windbell","작은 풍경","유지",3,1,"유지마다 다음 성공 +1강 (최대 +2)"],
+  ["thirdeye","감긴 셋째 눈","유지",3,1,"유지 후 다음 타격 성공 티켓 +4"],["kingcup","왕의 빈 잔","유지",6,3,"유지마다 이 돼지에 대성공 티켓 +1"],
+  ["thorn","가시 추","손상",3,1,"가치 +10%, 유지 티켓 2장을 손상으로 바꿈"],["comb","쇠빗","손상",3,1,"손상마다 손상 전 가치의 5%를 더함"],
+  ["kseal","패배한 왕의 인장","손상",4,3,"손상마다 다음 대성공 +1강"],["spine","거인의 척추","손상",5,2,"손상 2번마다 다음 파괴 1번을 손상으로 바꿈"],
+  ["chalice","장의사의 잔","파괴",2,1,"파괴될 때 최고 가치의 30%를 오늘 공물로 바침"],["molar","굶주린 어금니","파괴",3,1,"+4 이상 돼지가 파괴되면 다음 +0 돼지가 성공 티켓 +4를 평생 가짐"],
+  ["grudge","원한의 못","파괴",3,2,"파괴될 때 그 등급만큼 대성공 티켓을 다음 타격에 1회 추가"],["holy","부러진 성검","파괴",3,3,"파괴된 돼지 강화의 30%를 다음 +0 돼지가 이어받고 광란 +3 (새벽의 칼집과 합산)"],
+  ["mourning","애도의 매듭","파괴",3,1,"공물을 못 낼 때마다 이번 판 대성공 티켓 +1"],["ossuary","납골당 왕의 칼집","파괴",5,3,"+7 이상 돼지가 파괴되면 직전 결과의 티켓 +1을 이번 판 내내 가짐"],
+  ["grip","닳은 손잡이","광란",4,2,"타격 속도 +15%"],["bellows","홀린 풀무","광란",7,3,"광란 중 타격 속도 +30%"],
+  ["hearth","주머니 화덕","가치",7,3,"이번 판 공물 완납마다 기본 가치 +20G"],
+  ["hook","수집가의 갈고리","경제",4,2,"진열장을 바꾸면 그날 첫 +0 돼지를 크레딧 2로 바꿔줌"],["badge","견습생 배지","경제",4,2,"공물 완납 다음 날 배달 돼지가 +2로 시작"],
+  ["testament","대장장이의 유언","경제",5,2,"+10 이상 돼지로 공물 완납 시 다음 배달 돼지 1마리가 그 등급의 30%로 시작"],["writ","은빛 공급 증서","경제",6,2,"상인의 기본 돼지 재고 +2"],
+  ["idol","묶인 우상","연속",2,1,"돼지가 처음 +4, +8, +12…에 닿을 때마다 가치 +15%"],["wax","밀랍 인형","연속",2,1,"같은 결과 2연속마다 가치 +150G"],
+  ["blinddie","눈먼 주사위","연속",3,1,"손상/유지 후 다음 타격 대성공 티켓 +3"],["censer","그을음 향로","연속",4,2,"직전과 다른 결과가 나오면 기본 가치 +20G"],
+  ["weights","맞물린 추","연속",4,2,"손상 직후 성공/대성공이면 +2강"],["mirror","갈라진 쌍거울","연속",6,3,"같은 결과 2연속마다 그 타격의 유물 가치 보너스를 한 번 더"],
+  ["sickle","다섯 눈금 저울","업적",6,4,"모든 결과의 기본 티켓을 5장으로 맞춤"],["butter","버터 발굽","업적",6,3,"파괴 티켓 +3, 대성공 티켓 +5"],
+  ["royal","군주의 잔돈","업적",7,4,"공물 초과분의 30%로 다음 공물을 깎음 (최대 30%)"],["pardon","군주의 사면장","업적",6,4,"게임 오버를 한 번 막고 분노를 2로 낮춘 뒤 사라짐"],
+  ["wledger","떠돌이 유령의 장부","업적",6,3,"유령 상인이 기본 돼지 +1, 특수 돼지 +1을 더 가져옴"],["contract","종신 계약서","업적",10,5,"배달 돼지가 +7로 시작하고 달굴 필요 없음"],
   ["dawn","새벽의 칼집","걸작",6,3,"파괴된 돼지 강화의 40%를 다음 +0 돼지가 이어받고 광란 +4",0,1],["shaft","멈추지 않는 굴대","걸작",7,4,"성공 2번마다 +1강",0,1],
   ["twins","쌍둥이 인장","걸작",8,4,"살아남은 타격마다 2% 확률로 똑같은 돼지가 하나 더 생김",0,1],["seed","영원의 씨앗","걸작",7,4,"유지 티켓 +6, 유지마다 기본 가치 +40G",0,1],
   ["pearl","심연의 진주","걸작",7,4,"손상 티켓 +3, 돼지마다 첫 손상 2번은 등급이 안 내려감",0,1],["ledger","장의사의 장부","걸작",8,4,"+7 이상 돼지가 파괴되면 다음 날 돼지 +1 (하루 최대 2)",0,1],
@@ -189,6 +207,29 @@ const REGULAR = Object.keys(FAMS).filter(k => !FAMS[k].special), SPECIAL = Objec
 let unlocks = []; try { unlocks = JSON.parse(localStorage.getItem("pigforge-unlocks")) || []; } catch {}
 const unlocked = fam => unlocks.includes(fam);
 function unlock(fam) { if (unlocked(fam)) return false; unlocks.push(fam); try { localStorage.setItem("pigforge-unlocks", JSON.stringify(unlocks)); } catch {} return true; }
+// Achievements persist across runs; seven of them unlock a relic in the shop
+const ACH = {
+  clear: { name: "계약 만료", desc: "분노 3번 전에 21일 버티기", relic: "sickle" },
+  broken10: { name: "미끄러운 발굽", desc: "한 판에 돼지 10마리 파괴 (유물로 막은 건 제외)", relic: "butter" },
+  frenzy5: { name: "쉬지 않는 망치", desc: "한 판에 광란 5번", relic: "wick" },
+  triple: { name: "통 큰 공물", desc: "공물의 3배 이상 바치기", relic: "royal" },
+  last: { name: "벼랑 끝", desc: "분노 2번인 날 공물 완납", relic: "pardon" },
+  soldout: { name: "싹쓸이", desc: "유령 상인 한 번 방문 때 모든 물건 매진", relic: "wledger" },
+  overtime: { name: "종신 고용", desc: "계약 완료 후 공물 3번 완납", relic: "contract" },
+  first10: { name: "두 자릿수", desc: "처음으로 +10 달성" },
+  firstdeath: { name: "첫 파산", desc: "처음으로 게임 오버" },
+  firstfrenzy: { name: "첫 광란", desc: "처음으로 광란 발동" },
+};
+const ACH_RELIC = Object.fromEntries(Object.entries(ACH).filter(([, a]) => a.relic).map(([k, a]) => [a.relic, k]));
+let achs = []; try { achs = JSON.parse(localStorage.getItem("pigforge-ach")) || []; } catch {}
+const achieved = id => achs.includes(id);
+const toasts = [];
+function achieve(id) { if (achieved(id)) return; achs.push(id); toasts.push(id); try { localStorage.setItem("pigforge-ach", JSON.stringify(achs)); } catch {} }
+function flushToasts(delay = 1200) {
+  toasts.splice(0).forEach((id, i) => setTimeout(() => { const a = ACH[id];
+    banner("업적 달성!", a.name + (a.relic ? ` · ${RB[a.relic].name} 해금` : ""), "g"); sfx.play("achievement"); }, delay + i * 2000));
+}
+const need = () => Math.max(0, Math.round(quota(S.day) - (S.carry || 0)));
 function pigName(p, L = p.lvl) {
   const f = FAMS[p.fam], look = Math.max(L, p.peak || 0);
   if (f?.special) return `${f.forms[Math.min(10, look >> 1)]} 돼지`;
@@ -206,20 +247,24 @@ const fresh = () => ({ day: 1, gold: 0, credits: 0, anger: 0, pen: [], hand: nul
 function load() { try { const d = JSON.parse(localStorage.getItem("pigforge")); if (d && d.day) { S = d; uid = d.uid || 1000; return true; } } catch {} return false; }
 const save = () => { try { S.uid = uid; localStorage.setItem("pigforge", JSON.stringify(S)); } catch {} };
 
-const gmult = L => (has("signet") ? 1.15 : 1) * (has("iron") && L >= 8 ? 1.3 : 1) * (has("lseal") && L >= 12 ? 1.5 : 1);
-const V = p => Math.round(p.base * 1.5 ** p.lvl * p.mult * gmult(p.lvl) + p.flat);
+const gmult = L => (has("thorn") ? 1.1 : 1) * (has("signet") ? 1.15 : 1) * (has("iron") && L >= 8 ? 1.3 : 1) * (has("lseal") && L >= 12 ? 1.5 : 1);
+const V = p => Math.round((p.base + (has("hearth") ? 20 * (S.pays || 0) : 0)) * 1.5 ** p.lvl * p.mult * gmult(p.lvl) + p.flat);
 const G = n => Math.round(n).toLocaleString("ko-KR") + "G";
 
 // ===== Forge odds: 30-ticket deck (B9 D2 H5 S12 G2); the break pile is weighted by grade =====
 let frenzyUntil = 0;
 const inFrenzy = () => performance.now() < frenzyUntil;
 function odds(p, frenzy = inFrenzy(), armed = S.armed) {
-  const c = { d: 2, h: 5, s: 12, g: 2 }; let bt = 9;
+  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }; let bt = sickle ? 5 : 9;
   const add = (k, n) => c[k] += n;
   if (has("bent")) add("s", 4); if (has("spike")) add("s", 6); if (has("whet")) { add("h", -2); add("s", 2); } if (has("mallet")) { add("d", -1); add("s", 1); }
   if (has("coal")) add("g", 1); if (has("gnail")) add("g", 2); if (has("die")) add("g", 4); if (has("seal")) add("h", 2); if (has("weight")) add("h", 3);
   if (has("core") && frenzy) add("g", 6); if (has("hoop")) bt -= 2; if (has("seed")) add("h", 6); if (has("pearl")) add("d", 3);
+  if (has("butter")) { bt += 3; add("g", 5); } if (has("thorn")) { add("h", -2); add("d", 2); }
+  for (const src of [p.tk, p.nx, S.perm]) if (src) for (const k in src) if (k in c) add(k, src[k]);
+  if (S.mourn) add("g", S.mourn); if (S.grudge) add("g", S.grudge);
   for (const k in c) c[k] = Math.max(0, c[k]);
+  if (has("obsid") && p.lvl >= 8) { const n = Math.min(2, c.s); c.s -= n; c.g += n; }
   if (armed.chalk) c.g *= 2;
   const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100;
   let pb = 0;
@@ -244,26 +289,38 @@ function rollOutcome(o) { let r = Math.random(); for (const k of ["b","d","h","s
 
 // One strike: mutates the pig and state, returns the outcome
 function strike(p) {
+  p.tk ||= {}; p.nx ||= {};
   let frenzyStarted = false;
-  if (!inFrenzy() && p.charge >= 10) { p.charge = 0; frenzyUntil = performance.now() + (4 + (has("redsand") ? 1 : 0) + (has("wick") ? 2 : 0)) * 1000; frenzyStarted = true; }
-  const fz = inFrenzy(), o = odds(p, fz), A = S.armed; S.armed = {};
-  let res = rollOutcome(o), saved = "";
+  if (!inFrenzy() && p.charge >= 10) {
+    p.charge = 0; frenzyUntil = performance.now() + (4 + (has("redsand") ? 1 : 0) + (has("wick") ? 2 : 0)) * 1000; frenzyStarted = true;
+    S.frenzies = (S.frenzies || 0) + 1; achieve("firstfrenzy"); if (S.frenzies >= 5) achieve("frenzy5");
+  }
+  const fz = inFrenzy(), o = odds(p, fz), A = S.armed; S.armed = {}; p.nx = {}; S.grudge = 0; // one-strike tickets are spent now
+  let res = rollOutcome(o), saved = "", spined = false;
   if (A.powder) res = res === "s" || res === "g" ? "g" : "b";
   p.nbm = 1;
   if (res === "b" && A.scale) { res = "h"; saved = "철 비늘이 막았다"; }
   if (res === "b" && has("fence") && !S.fenceUsed) { S.fenceUsed = true; res = "d"; saved = "철사 울타리가 막았다"; }
   if (res === "b" && has("stone") && !p.stone) { p.stone = true; res = "d"; saved = "굳센 주춧돌이 막았다"; }
+  if (res === "b" && has("spine") && p.spine > 0) { p.spine--; res = "d"; spined = true; saved = "거인의 척추가 막았다"; }
   if (res === "b" && has("phoenix") && !p.phoenix) { p.phoenix = true; p.mult *= .6; res = "h"; saved = "불사조 재 (가치 -40%)"; }
   if (res === "b") {
+    S.broken = (S.broken || 0) + 1; if (S.broken >= 10) achieve("broken10");
     if (has("sieve")) S.gold += 500;
-    if (has("dawn")) S.inherit = Math.floor(p.lvl * .4);
+    const inh = (has("holy") ? .3 : 0) + (has("dawn") ? .4 : 0);
+    if (inh) S.inherit = { lvl: Math.floor(p.lvl * inh), charge: (has("holy") ? 3 : 0) + (has("dawn") ? 4 : 0) };
     if (has("ledger") && p.lvl >= 7 && (S.ledgerToday || 0) < 2) { S.ledgerToday = (S.ledgerToday || 0) + 1; S.extra++; }
+    if (has("chalice")) S.scrap = (S.scrap || 0) + Math.round(.3 * Math.max(p.peakV || 0, V(p)));
+    if (has("molar") && p.lvl >= 4) S.molar = true;
+    if (has("grudge")) S.grudge = p.lvl;
+    if (has("ossuary") && p.lvl >= 7 && p.last) { S.perm ||= {}; S.perm[p.last] = (S.perm[p.last] || 0) + 1; }
     return { res, frenzyStarted };
   }
-  const first = p.strikes === 0, up = res === "s" || res === "g";
+  const first = p.strikes === 0, up = res === "s" || res === "g", preV = V(p), prev = p.last;
   if (res === "g") { p.lvl += 2; p.mult *= 2.5 / 2.25; }
   if (res === "s") p.lvl += 1;
   if (res === "d" && p.lvl > 0) { if (has("pearl") && p.pearl < 2) p.pearl++; else { p.lvl -= 1; if (has("crown")) p.mult *= 1.25; } }
+  const s0 = { base: p.base, mult: p.mult, flat: p.flat }; // relic value bonuses below are measured from here (for the mirror)
   if (up) {
     p.run++; p.holdRun = 0;
     if (has("stamp")) p.flat += 100;
@@ -272,15 +329,21 @@ function strike(p) {
     if (has("scorch") && !fz) p.scorch = Math.min(.18, p.scorch + .03);
     if (has("echo") && Math.random() < .25) p.lvl += 1;
     if (has("lheart") && p.lvl >= 7) p.mult *= 1.15;
+    if (has("weights") && prev === "d") p.lvl += 2;
   } else p.run = 0;
-  if (res === "s" && has("cog")) p.base += 30;
-  if (res === "s" && has("shaft") && ++p.sCount % 2 === 0) p.lvl += 1;
+  if (res === "s") {
+    if (has("cog")) p.base += 30;
+    if (has("shaft") && ++p.sCount % 2 === 0) p.lvl += 1;
+    if (has("bronze")) p.tk.s = (p.tk.s || 0) + 1;
+    if (has("windbell")) { p.lvl += p.wind || 0; p.wind = 0; }
+  }
   if (res === "g") {
     if (has("cbell")) p.mult *= 1.2;
     if (!fz && has("lmark")) p.nbm *= .6;
     if (!fz && has("fork")) p.lvl += 1;
     if (fz && has("glass")) p.lvl += 3;
     if (has("heart")) { p.lvl += p.heart; p.heart = 0; }
+    if (has("kseal")) { p.lvl += p.kseal || 0; p.kseal = 0; }
   }
   if (res === "h") {
     p.holdRun++;
@@ -289,14 +352,29 @@ function strike(p) {
     if (has("sleep") && Math.random() < .7) p.lvl += 1;
     if (has("thread")) p.nbm *= .8;
     if (has("heart")) p.heart = Math.min(4, p.heart + 1);
+    if (has("chain") && !fz && Math.random() < .5) p.charge++;
+    if (has("windbell")) p.wind = Math.min(2, (p.wind || 0) + 1);
+    if (has("thirdeye")) p.nx.s = (p.nx.s || 0) + 4;
+    if (has("kingcup")) p.tk.g = (p.tk.g || 0) + 1;
   } else if (!up) p.holdRun = 0;
   if (res === "d") {
     if (has("apron")) p.flat += 140; if (has("splice")) p.splice = Math.min(.6, p.splice + .15);
     if (has("oath") && Math.random() < .7) p.lvl += 1; if (has("watch") && !fz) p.charge++;
+    if (!spined) { p.dmg = (p.dmg || 0) + 1; if (has("spine") && p.dmg % 2 === 0) p.spine = (p.spine || 0) + 1; }
+    if (has("comb")) p.flat += Math.round(.05 * preV);
+    if (has("kseal")) p.kseal = (p.kseal || 0) + 1;
   }
+  if ((res === "h" || res === "d") && has("blinddie")) p.nx.g = (p.nx.g || 0) + 3;
+  if (has("censer") && prev && res !== prev) p.base += 20;
+  const pair = prev === res;
+  if (pair && has("wax")) p.flat += 150;
+  if (has("idol")) while ((p.idol || 0) + 4 <= p.lvl) { p.idol = (p.idol || 0) + 4; p.mult *= 1.15; }
+  if (pair && has("mirror")) { const db = p.base - s0.base, dm = p.mult / s0.mult, df = p.flat - s0.flat; p.base += db; p.mult *= dm; p.flat += df; }
+  p.last = pair ? null : res; // a pair is used up, so the next pair needs two fresh results
   if (fz && has("collar")) p.mult *= 1.05;
   if (!fz) { p.charge++; if (first && has("locket")) p.charge += 2; }
-  p.charge = Math.min(10, p.charge); p.strikes++; p.peak = Math.max(p.peak || 0, p.lvl);
+  p.charge = Math.min(10, p.charge); p.strikes++; p.peak = Math.max(p.peak || 0, p.lvl); p.peakV = Math.max(p.peakV || 0, V(p));
+  if (p.lvl >= 10) achieve("first10");
   let twin = false, mastered = null;
   if (has("twins") && Math.random() < .02) { S.pen.push({ ...JSON.parse(JSON.stringify(p)), id: uid++ }); twin = true; }
   if (p.lvl >= 20 && unlock(p.fam)) mastered = p.fam;
@@ -305,19 +383,24 @@ function strike(p) {
 
 // ===== Day cycle =====
 function morning() {
-  const n = 3 + (has("permit") ? 1 : 0) + S.extra; S.extra = 0;
-  for (let i = 0; i < n; i++) S.pen.push(newPig());
-  S.fenceUsed = false; S.freeReroll = has("voucher"); S.armed = {}; S.ledgerToday = 0;
+  const n = 3 + (has("permit") ? 1 : 0) + S.extra, start = has("contract") ? 7 : S.badgeNext ? 2 : 0, born = [];
+  for (let i = 0; i < n; i++) { const p = newPig(start); if (has("contract")) p.heated = true; born.push(p); }
+  if (S.testament) born[0].lvl = born[0].peak = Math.max(born[0].lvl, S.testament);
+  S.extra = 0; S.badgeNext = false; S.testament = 0; S.pen.push(...born);
+  S.fenceUsed = false; S.freeReroll = has("voucher"); S.armed = {}; S.ledgerToday = 0; S.hookUsed = false;
   S.shop = S.day >= 2 ? rollShop() : [];
   S.merchant = S.day % 3 === 0 ? makeMerchant() : null;
+  return born;
 }
 function rollShop() {
-  return RELICS.filter(r => r.day <= S.day && !S.relics.includes(r.id) && (!r.mw || unlocks.some(k => FAMS[k].mw === r.id))).sort(() => Math.random() - .5).slice(0, 3).map(r => r.id);
+  return RELICS.filter(r => r.day <= S.day && !S.relics.includes(r.id) && (!r.mw || unlocks.some(k => FAMS[k].mw === r.id)) && (!ACH_RELIC[r.id] || achieved(ACH_RELIC[r.id]))).sort(() => Math.random() - .5).slice(0, 3).map(r => r.id);
 }
 function makeMerchant() {
   const v = S.day / 3, q = quota(S.day), stock = { pig: { left: [2,3,3,4,4,4,4][v - 1] ?? 5, price: Math.max(700, Math.round(.4 * q / 10) * 10) } };
   const g = S.day < 9 ? 0 : S.day < 15 ? 2 : 4; // special pig grade by day; price ×1.6 / ×2.4 for +2 / +4 matches the source table
   stock.special = { left: 1, fam: SPECIAL[Math.floor(Math.random() * 3)], lvl: g, price: Math.max(1100, Math.round(1.75 * .65 * q * [1, 1.6, 2.4][g / 2] / 10) * 10) };
+  if (has("writ")) stock.pig.left += 2;
+  if (has("wledger")) { stock.pig.left++; stock.special.left++; }
   for (const [id, it] of Object.entries(ITEMS)) {
     if (it.day > S.day || (id === "incense" && (S.anger === 0 || S.incenseUsed))) continue;
     stock[id] = { left: it.stock, price: Math.round(it.k * q / 10) * 10 };
@@ -325,17 +408,30 @@ function makeMerchant() {
   return stock;
 }
 function ringBell() {
-  const q = quota(S.day), total = S.tribute.reduce((a, p) => a + V(p), 0), day = S.day;
+  const q = need(), total = S.tribute.reduce((a, p) => a + V(p), 0) + (S.scrap || 0), day = S.day, angerBefore = S.anger;
   const paid = total >= q; // as in the original, only offered pig value counts; gold never pays tribute
-  S.gold += total; S.tribute = []; // as in the original, the full offered value comes back as gold, paid or not
-  if (paid) { S.pays++; if (has("tally")) S.credits++; } else S.anger++;
-  if (S.anger >= 3) { sfx.play("error-sharp-alert"); save(); ui(); return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart); }
-  S.day++; morning();
-  banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : `${G(q - total)} 모자라요 · 분노 ${S.anger}/3 · 골드 +${G(total)}`, paid ? "s" : "b");
-  sfx.play(paid ? "success-celebrate" : "warning-buzz");
-  if (!paid) shakeT = .6;
+  const best = Math.max(0, ...S.tribute.map(p => p.lvl));
+  S.gold += total; S.tribute = []; S.scrap = 0; // the full offered value comes back as gold, paid or not
+  S.carry = has("royal") && paid ? Math.min(.3 * (total - q), .3 * quota(day + 1)) : 0;
+  if (paid) {
+    S.pays++; if (has("tally")) S.credits++; if (has("badge")) S.badgeNext = true;
+    if (has("testament") && best >= 10) S.testament = Math.floor(best * .3);
+    if (total >= 3 * q) achieve("triple"); if (angerBefore === 2) achieve("last");
+    if (S.contract && (S.otPays = (S.otPays || 0) + 1) >= 3) achieve("overtime");
+  } else { S.anger++; if (has("mourning")) S.mourn = (S.mourn || 0) + 1; }
+  let pardoned = false;
+  if (S.anger >= 3 && has("pardon")) { S.relics = S.relics.filter(x => x !== "pardon"); S.anger = 2; pardoned = true; }
+  if (S.anger >= 3) {
+    achieve("firstdeath"); sfx.play("error-sharp-alert"); save(); ui(); flushToasts(400);
+    return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart);
+  }
+  if (day === 21) achieve("clear");
+  S.day++; const born = morning();
+  banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : pardoned ? "군주의 사면장이 목숨을 구했다 · 분노 2/3" : `${G(q - total)} 모자라요 · 분노 ${S.anger}/3 · 골드 +${G(total)}`, paid ? "s" : "b");
   ui();
+  if (paid) sfx.play("success-celebrate"); else rage(born);
   if (day === 21 && !S.contract) { S.contract = true; sfx.play("achievement"); showModal(`<h2 class="gold">계약 완료!</h2><p>21일을 버텼어요. 이제부터는 매일 공물이 20%씩 올라요.</p><button id="ok">계속하기</button>`, () => $("ok").onclick = closeModal); }
+  flushToasts(paid ? 1500 : 4200);
 }
 
 // ===== 3D =====
@@ -489,10 +585,24 @@ function sync() {
   const used = new Set(["anvil", "hand"]);
   placePig("anvil", hideAnvilPig ? null : S.anvil, scene, anvilPos.clone().setY(.72), .32);
   placePig("hand", S.hand, cam, new THREE.Vector3(.3, .2, -.9), .12);
-  S.pen.slice(0, 12).forEach((p, i) => { const k = "pen" + i; used.add(k); placePig(k, p, scene, at(110 + (i % 4 - 1.5) * 8, 2.15 + Math.floor(i / 4) * .45, 0), .25); });
+  S.pen.slice(0, 12).forEach((p, i) => { if (flying.has(p.id)) return; const k = "pen" + i; used.add(k); placePig(k, p, scene, penSlot(i), .25); });
   S.tribute.slice(0, 8).forEach((p, i) => { const k = "tr" + i; used.add(k); placePig(k, p, scene, at(-70 + (i % 4 - 1.5) * 7, 2.85 + Math.floor(i / 4) * .3, .55), .19); });
   for (const k of [...slots.keys()]) if (!used.has(k)) placePig(k, null);
   ghost.visible = !!S.merchant;
+}
+
+// Rage: after a failed tribute the boar lord throws the morning delivery through the hatch into the pen
+const flying = new Set(), flights = [];
+let rageT = 0;
+const penSlot = i => at(110 + (i % 4 - 1.5) * 8, 2.15 + Math.floor(i / 4) * .45, 0);
+async function rage(born) {
+  rageT = 2.6; shakeT = .8; sfx.play("error-sharp-alert", "warning-buzz"); buzz([200, 80, 200]);
+  born.forEach(p => flying.add(p.id)); sync();
+  st = 2; ui(); await sleep(reduced ? 200 : 900); // turn to the pen to watch them land
+  born.forEach((p, i) => setTimeout(() => {
+    const m = makePig(p); m.scale.setScalar(.25); scene.add(m); sfx.play("whoosh-short");
+    flights.push({ m, p, from: at(-70, 3.2, 1.3), to: penSlot(Math.max(0, S.pen.indexOf(p))), t0: performance.now(), dur: reduced ? 300 : 950 });
+  }, i * 380));
 }
 
 // Effects
@@ -534,7 +644,14 @@ function loop(now) {
   cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 4); cam.updateProjectionMatrix();
   fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; fire.material.color.setHSL(.07 + Math.random() * .02, 1, .55);
   ghost.position.y = .2 + Math.sin(t * 2) * .06;
-  for (const e of hatch.userData.eyes) e.scale.setScalar(S.anger ? 1 + S.anger * .35 + Math.sin(t * 8) * .1 : .7);
+  rageT = Math.max(0, rageT - dt);
+  for (const e of hatch.userData.eyes) e.scale.setScalar(rageT > 0 ? 2.6 + Math.sin(t * 40) * .6 : S.anger ? 1 + S.anger * .35 + Math.sin(t * 8) * .1 : .7);
+  for (let i = flights.length - 1; i >= 0; i--) {
+    const f = flights[i], k = Math.min(1, (now - f.t0) / f.dur);
+    f.m.position.lerpVectors(f.from, f.to, k); f.m.position.y += Math.sin(k * Math.PI) * 1.4; f.m.rotation.set(k * 9, 0, k * 5);
+    tickPig(f.m, t);
+    if (k >= 1) { scene.remove(f.m); flights.splice(i, 1); flying.delete(f.p.id); sync(); sfx.play("click-deep", "invalid-thunk"); shakeT = .25; sparkBurst(f.to.clone().setY(.25), 0xb08060, 18); }
+  }
   for (const c of bank.children) if (c.userData.orb !== undefined) c.position.y = -.15 + Math.sin(t * 3 + c.userData.orb) * .03;
   swing = Math.max(0, swing - dt * 4); hammer.rotation.z = HAMMER_UP * (1 - Math.sin(swing * Math.PI));
   for (const [, o] of slots) tickPig(o.group, t);
@@ -572,7 +689,9 @@ async function doStrike() {
   if (big) { // FIFA-style build-up from +15
     fovTarget = 32; $("ring").hidden = $("ringText").hidden = false; sfx.play("whoosh-short");
     const dur = reduced ? 700 : 2400, t0 = performance.now();
+    let cue = 0;
     for (let k = 0; k < 1; k = (performance.now() - t0) / dur) {
+      if (cue < 2 && k > [.45, .85][cue]) { sfx.play(cue ? "whoosh-short" : "tap-ui-tick", "whoosh-short"); cue++; }
       $("ring").style.setProperty("--p", k); $("ringText").textContent = `+${before} ▶ +${before + 1}   ${(dur / 1000 * (1 - k)).toFixed(1)}s`;
       if (k > .7) shakeT = .05; await sleep(30);
     }
@@ -580,20 +699,22 @@ async function doStrike() {
   }
   swing = 1; await sleep(big ? 60 : 110);
   const fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
-  sfx.play("click-deep"); buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
-  nextStrikeAt = performance.now() + (fzBefore || frenzyStarted || !has("loop") ? 560 : 560 / 1.2);
+  if (big) sfx.play("click-deep", "invalid-thunk"); else sfx.play("click-deep");
+  buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
+  const fzNow = inFrenzy(), spd = 1 + (!fzNow && has("loop") ? .2 : 0) + (has("grip") ? .15 : 0) + (fzNow && has("bellows") ? .3 : 0);
+  nextStrikeAt = performance.now() + 560 / spd;
   if (res === "b") await breakFx(p, before, big);
   else {
-    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pigName(p)}`, "g"); sfx.play("level-up"); }
-    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pigName(p)}`, "s"); sfx.play("xp-up"); }
-    if (res === "h") { banner("유지", saved || "아무 일도 없었다", "h"); sfx.play("tap-ui-tick"); }
-    if (res === "d") { shakeT = .25; crackT = .2; banner("손상", saved || `+${before} → +${p.lvl}`, "d"); sfx.play("error-soft-thud"); }
+    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pigName(p)}`, "g"); if (big) sfx.play("level-up", "success-celebrate", "coin-double"); else sfx.play("level-up"); }
+    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pigName(p)}`, "s"); if (big) sfx.play("xp-up", "achievement"); else sfx.play("xp-up"); }
+    if (res === "h") { banner("유지", saved || "아무 일도 없었다", "h"); sfx.play(big ? "error-soft-thud" : "tap-ui-tick"); }
+    if (res === "d") { shakeT = .25; crackT = .2; banner("손상", saved || `+${before} → +${p.lvl}`, "d"); if (big) sfx.play("error-soft-thud", "warning-buzz"); else sfx.play("error-soft-thud"); }
     if (twin) setTimeout(() => { banner("쌍둥이!", "똑같은 돼지가 우리에 생겼어요", "f"); sfx.play("coin-double"); }, 400);
     if (mastered) setTimeout(() => { banner("걸작 해금!", `${RB[FAMS[mastered].mw].name} · 이제 유물 진열장에 나와요`, "g"); sfx.play("achievement"); }, 900);
     if (frenzyStarted) setTimeout(() => { banner("광란!", "잠깐 동안 깨지지 않아요", "f"); sfx.play("achievement"); }, 350);
     if (big) { await sleep(700); fovTarget = 62; }
   }
-  busy = false; ui();
+  busy = false; ui(); flushToasts(mastered || twin ? 2600 : 1200);
 }
 async function breakFx(p, before, big) {
   const pos = anvilPos.clone().setY(.9), color = new THREE.Color().setHSL(HSL[Math.min(20, before)][0] / 360, .6, .6);
@@ -602,7 +723,7 @@ async function breakFx(p, before, big) {
     await sleep(reduced ? 400 : 1000); banner("…은 구라", "", "fake"); await sleep(350);
   }
   shakeT = .6; crackT = .65; sfx.play("invalid-thunk"); await sleep(650);
-  hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); flash(1); shakeT = .5; sfx.play("trash-crumple", "error-sharp-alert"); buzz([80, 40, 160]);
+  hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); flash(1); shakeT = .5; sfx.play("trash-crumple", "error-sharp-alert"); if (big) sfx.play("warning-buzz", "invalid-thunk"); buzz([80, 40, 160]);
   banner("파사삭", `+${before} ${pigName(p, before)} 파괴`, "b"); ui();
   await sleep(big ? 1300 : 900); hideAnvilPig = false; fovTarget = 62;
 }
@@ -620,7 +741,7 @@ function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pi
 let confirmBell = false;
 function ui() {
   sync();
-  const q = quota(S.day), tsum = S.tribute.reduce((a, p) => a + V(p), 0), s = STATIONS[st].id;
+  const q = need(), tsum = S.tribute.reduce((a, p) => a + V(p), 0) + (S.scrap || 0), s = STATIONS[st].id;
   $("day").textContent = S.day; $("quota").textContent = G(q); $("tsum").textContent = G(tsum); $("tsum").style.color = tsum >= q ? "var(--ok)" : "";
   $("mute").textContent = sfx.muted ? "소리 끔" : "소리 켬"; $("mute").setAttribute("aria-pressed", String(!sfx.muted));
   $("anger").innerHTML = [0, 1, 2].map(i => `<span class="${i < S.anger ? "on" : ""}">✕</span>`).join("");
@@ -655,6 +776,8 @@ function ui() {
     if (S.shop.length) h += `<div class="list">${S.shop.map(id => { const r = RB[id]; return `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-buy="${id}" ${S.credits < r.cost || S.relics.length >= 8 ? "disabled" : ""}>${r.cost}크레딧</button></div>`; }).join("")}</div>`;
     else if (S.day >= 2) h += `<p class="label">오늘 진열장이 비었어요.</p>`; else h += `<p class="label">진열장은 Day 2부터 열려요.</p>`;
     if (S.day >= 2) h += `<button class="ghost" id="reroll" ${S.freeReroll || S.gold >= rerollCost() ? "" : "disabled"}>진열장 바꾸기 · ${S.freeReroll ? "무료" : G(rerollCost())}</button>`;
+    h += `<details><summary class="label">업적 ${achs.filter(k => ACH[k]).length}/${Object.keys(ACH).length} · 일부는 유물을 해금해요</summary><div class="list" style="margin-top:6px">${Object.entries(ACH).map(([k, a]) =>
+      `<div class="item"><div><b>${a.name}</b>${a.relic ? `<span class="tag">${RB[a.relic].name}</span>` : ""}<p>${a.desc}</p></div><span class="label">${achieved(k) ? "달성" : "미달성"}</span></div>`).join("")}</div></details>`;
     h += `<details><summary class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 해금</summary><div class="list" style="margin-top:6px">${Object.entries(FAMS).map(([k, f]) =>
       `<div class="item"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b><span class="tag">${f.name}${f.special ? " · 특수" : ""}</span><p>${unlocked(k) ? RB[f.mw].desc : `${f.name} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("")}</div></details>`;
     h += `<p class="label">내 유물 ${S.relics.length}/8</p>` + (S.relics.length ? `<div class="list">${S.relics.map(id => `<div class="item"><div><b>${RB[id].name}</b><p>${RB[id].desc}</p></div><button class="ghost" data-toss="${id}">버리기</button></div>`).join("")}</div>` : "");
@@ -671,6 +794,8 @@ function ui() {
     const short = Math.max(0, q - tsum);
     h += `<div class="row"><span>오늘 공물 <b class="num">${G(tsum)}</b> / ${G(q)}</span>${S.hand ? `<button id="offer">창구에 넣기</button>` : ""}</div>`;
     if (short) h += `<p class="bad">부족 ${G(short)} · 돼지를 더 바쳐야 해요 (골드로는 못 내요)</p>`;
+    if (S.scrap) h += `<p class="label">장의사의 잔 조각 공물 ${G(S.scrap)} 포함</p>`;
+    if (S.carry) h += `<p class="label">군주의 잔돈으로 공물 ${G(S.carry)} 깎임</p>`;
     if (S.tribute.length) h += `<div class="list">${S.tribute.map((p, i) => pigLine(p, `<button class="ghost" data-take="${i}" ${S.hand ? "disabled" : ""}>꺼내기</button>`)).join("")}</div>`;
     h += `<p class="label">종을 치면 하루가 끝나요. 공물은 돼지로만 낼 수 있어요. 모자라면 분노가 쌓이고, 3번이면 끝이에요. 바친 돼지 가치는 완납이든 아니든 전부 골드로 돌려받아요.</p>
       <button id="bell" class="${confirmBell ? "hot" : ""}">${confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
@@ -685,18 +810,25 @@ $("panel").addEventListener("click", async e => {
   if (["lift", "place", "drop", "offer"].includes(id) || d.pick || d.take) sfx.play("tap-ui-tick");
   if (id === "lift") { S.hand = S.anvil; S.anvil = null; lastSnap = null; }
   if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null;
-    const a = S.anvil; if (S.inherit && a.lvl === 0 && a.strikes === 0) { a.lvl = a.peak = S.inherit; a.charge = Math.min(10, a.charge + 4); banner(`+${S.inherit} 계승`, "새벽의 칼집", "f"); S.inherit = 0; } }
+    const a = S.anvil; if (typeof S.inherit === "number") S.inherit = { lvl: S.inherit, charge: 4 };
+    if (a.lvl === 0 && a.strikes === 0) {
+      if (S.inherit) { a.lvl = a.peak = S.inherit.lvl; a.charge = Math.min(10, a.charge + S.inherit.charge); banner(`+${S.inherit.lvl} 계승`, `광란 +${S.inherit.charge}`, "f"); S.inherit = null; }
+      if (S.molar) { a.tk = { ...(a.tk || {}), s: ((a.tk || {}).s || 0) + 4 }; S.molar = false; banner("굶주린 어금니", "이 돼지는 성공 티켓 +4", "f"); }
+    } }
   if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; sfx.play("whoosh-short"); const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); sfx.play("pop-bubble"); }
   if (id === "drop") { S.pen.push(S.hand); S.hand = null; }
   if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
   if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().setY(1.5), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coin-collect"); }
   if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); sfx.play("confirm-unlock"); }
-  if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("swipe"); }
+  if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("swipe");
+    if (has("hook") && !S.hookUsed) { const i = S.pen.findIndex(p => p.lvl === 0 && p.strikes === 0); if (i >= 0) { S.pen.splice(i, 1); S.credits += 2; S.hookUsed = true; banner("+2 크레딧", "수집가의 갈고리가 +0 돼지를 가져갔어요", "f"); } } }
   if (d.toss) S.relics = S.relics.filter(x => x !== d.toss);
   if (id === "gift") return pickGift();
   if (d.shop) { const o = S.merchant[d.shop]; S.gold -= o.price; o.left--; o.price *= 3;
     if (d.shop === "pig") S.pen.push(newPig()); else if (d.shop === "special") S.hand = newPig(o.lvl, o.fam); else if (d.shop === "note") S.extra += 2;
     else if (d.shop === "incense") { S.anger = Math.max(0, S.anger - 1); S.incenseUsed = true; } else S.items[d.shop] = (S.items[d.shop] || 0) + 1;
+    if (Object.values(S.merchant).every(x => !x.left)) achieve("soldout");
+    flushToasts(1400);
     banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coin-double"); }
   if (d.use) { const k = d.use;
     if (k === "star") { if (inFrenzy()) return banner("안 돼요", "광란 중엔 못 써요", "h"); S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
