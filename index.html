@@ -329,11 +329,12 @@ function makeMerchant() {
 function ringBell() {
   const q = quota(S.day), total = S.tribute.reduce((a, p) => a + V(p), 0), day = S.day;
   const short = Math.max(0, q - total), fromGold = Math.min(S.gold, short), paid = fromGold >= short;
-  S.gold -= fromGold; S.gold += total; S.tribute = []; // shortfall comes out of held gold first, then pig value is refunded as before
+  const change = Math.max(0, total - q); // only the pig value above the tribute comes back as gold
+  S.gold += change - fromGold; S.tribute = [];
   if (paid) { S.pays++; if (has("tally")) S.credits++; } else S.anger++;
   if (S.anger >= 3) { sfx.play("error-sharp-alert"); save(); ui(); return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart); }
   S.day++; morning();
-  banner(paid ? "공물 완납" : "공물 부족", paid ? `돼지 ${G(total)}${fromGold ? ` + 골드 ${G(fromGold)}` : ""} · Day ${S.day}` : `골드 ${G(fromGold)}까지 냈지만 모자라요 · 분노 ${S.anger}/3`, paid ? "s" : "b");
+  banner(paid ? "공물 완납" : "공물 부족", paid ? (fromGold ? `돼지 ${G(total)} + 골드 ${G(fromGold)} · Day ${S.day}` : `거스름돈 +${G(change)} · Day ${S.day}`) : `골드 ${G(fromGold)}까지 냈지만 모자라요 · 분노 ${S.anger}/3`, paid ? "s" : "b");
   sfx.play(paid ? "success-celebrate" : "warning-buzz");
   if (!paid) shakeT = .6;
   ui();
@@ -666,9 +667,10 @@ function ui() {
   if (s === "tribute") {
     const short = Math.max(0, q - tsum);
     h += `<div class="row"><span>오늘 공물 <b class="num">${G(tsum)}</b> / ${G(q)}</span>${S.hand ? `<button id="offer">창구에 넣기</button>` : ""}</div>`;
+    if (!short && tsum > q) h += `<p class="gold">공물을 내고 남는 ${G(tsum - q)}을 골드로 받아요</p>`;
     if (short) h += `<p class="${S.gold >= short ? "gold" : "bad"}">부족 ${G(short)} → ${S.gold >= short ? "보유 골드에서 차감돼요" : `골드 ${G(S.gold)}로도 모자라요`}</p>`;
     if (S.tribute.length) h += `<div class="list">${S.tribute.map((p, i) => pigLine(p, `<button class="ghost" data-take="${i}" ${S.hand ? "disabled" : ""}>꺼내기</button>`)).join("")}</div>`;
-    h += `<p class="label">종을 치면 하루가 끝나요. 돼지 가치가 모자라면 보유 골드에서 나머지를 내요. 골드로도 모자라면 분노가 쌓이고, 3번이면 끝이에요. 바친 돼지 가치는 골드로 돌려받아요.</p>
+    h += `<p class="label">종을 치면 하루가 끝나요. 돼지 가치가 모자라면 보유 골드에서 나머지를 내요. 골드로도 모자라면 분노가 쌓이고, 3번이면 끝이에요. 돼지 가치가 공물보다 많으면 남는 만큼 골드로 받아요.</p>
       <button id="bell" class="${confirmBell ? "hot" : ""}">${confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
   }
   $("panel").innerHTML = h; save();
