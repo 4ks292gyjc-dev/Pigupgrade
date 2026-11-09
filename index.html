@@ -85,6 +85,27 @@ button.armed{outline:3px solid var(--great)}
 .modal h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}
 .modal p{margin:0;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){#banner b{animation:none!important}}
+/* Title menu over the slowly turning forge */
+body.menu .hud,body.ko .hud{opacity:0;pointer-events:none}
+.hud{transition:opacity .4s}
+#menu{position:fixed;inset:0;z-index:9;display:grid;grid-template-rows:1fr auto;padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px));
+  background:radial-gradient(120% 70% at 50% 40%,transparent 30%,rgba(8,5,3,.75) 75%),linear-gradient(180deg,rgba(8,5,3,.55),transparent 30%,transparent 55%,rgba(8,5,3,.92))}
+#menu .head{align-self:center;text-align:center;margin-top:-12vh}
+#menu .kicker{font-family:var(--body);font-weight:700;font-size:13px;letter-spacing:.35em;color:var(--ember);margin:0 0 6px;text-shadow:0 1px 0 #000}
+#menu h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(52px,17vw,96px);line-height:1;color:var(--great);
+  background:linear-gradient(180deg,#fff6d8 5%,#ffc94a 45%,#b8641a 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 6px 0 rgba(0,0,0,.85)) drop-shadow(0 0 30px rgba(255,140,40,.35))}
+#menu .best{margin:10px 0 0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-shadow:0 1px 2px #000}
+#menu .foot{width:100%;max-width:340px;margin-inline:auto;display:grid;gap:8px}
+#menu .foot>button{min-height:52px;font-size:19px}
+#menu .credit{margin:6px 0 0;text-align:center;font-size:10px;color:var(--muted);opacity:.7}
+#menu .achPanel{width:100%;max-width:440px;margin-inline:auto;align-self:end;display:grid;gap:8px;max-height:72vh}
+#menu .achPanel .scroll{overflow:auto;display:grid;gap:10px;padding-right:2px}
+#menu .achPanel h2{margin:0;font-family:var(--display);font-weight:400;font-size:26px}
+.item.done{border-color:rgba(255,212,59,.5)} .item.done .label{color:var(--great)} .item.locked{opacity:.6}
+/* Knock-out: eyelids close from top and bottom */
+.lid{position:fixed;left:-10%;right:-10%;height:0;background:#000;z-index:7;pointer-events:none}
+#lidT{top:0;border-radius:0 0 50% 50%/0 0 40% 40%} #lidB{bottom:0;border-radius:50% 50% 0 0/40% 40% 0 0}
 </style>
 
 <canvas id="gl" aria-label="돼지 대장간"></canvas>
@@ -107,6 +128,8 @@ button.armed{outline:3px solid var(--great)}
 <div id="flash"></div>
 <div id="banner" aria-live="assertive"><b></b><small></small></div>
 
+<div class="lid" id="lidT"></div><div class="lid" id="lidB"></div>
+<div id="menu" hidden></div>
 <div class="modal" id="modal" hidden><div id="modalBody"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -457,11 +480,11 @@ function ringBell() {
   let pardoned = false;
   if (S.anger >= 3 && has("pardon")) { S.relics = S.relics.filter(x => x !== "pardon"); S.anger = 2; pardoned = true; }
   if (S.anger >= 3) {
-    achieve("firstdeath"); sfx.play("roar"); save(); ui(); flushToasts(400);
-    return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart);
+    achieve("firstdeath"); save(); return knockout(day, total, q);
   }
   if (day === 21) achieve("clear");
   S.day++; const born = morning();
+  if (S.day > bestDay) { bestDay = S.day; try { localStorage.setItem("pigforge-best", bestDay); } catch {} }
   banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : pardoned ? "군주의 사면장이 목숨을 구했다 · 분노 2/3" : `${G(q - total)} 모자라요 · 분노 ${S.anger}/3 · 골드 +${G(total)}`, paid ? "s" : "b");
   ui();
   if (paid) sfx.play("coinsBig", "grunt"); else rage(born);
@@ -620,13 +643,13 @@ const arm = new THREE.Group(), handG = new THREE.Group(), fingers = []; arm.visi
   const palm = new THREE.Mesh(rbox(.36, .11, .3, .045), skin); handG.add(palm);
   for (let i = 0; i < 4; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(.045, 10, 8), skin); k.position.set(-.13 + i * .087, .045, .12); k.scale.set(1, .7, 1); handG.add(k); }
   const digit = (len1, len2, r) => { const f = new THREE.Group(), joint = new THREE.Group();
-    const s1 = new THREE.Mesh(new THREE.CylinderGeometry(r * .9, r, len1, 10), skin); s1.rotation.x = Math.PI / 2; s1.position.z = len1 / 2; f.add(s1);
+    const s1 = new THREE.Mesh(new THREE.CylinderGeometry(r * .9, r, len1, 14), skin); s1.rotation.x = Math.PI / 2; s1.position.z = len1 / 2; f.add(s1);
     f.add(new THREE.Mesh(new THREE.SphereGeometry(r * 1.05, 10, 8), skin)); joint.position.z = len1; f.add(joint);
     joint.add(new THREE.Mesh(new THREE.SphereGeometry(r * .95, 10, 8), skin));
     const s2 = new THREE.Mesh(new THREE.CylinderGeometry(r * .75, r * .9, len2, 10), skin); s2.rotation.x = Math.PI / 2; s2.position.z = len2 / 2; joint.add(s2);
     const c = new THREE.Mesh(new THREE.ConeGeometry(r * .75, .09, 8), claw); c.rotation.x = Math.PI / 2; c.position.z = len2 + .035; joint.add(c);
     return { f, joint }; };
-  for (let i = 0; i < 4; i++) { const d = digit(.13 - Math.abs(i - 1.5) * .015, .1, .038); d.f.position.set(-.13 + i * .087, 0, .14); d.f.rotation.y = (1.5 - i) * .06; handG.add(d.f); fingers.push(d); }
+  for (let i = 0; i < 4; i++) { const d = digit(.115 - Math.abs(i - 1.5) * .012, .095, .046); d.f.position.set(-.13 + i * .087, 0, .14); d.f.rotation.y = (1.5 - i) * .06; handG.add(d.f); fingers.push(d); }
   const th = digit(.1, .08, .042); th.f.position.set(.19, -.02, .0); th.f.rotation.set(0, -.9, .3); handG.add(th.f); fingers.push(th);
   const fore = new THREE.Mesh(new THREE.CylinderGeometry(.15, .19, 1.9, 16), fur); fore.rotation.x = Math.PI / 2; fore.position.z = -1.05; handG.add(fore);
   const cuff = new THREE.Mesh(new THREE.TorusGeometry(.2, .05, 10, 24), M(0x7a1a14, { roughness: .7 })); cuff.position.z = -.75; handG.add(cuff);
@@ -834,23 +857,24 @@ function sparkBurst(pos, color, n = 40) {
 let st = 0, yaw = 0, pitch = -.5, shakeT = 0, swing = 0, fovTarget = 62, crackT = 0, drag = null;
 canvas.addEventListener("pointerdown", e => drag = { x: e.clientX });
 canvas.addEventListener("pointerup", e => {
-  if (!drag) return; const dx = e.clientX - drag.x; drag = null;
+  if (!drag || menu || ko) return; const dx = e.clientX - drag.x; drag = null;
   if (Math.abs(dx) > 50) go(dx > 0 ? -1 : 1);
   else if (STATIONS[st].id === "anvil" && S.anvil) doStrike();
 });
-addEventListener("keydown", e => { if (e.code === "Space" && STATIONS[st].id === "anvil") { e.preventDefault(); doStrike(); } if (e.code === "ArrowLeft") go(-1); if (e.code === "ArrowRight") go(1); });
+addEventListener("keydown", e => { if (menu || ko) return; if (e.code === "Space" && STATIONS[st].id === "anvil") { e.preventDefault(); doStrike(); } if (e.code === "ArrowLeft") go(-1); if (e.code === "ArrowRight") go(1); });
 // ▶ turns right (yaw decreases); swipe right turns left
-function go(d) { st = (st - d + STATIONS.length) % STATIONS.length; confirmBell = false; sfx.play("step"); setTimeout(() => sfx.play("step"), 170); ui(); }
+function go(d) { if (menu || ko || collecting) return; st = (st - d + STATIONS.length) % STATIONS.length; confirmBell = false; sfx.play("step"); setTimeout(() => sfx.play("step"), 170); ui(); }
 
 let last = performance.now(), wasFrenzy = false;
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000), t = now / 1000; last = now;
-  let target = STATIONS[st].yaw; while (target - yaw > 180) target -= 360; while (target - yaw < -180) target += 360;
-  yaw += (target - yaw) * Math.min(1, dt * 7);
-  pitch += (STATIONS[st].pitch - pitch) * Math.min(1, dt * 7);
-  cam.position.set(0, 1.55, 0);
+  if (menu) { yaw = (yaw + dt * 5) % 360; pitch += (-.2 - pitch) * Math.min(1, dt * 2); }
+  else { let target = STATIONS[st].yaw; while (target - yaw > 180) target -= 360; while (target - yaw < -180) target += 360;
+    yaw += (target - yaw) * Math.min(1, dt * 7);
+    pitch += (STATIONS[st].pitch - pitch) * Math.min(1, dt * 7); }
+  cam.position.set(0, ko ? ko.y : 1.55, 0);
   if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
-  cam.rotation.set(0, 0, 0); cam.rotateY(yaw * Math.PI / 180); cam.rotateX(pitch);
+  cam.rotation.set(0, 0, 0); cam.rotateY(yaw * Math.PI / 180); cam.rotateX(ko ? pitch + ko.tilt : pitch); if (ko) cam.rotateZ(ko.roll);
   cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 4); cam.updateProjectionMatrix();
   fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; tickFire(dt, t);
   { const d = Math.abs(((yaw - 55) % 360 + 540) % 360 - 180); sfx.ambience(.05 + Math.max(0, 1 - d / 75) * .45); } // crackle louder facing the furnace
@@ -990,10 +1014,8 @@ function ui() {
     if (S.shop.length) h += `<div class="list">${S.shop.map(id => { const r = RB[id]; return `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-buy="${id}" ${S.credits < r.cost || S.relics.length >= 8 ? "disabled" : ""}>${r.cost}크레딧</button></div>`; }).join("")}</div>`;
     else if (S.day >= 2) h += `<p class="label">오늘 진열장이 비었어요.</p>`; else h += `<p class="label">진열장은 Day 2부터 열려요.</p>`;
     if (S.day >= 2) h += `<button class="ghost" id="reroll" ${S.freeReroll || S.gold >= rerollCost() ? "" : "disabled"}>진열장 바꾸기 · ${S.freeReroll ? "무료" : G(rerollCost())}</button>`;
-    h += `<details><summary class="label">업적 ${achs.filter(k => ACH[k]).length}/${Object.keys(ACH).length} · 일부는 유물을 해금해요</summary><div class="list" style="margin-top:6px">${Object.entries(ACH).map(([k, a]) =>
-      `<div class="item"><div><b>${a.name}</b>${a.relic ? `<span class="tag">${RB[a.relic].name}</span>` : ""}<p>${a.desc}</p></div><span class="label">${achieved(k) ? "달성" : "미달성"}</span></div>`).join("")}</div></details>`;
-    h += `<details><summary class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 해금</summary><div class="list" style="margin-top:6px">${Object.entries(FAMS).map(([k, f]) =>
-      `<div class="item"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b><span class="tag">${f.name}${f.special ? " · 특수" : ""}</span><p>${unlocked(k) ? RB[f.mw].desc : `${f.name} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("")}</div></details>`;
+    h += `<details><summary class="label">업적 ${achCount()} · 일부는 유물을 해금해요</summary><div class="list" style="margin-top:6px">${achList()}</div></details>`;
+    h += `<details><summary class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 해금</summary><div class="list" style="margin-top:6px">${mwList()}</div></details>`;
     h += `<p class="label">내 유물 ${S.relics.length}/8</p>` + (S.relics.length ? `<div class="list">${S.relics.map(id => `<div class="item"><div><b>${RB[id].name}</b><p>${RB[id].desc}</p></div><button class="ghost" data-toss="${id}">버리기</button></div>`).join("")}</div>` : "");
   }
   if (s === "ghost") {
@@ -1058,12 +1080,73 @@ $("panel").addEventListener("click", async e => {
 
 function showModal(html, after) { $("modalBody").innerHTML = html; $("modal").hidden = false; after && after(); }
 function closeModal() { $("modal").hidden = true; ui(); }
+const achCount = () => `${achs.filter(k => ACH[k]).length}/${Object.keys(ACH).length}`;
+const achList = () => Object.entries(ACH).map(([k, a]) =>
+  `<div class="item ${achieved(k) ? "done" : "locked"}"><div><b>${a.name}</b>${a.relic ? `<span class="tag">${RB[a.relic].name}</span>` : ""}<p>${a.desc}</p></div><span class="label">${achieved(k) ? "달성" : "미달성"}</span></div>`).join("");
+const mwList = () => Object.entries(FAMS).map(([k, f]) =>
+  `<div class="item ${unlocked(k) ? "done" : "locked"}"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b><span class="tag">${f.name}${f.special ? " · 특수" : ""}</span><p>${unlocked(k) ? RB[f.mw].desc : `${f.name} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("");
+
+// ===== Title menu =====
+let menu = false, confirmNew = false, bestDay = 0; try { bestDay = +localStorage.getItem("pigforge-best") || 0; } catch {}
+const alive = () => S && S.anger < 3;
+const inProgress = () => alive() && (S.day > 1 || S.gift);
+function showMenu(view = "main") {
+  menu = true; confirmNew = view === "confirm"; document.body.classList.add("menu"); const m = $("menu"); m.hidden = false;
+  if (view === "ach") {
+    m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>업적 <span class="gold">${achCount()}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
+      <div class="scroll"><div class="list">${achList()}</div><div class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 유물 진열장에 나와요</div><div class="list">${mwList()}</div></div></div>`;
+  } else {
+    m.innerHTML = `<div class="head"><p class="kicker">멧돼지 군주의 대장간</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}</div>
+      <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</small></button>` : ""}
+      <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
+      <button class="ghost" id="mAch">업적 ${achCount()}</button>
+      <button class="ghost" id="mSnd">${sfx.muted ? "소리 끔" : "소리 켬"}</button>
+      <p class="credit">효과음 · 3D 모델 · 질감: CC0 (OpenGameArt · Poly Haven)</p></div>`;
+  }
+  m.querySelectorAll("button").forEach(b => b.onclick = () => { sfx.play("tick"); menuClick(b.id); });
+}
+function menuClick(id) {
+  if (id === "mBack") return showMenu();
+  if (id === "mAch") return showMenu("ach");
+  if (id === "mSnd") { sfx.toggle(); return showMenu(); }
+  if (id === "mNew" && inProgress() && !confirmNew) return showMenu("confirm");
+  if (id === "mNew") { newRun(); hideMenu(); return pickGift(); }
+  if (id === "mCont") { hideMenu(); if (S.day === 1 && !S.gift) pickGift(); }
+}
+function hideMenu() { menu = false; $("menu").hidden = true; document.body.classList.remove("menu"); yaw = STATIONS[st].yaw + 40; sfx.play("swish"); ui(); }
+function newRun() { resetKO(); S = fresh(); uid = 1; morning(); st = 2; save(); }
+
+// ===== Game over: the boar lord punches the camera, the view falls and the eyes slowly close =====
+let ko = null;
+const FIST = 1.75; // fingers fold 90° down then back into the palm so the knuckles face the lens
+function resetKO() { ko = null; collecting = false; document.body.classList.remove("ko"); $("lidT").style.height = $("lidB").style.height = "0"; $("gl").style.filter = ""; }
+async function knockout(day, total, q) {
+  collecting = true; document.body.classList.add("ko"); confirmBell = false;
+  const sp = reduced ? .4 : 1, gate = hatch.userData.gate;
+  st = 5; rageT = 5; sfx.play("roar", "chain"); buzz([200, 80, 200]);
+  await tween(450 * sp, k => gate.scale.y = 1 - .93 * k);
+  arm.visible = true; poseArm(-1.4, -.1, 0, FIST);
+  await tween(550 * sp, k => poseArm(lerp(-1.4, -.35, k), lerp(-.1, .05, k), -.2 * k, FIST)); // wind up in the opening
+  sfx.play("grunt"); await sleep(180 * sp); sfx.play("swish");
+  await tween(170 * sp, k => poseArm(lerp(-.35, 2.85, k * k), lerp(.05, .4, k), lerp(-.2, 0, k), FIST)); // straight at the lens
+  sfx.play("heavy", "dent", "thud"); flash(1); shakeT = .45; buzz([400]);
+  ko = { y: 1.55, tilt: 0, roll: 0 };
+  tween(350, k => poseArm(lerp(2.85, -1.4, k), lerp(.4, -.1, k), 0, FIST)).then(() => { arm.visible = false; tween(400, k => gate.scale.y = .07 + .93 * k); });
+  await tween(900 * sp, k => { ko.y = lerp(1.55, .45, k); ko.tilt = lerp(0, .95, k); ko.roll = lerp(0, .38, k); }); // fall on your back
+  sfx.play("thud"); shakeT = .15;
+  const lids = h => { $("lidT").style.height = $("lidB").style.height = h + "vh"; $("gl").style.filter = `blur(${(h / 9).toFixed(1)}px)`; };
+  for (const [a, b, ms] of [[0, 30, 700], [30, 12, 450], [12, 42, 800], [42, 28, 350], [28, 53, 1100]]) await tween(ms * sp, k => lids(lerp(a, b, k)));
+  await sleep(500 * sp);
+  showModal(`<h2 class="bad">녹아웃</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p>
+    <button class="hot" id="again">처음부터</button><button class="ghost" id="toMenu">메인 화면</button>`, () => { $("again").onclick = restart; $("toMenu").onclick = () => { closeModal(); newRun(); showMenu(); }; });
+  flushToasts(600);
+}
 function pickGift() {
   const opts = RELICS.filter(r => r.gift).sort(() => Math.random() - .5).slice(0, 3);
   showModal(`<h2>첫날 선물</h2><p>하나만 가져갈 수 있어요. 나머지는 사라져요.</p><div class="list">${opts.map(r => `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-g="${r.id}">선택</button></div>`).join("")}</div>`,
     () => $("modalBody").querySelectorAll("[data-g]").forEach(b => b.onclick = () => { S.relics.push(b.dataset.g); S.gift = b.dataset.g; closeModal(); banner(RB[b.dataset.g].name, "선물을 받았어요", "g"); sfx.play("gem"); }));
 }
-function restart() { S = fresh(); uid = 1; morning(); st = 2; closeModal(); pickGift(); }
+function restart() { newRun(); closeModal(); pickGift(); }
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
 $("mute").onclick = () => { sfx.toggle(); ui(); };
 // iOS Safari ignores user-scalable=no: touch-action stops double-tap zoom, these stop pinch zoom
@@ -1072,8 +1155,8 @@ document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preven
 const buzz = ms => { try { navigator.vibrate?.(ms); } catch {} };
 
 // Boot
-if (!load()) { S = fresh(); morning(); st = 2; }
+if (!load() || !alive()) { S = fresh(); morning(); st = 2; }
 yaw = STATIONS[st].yaw;
 resize(); ui(); requestAnimationFrame(loop);
-if (S.day === 1 && !S.gift) pickGift();
+showMenu();
 </script>
