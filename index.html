@@ -9,13 +9,14 @@
 <meta name="apple-mobile-web-app-title" content="돼지강화">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 <style>
 /* Layout: full-screen 3D barn forge; HUD top (day/tribute), station panel bottom */
 :root{
   --bg:#120d0a; --panel:rgba(28,20,15,.88); --line:#4a3a2c; --text:#f6ead8; --muted:#b29e88; --ember:#ff8a3d;
   --break:#ff4d4d; --dmg:#ff9f43; --hold:#9aa0a8; --ok:#4dabf7; --great:#ffd43b; --frenzy:#ff3df2;
-  --display:"Jua","Gowun Dodum",system-ui,sans-serif; --body:"Gowun Dodum",system-ui,sans-serif;
+  --display:"Black Han Sans","Noto Sans KR",system-ui,sans-serif; --body:"Noto Sans KR",system-ui,sans-serif;
+  --frame:#6b5236; --parch-hi:#f5e6c8; --parch-lo:#d4b98c;
   color-scheme:dark;
 }
 html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-text-size-adjust:100%}
@@ -23,7 +24,7 @@ html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;touch-ac
 button{touch-action:manipulation}
 #gl{touch-action:none}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;font-weight:500;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .num{font-variant-numeric:tabular-nums}
 .hud{position:fixed;left:0;right:0;z-index:2;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));pointer-events:none}
@@ -31,9 +32,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14
 #top,#bottom{max-width:520px;margin-inline:auto}
 #top{top:0;padding-top:calc(8px + env(safe-area-inset-top,0px));display:grid;gap:6px}
 #bottom{bottom:0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;gap:6px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.card{background:linear-gradient(180deg,rgba(44,32,23,.94),rgba(22,15,11,.94));border:1px solid var(--frame);border-radius:4px;padding:8px 10px;
+  box-shadow:inset 0 1px 0 rgba(255,214,160,.12),inset 0 0 0 1px rgba(0,0,0,.6),0 6px 16px rgba(0,0,0,.55)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.label{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em}
 .big{font-family:var(--display);font-size:20px}
 .gold{color:var(--great)} .bad{color:var(--break)}
 .anger span{font-family:var(--display);font-size:16px;opacity:.25} .anger span.on{opacity:1;color:var(--break)}
@@ -41,34 +43,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14
 #panel p{margin:0}
 #nav{display:grid;grid-template-columns:48px 1fr 48px;gap:6px;align-items:center}
 #nav b{font-family:var(--display);font-weight:400;font-size:18px;text-align:center;text-shadow:0 2px 4px #000}
-button{font-family:var(--display);font-size:16px;border:0;border-radius:10px;padding:10px;cursor:pointer;color:#1a120c;background:var(--text);min-height:44px}
-button small{display:block;font-family:var(--body);font-size:11px;opacity:.75}
+button{font-family:var(--display);font-size:16px;letter-spacing:.02em;border:1px solid #4a3220;border-radius:4px;padding:10px;cursor:pointer;color:#2a1a0e;min-height:44px;
+  background:linear-gradient(180deg,var(--parch-hi),var(--parch-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 2px 0 #3a2616,0 3px 6px rgba(0,0,0,.4)}
+button:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 #3a2616}
+button small{display:block;font-family:var(--body);font-weight:500;font-size:11px;letter-spacing:0;opacity:.75}
 button:focus-visible{outline:3px solid var(--great);outline-offset:2px}
 button:disabled{opacity:.35;cursor:not-allowed}
-button.ghost{background:var(--panel);color:var(--text);border:1px solid var(--line)}
-button.hot{background:linear-gradient(180deg,#ffb06b,var(--ember))}
+button.ghost{background:linear-gradient(180deg,#3a2a1e,#241912);color:var(--text);border-color:var(--frame);box-shadow:inset 0 1px 0 rgba(255,214,160,.14),0 2px 0 #0d0805}
+button.hot{background:linear-gradient(180deg,#ffc27a,#f07a2a 55%,#c9531a);border-color:#6a2a0c;color:#2a0e02;box-shadow:inset 0 1px 0 rgba(255,240,200,.7),0 3px 0 #5a2208,0 4px 10px rgba(255,120,40,.3)}
 button.armed{outline:3px solid var(--great)}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
 .btns>button{flex:1 1 30%}
 #strike{font-size:24px;flex-basis:100%;min-height:58px}
 .odds{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:2px}
-.odds span{font-size:11px;color:var(--muted)} .odds b{display:block;font-size:14px;font-weight:400}
+.odds span{font-size:11px;font-weight:700;color:var(--muted)} .odds b{display:block;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)} .stack i{display:block;height:100%}
 .charges{display:grid;grid-template-columns:repeat(10,1fr);gap:3px} .charges i{height:8px;border-radius:2px;background:var(--line)} .charges i.on{background:var(--frenzy)}
 .list{display:grid;gap:6px}
-.item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:rgba(255,255,255,.04);border-radius:10px;padding:6px 8px;text-align:left}
+.item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:rgba(0,0,0,.25);border:1px solid rgba(107,82,54,.45);border-radius:3px;padding:6px 8px;text-align:left}
 .item p{margin:0;font-size:12px;color:var(--muted)}
 .item b{font-family:var(--display);font-weight:400;font-size:15px}
-.tag{font-size:10px;padding:1px 6px;border-radius:6px;background:var(--line);color:var(--text);margin-left:4px}
+.tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:2px;background:var(--line);color:var(--text);margin-left:4px}
 #banner{position:fixed;left:50%;top:32%;z-index:5;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%)}
 #banner.show{animation:bIn .45s cubic-bezier(.2,1.6,.4,1) forwards,bOut .4s ease-in 1.8s forwards}
 @keyframes bOut{to{opacity:0}}
-#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(48px,16vw,110px);line-height:1;text-shadow:0 0 28px currentColor,0 5px 0 #000}
-#banner small{display:block;font-size:17px;color:var(--text);text-shadow:0 2px 4px #000;margin-top:6px}
-#banner.g b{color:var(--great);animation:hue 1s linear infinite} #banner.s b{color:var(--ok)} #banner.h b{color:var(--hold)} #banner.d b{color:var(--dmg)}
+#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(48px,16vw,110px);line-height:1.05;letter-spacing:-.01em;
+  background:linear-gradient(180deg,#fff 8%,currentColor 48%,color-mix(in srgb,currentColor 55%,#000) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 5px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px color-mix(in srgb,currentColor 35%,transparent))}
+#banner small{display:block;font-size:16px;font-weight:700;letter-spacing:.04em;color:var(--text);text-shadow:0 1px 0 #000,0 0 6px #000;margin-top:8px}
+#banner.g b{color:var(--great)} #banner.s b{color:var(--ok)} #banner.h b{color:var(--hold)} #banner.d b{color:var(--dmg)}
 #banner.b b,#banner.fake b{color:var(--break);animation:jit .07s infinite} #banner.f b{color:var(--frenzy)}
 @keyframes bIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-@keyframes hue{to{filter:hue-rotate(360deg)}}
 @keyframes jit{25%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(4px,-2px) skewX(-8deg)}}
 #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
 #ring{position:fixed;left:50%;top:40%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:3;pointer-events:none;
@@ -585,15 +590,32 @@ function makePig(p) {
     emissive: p.heated ? 0xff5a10 : L >= 13 ? col : 0x000000, emissiveIntensity: p.heated ? .45 : L >= 13 ? .25 : 0 });
   const dark = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.7), metalness: mat.metalness, roughness: mat.roughness });
   const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
-  add(new THREE.SphereGeometry(.5, 24, 16), mat, 0, .55, 0, 1.3, 1, 1);
-  add(new THREE.SphereGeometry(.36, 20, 14), mat, .62, .72, 0);
-  add(new THREE.CylinderGeometry(.15, .15, .14, 16), dark, .96, .66, 0).rotation.z = Math.PI / 2;
-  for (const z of [-.06, .06]) add(new THREE.SphereGeometry(.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x220000 }), 1.03, .67, z);
-  const eyeM = new THREE.MeshBasicMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x111111 });
-  for (const z of [-.15, .15]) add(new THREE.SphereGeometry(.05, 10, 8), eyeM, .88, .84, z);
-  for (const z of [-.18, .18]) add(new THREE.ConeGeometry(.11, .22, 4), dark, .55, 1.08, z).rotation.x = z > 0 ? .4 : -.4;
-  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) add(new THREE.CylinderGeometry(.08, .07, .3, 10), dark, x, .15, z);
-  add(new THREE.TorusGeometry(.08, .025, 6, 12, 5), dark, -.68, .7, 0).rotation.y = Math.PI / 2;
+  // Body, rump and neck overlap so the silhouette reads as one soft barrel instead of two balls
+  add(new THREE.SphereGeometry(.5, 36, 26), mat, 0, .55, 0, 1.3, 1, 1);
+  add(new THREE.SphereGeometry(.42, 28, 20), mat, -.32, .58, 0, 1, 1, 1.08);
+  add(new THREE.SphereGeometry(.34, 28, 20), mat, .42, .63, 0, 1, .92, 1.1);
+  add(new THREE.SphereGeometry(.36, 32, 24), mat, .62, .72, 0, 1, .95, 1.05);
+  for (const z of [-.17, .17]) add(new THREE.SphereGeometry(.14, 20, 14), mat, .78, .62, z);
+  const snoutM = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.88), metalness: mat.metalness, roughness: mat.roughness * .9 });
+  const snout = add(new THREE.LatheGeometry([[0, 0], [.13, 0], [.155, .02], [.165, .08], [.155, .13], [.12, .155], [0, .155]].map(([r, y]) => new THREE.Vector2(r, y)), 28), snoutM, .9, .66, 0);
+  snout.rotation.z = -Math.PI / 2;
+  const holeM = new THREE.MeshBasicMaterial({ color: 0x1a0505 });
+  for (const z of [-.05, .05]) add(new THREE.SphereGeometry(.03, 12, 8), holeM, 1.052, .665, z, .35, 1.3, 1);
+  const eyeM = new THREE.MeshStandardMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x1a1210, roughness: .15, emissive: L >= 7 ? (L >= 12 ? 0x6a4a00 : 0x5a0000) : 0 });
+  const whiteM = new THREE.MeshStandardMaterial({ color: 0xf4efe8, roughness: .3 }), glintM = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (const z of [-.16, .16]) { add(new THREE.SphereGeometry(.06, 16, 12), whiteM, .9, .83, z, .7, 1, 1);
+    add(new THREE.SphereGeometry(.038, 14, 10), eyeM, .935, .83, z * 1.02); add(new THREE.SphereGeometry(.012, 8, 6), glintM, .968, .847, z * .95);
+    add(new THREE.SphereGeometry(.065, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.4), mat, .9, .835, z, .75, .9, 1.05).rotation.z = -.35; } // upper lid
+  // Ears: soft extruded leaf shape, tipped forward and outward on a pivot
+  const earShape = new THREE.Shape(); earShape.moveTo(-.11, 0); earShape.quadraticCurveTo(-.11, .2, .01, .3); earShape.quadraticCurveTo(.11, .19, .11, 0); earShape.quadraticCurveTo(0, -.03, -.11, 0);
+  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: .015, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 3, curveSegments: 14 });
+  for (const side of [-1, 1]) { const piv = new THREE.Group(); piv.position.set(.55, 1, side * .2); piv.rotation.set(side * .5, 0, -.55); g.add(piv);
+    const ear = new THREE.Mesh(earGeo, dark); ear.rotation.y = Math.PI / 2; piv.add(ear); }
+  const hoofM = new THREE.MeshStandardMaterial({ color: 0x2a1c16, roughness: .5, metalness: metal ? .6 : 0 });
+  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) { add(new THREE.CylinderGeometry(.09, .07, .26, 18), dark, x, .19, z);
+    add(new THREE.CylinderGeometry(.068, .078, .07, 18), hoofM, x, .035, z); add(new THREE.BoxGeometry(.16, .06, .012), holeM, x + .02, .035, z); } // cloven split
+  const tail = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 3.4, r = .07 * (1 - i / 34); tail.push(new THREE.Vector3(-.64 - i * .007, .74 + Math.sin(a) * r, Math.cos(a) * r - .07)); }
+  add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tail), 60, .018, 8), dark, 0, 0, 0);
   if (p.fam === "tree") for (const [x, z, r] of [[-.2, -.15, .5], [0, .1, -.3], [.2, -.05, .2]]) { const leaf = add(new THREE.ConeGeometry(.09, .32, 5), new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: .6 }), x, 1.1, z); leaf.rotation.set(r, 0, r); }
   if (p.fam === "fish") add(new THREE.ConeGeometry(.22, .4, 3), new THREE.MeshStandardMaterial({ color: 0x2ec4b6, metalness: .4, roughness: .3 }), -.1, 1.1, 0, .4, 1, 1.4);
   if (p.fam === "grave") { g.userData.wisp = add(new THREE.SphereGeometry(.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb98cff }), .1, 1.45, .25); }
