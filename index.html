@@ -109,13 +109,11 @@ button.armed{outline:3px solid var(--great)}
 <script>
 // ===== Rules: odds, value, tribute and merchant numbers follow the ForgeTax data on forgetax.tools =====
 const BREAK = [0,1.8,5.9,12.9,24.8,29.7,34.7,38.3,41.8,44.3,46.7,49.1,50.5,51.9,53.2,54.5,55.8,57.6,59.4,61.2,63,63.9,64.8,65.7,66.6,67.5,68.4,69.3,70.2,71.1,72];
-const QP = [[1,1800],[7,7500],[14,45800],[21,232000]];
-// shortcut: only 4 tribute points are published; days between are geometric interpolation, replace with the real calendar if found
+// Official tribute calendar (forgetax.tools/tribute) for days 1-21, then +20% a day
+const TRIBUTE = [1800,2100,2600,3350,4350,5700,7500,9800,12800,16700,21500,27750,35700,45800,58650,74650,94550,119350,149950,186850,232000];
 function quota(d) {
-  let q;
-  if (d >= 21) q = 232000 * 1.2 ** (d - 21);
-  else { const i = QP.findIndex(([x]) => x > d) - 1, [d0, q0] = QP[i], [d1, q1] = QP[i + 1]; q = q0 * (q1 / q0) ** ((d - d0) / (d1 - d0)); }
-  return Math.round(q * (has("rebate") ? .9 : 1) / 10) * 10;
+  const q = d <= 21 ? TRIBUTE[d - 1] : 232000 * 1.2 ** (d - 21);
+  return Math.round(q * (has("rebate") ? .9 : 1));
 }
 const NAMES = ["아기돼지","꿀꿀이","통통돼지","분홍돼지","흙돼지","씨름돼지","근육돼지","철갑돼지","은빛돼지","금빛돼지",
   "왕돼지","장군돼지","용돼지","번개돼지","불꽃돼지","얼음돼지","무지개돼지","천상돼지","우주돼지","전설의 돼지","돼지신"];
