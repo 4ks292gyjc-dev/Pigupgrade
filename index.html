@@ -2,382 +2,639 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
 <style>
-/* Layout: one column in a sooty forge — calendar deadline, item panel, pig on the anvil, actions */
+/* Layout: full-screen 3D barn forge; HUD top (day/tribute), station panel bottom */
 :root{
-  --bg:#15110f; --panel:#221b17; --line:#3a2f28; --text:#f3e9dc; --muted:#a8988a; --ember:#ff8a3d;
-  --break:#ff4d4d; --dmg:#ff9f43; --keep:#8a8f98; --ok:#4dabf7; --great:#ffd43b;
-  --display:"Jua","Gowun Dodum",system-ui,sans-serif;
-  --body:"Gowun Dodum",system-ui,sans-serif;
+  --bg:#120d0a; --panel:rgba(28,20,15,.88); --line:#4a3a2c; --text:#f6ead8; --muted:#b29e88; --ember:#ff8a3d;
+  --break:#ff4d4d; --dmg:#ff9f43; --hold:#9aa0a8; --ok:#4dabf7; --great:#ffd43b; --frenzy:#ff3df2;
+  --display:"Jua","Gowun Dodum",system-ui,sans-serif; --body:"Gowun Dodum",system-ui,sans-serif;
   color-scheme:dark;
 }
-html,body{height:100%}
+html,body{height:100%;margin:0;overflow:hidden}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;overflow-x:hidden;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
-main{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
-main.shake{animation:shake .35s}
-@keyframes shake{20%{transform:translate(-9px,4px)}40%{transform:translate(8px,-5px)}60%{transform:translate(-6px,-3px)}80%{transform:translate(5px,3px)}}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
 .num{font-variant-numeric:tabular-nums}
-.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
-h1{font-family:var(--display);font-weight:400;font-size:26px;margin:0}
-.gold{color:var(--great)}
-.label{font-size:12px;color:var(--muted);letter-spacing:.05em}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
-.cal{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
-.cal span{aspect-ratio:1;display:grid;place-items:center;font-size:10px;color:var(--muted);background:#2b231e;border-radius:3px;position:relative}
-.cal span.x::after{content:"";position:absolute;inset:3px;background:
-  linear-gradient(45deg,transparent 44%,var(--break) 44% 56%,transparent 56%),
-  linear-gradient(-45deg,transparent 44%,var(--break) 44% 56%,transparent 56%)}
-.cal span.today{outline:2px solid var(--ember)}
-.iname{font-family:var(--display);font-size:20px}
-.ilvl{font-family:var(--display);font-size:24px;color:var(--great)}
-.value{font-family:var(--display);font-size:26px}
-.odds{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:2px}
-.odds span{font-size:11px;color:var(--muted)}
-.odds b{display:block;font-size:14px;font-weight:400}
-.stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)}
-.stack i{display:block;height:100%;transition:width .3s}
-#stage{width:100%;max-width:320px;aspect-ratio:1;margin:0 auto;display:block}
-#stage.hit{animation:hit .3s}
-@keyframes hit{30%{transform:scale(.9) rotate(-3deg)}60%{transform:scale(1.06)}}
-#ghost{display:flex;gap:8px;align-items:center;font-family:var(--display);font-size:17px;color:#cfe8e4}
-#ghost svg{flex:none}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-button{font-family:var(--display);font-size:18px;border:0;border-radius:10px;padding:14px 8px;cursor:pointer;color:#1a1410;background:var(--text)}
-button small{display:block;font-family:var(--body);font-size:12px;opacity:.75}
+.hud{position:fixed;left:0;right:0;z-index:2;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));pointer-events:none}
+.hud>*{pointer-events:auto}
+#top{top:0;padding-top:calc(8px + env(safe-area-inset-top,0px));display:grid;gap:6px}
+#bottom{bottom:0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;gap:6px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.label{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.big{font-family:var(--display);font-size:20px}
+.gold{color:var(--great)} .bad{color:var(--break)}
+.anger span{font-family:var(--display);font-size:16px;opacity:.25} .anger span.on{opacity:1;color:var(--break)}
+#panel{max-height:46vh;overflow:auto;display:grid;gap:8px}
+#panel p{margin:0}
+#nav{display:grid;grid-template-columns:48px 1fr 48px;gap:6px;align-items:center}
+#nav b{font-family:var(--display);font-weight:400;font-size:18px;text-align:center;text-shadow:0 2px 4px #000}
+button{font-family:var(--display);font-size:16px;border:0;border-radius:10px;padding:10px;cursor:pointer;color:#1a120c;background:var(--text);min-height:44px}
+button small{display:block;font-family:var(--body);font-size:11px;opacity:.75}
 button:focus-visible{outline:3px solid var(--great);outline-offset:2px}
 button:disabled{opacity:.35;cursor:not-allowed}
-#enhance{grid-column:1/-1;background:linear-gradient(180deg,#ffb06b,var(--ember));font-size:24px}
-#sell{background:var(--great)}
-#submit{background:#9be39f}
-details{font-size:13px;color:var(--muted)}
-details p{margin:.4em 0}
-#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
-#banner{position:fixed;left:50%;top:40%;z-index:6;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%)}
-#banner.show{animation:bannerIn .45s cubic-bezier(.2,1.6,.4,1) forwards}
-#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(52px,17vw,104px);line-height:1;text-shadow:0 0 28px currentColor,0 5px 0 #000}
+button.ghost{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+button.hot{background:linear-gradient(180deg,#ffb06b,var(--ember))}
+button.armed{outline:3px solid var(--great)}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns>button{flex:1 1 30%}
+#strike{font-size:24px;flex-basis:100%;min-height:58px}
+.odds{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:2px}
+.odds span{font-size:11px;color:var(--muted)} .odds b{display:block;font-size:14px;font-weight:400}
+.stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)} .stack i{display:block;height:100%}
+.charges{display:grid;grid-template-columns:repeat(10,1fr);gap:3px} .charges i{height:8px;border-radius:2px;background:var(--line)} .charges i.on{background:var(--frenzy)}
+.list{display:grid;gap:6px}
+.item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:rgba(255,255,255,.04);border-radius:10px;padding:6px 8px;text-align:left}
+.item p{margin:0;font-size:12px;color:var(--muted)}
+.item b{font-family:var(--display);font-weight:400;font-size:15px}
+.tag{font-size:10px;padding:1px 6px;border-radius:6px;background:var(--line);color:var(--text);margin-left:4px}
+#banner{position:fixed;left:50%;top:32%;z-index:5;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%)}
+#banner.show{animation:bIn .45s cubic-bezier(.2,1.6,.4,1) forwards,bOut .4s ease-in 1.8s forwards}
+@keyframes bOut{to{opacity:0}}
+#banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(48px,16vw,110px);line-height:1;text-shadow:0 0 28px currentColor,0 5px 0 #000}
 #banner small{display:block;font-size:17px;color:var(--text);text-shadow:0 2px 4px #000;margin-top:6px}
-#banner.great b{color:var(--great);animation:hue 1s linear infinite}
-#banner.ok b{color:var(--ok)} #banner.keep b{color:var(--keep)} #banner.dmg b{color:var(--dmg)}
-#banner.boom b,#banner.fake b{color:var(--break);animation:jit .07s infinite}
-@keyframes bannerIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#banner.g b{color:var(--great);animation:hue 1s linear infinite} #banner.s b{color:var(--ok)} #banner.h b{color:var(--hold)} #banner.d b{color:var(--dmg)}
+#banner.b b,#banner.fake b{color:var(--break);animation:jit .07s infinite} #banner.f b{color:var(--frenzy)}
+@keyframes bIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes hue{to{filter:hue-rotate(360deg)}}
 @keyframes jit{25%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(4px,-2px) skewX(-8deg)}}
-.over{position:fixed;inset:0;background:rgba(10,8,7,.94);display:grid;place-items:center;padding:24px;text-align:center;z-index:8}
-.over div{display:grid;gap:12px;max-width:320px}
-.over h2{font-family:var(--display);font-weight:400;font-size:34px;margin:0;color:var(--break)}
-@media (prefers-reduced-motion:reduce){main.shake,#stage.hit,#banner b{animation:none!important}}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
+#ring{position:fixed;left:50%;top:40%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:3;pointer-events:none;
+  background:conic-gradient(var(--great) calc(var(--p,0)*1turn),rgba(255,255,255,.08) 0);-webkit-mask:radial-gradient(closest-side,transparent 88%,#000 89%);mask:radial-gradient(closest-side,transparent 88%,#000 89%)}
+#ringText{position:fixed;left:50%;top:calc(40% + min(35vw,150px) + 18px);transform:translateX(-50%);z-index:3;font-family:var(--display);font-size:22px;color:var(--great);pointer-events:none;white-space:nowrap;text-shadow:0 2px 4px #000}
+#frenzyBar{position:fixed;left:0;right:0;top:0;height:5px;background:var(--frenzy);transform-origin:left;z-index:6;box-shadow:0 0 16px var(--frenzy)}
+.modal{position:fixed;inset:0;background:rgba(10,7,5,.92);display:grid;place-items:center;padding:20px;z-index:8}
+.modal>div{display:grid;gap:10px;max-width:380px;width:100%;text-align:center}
+.modal h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}
+.modal p{margin:0;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#banner b{animation:none!important}}
 </style>
 
-<main id="main">
-  <div class="row"><h1>돼지 강화하기</h1><span class="value num gold" id="money"></span></div>
+<canvas id="gl" aria-label="돼지 대장간"></canvas>
 
-  <section class="box" aria-label="마감 달력">
-    <div class="row"><span><b id="month" class="num"></b>월 용의 공물 <b class="gold num" id="quota"></b></span><span class="label num" id="left"></span></div>
-    <div class="cal" id="cal"></div>
-  </section>
-
-  <section class="box" aria-label="강화 정보">
-    <div class="row"><span class="iname" id="name"></span><span class="ilvl num" id="lvl"></span></div>
-    <div class="row"><span class="label">판매 가치</span><span class="value num" id="value"></span></div>
-    <div class="row"><span class="label">성공 시</span><span class="num" id="gain"></span></div>
-    <div class="row"><span class="label">광란 게이지</span><span class="num" id="frenzy"></span></div>
-    <div class="odds num" id="odds"></div>
-    <div class="stack" id="stack"></div>
-  </section>
-
-  <canvas id="stage" aria-label="강화 중인 돼지" role="img"></canvas>
-
-  <div id="ghost" hidden>
-    <svg width="34" height="40" viewBox="0 0 34 40" aria-hidden="true"><path d="M17 2C8 2 3 9 3 18v20l5-4 4 4 5-4 5 4 4-4 5 4V18C31 9 26 2 17 2Z" fill="#cfe8e4" opacity=".85"/><ellipse cx="12" cy="17" rx="2.5" ry="4" fill="#15110f"/><ellipse cx="22" cy="17" rx="2.5" ry="4" fill="#15110f"/></svg>
-    <span id="ghostText"></span>
+<div class="hud" id="top">
+  <div class="card row">
+    <div><span class="label">DAY</span> <span class="big num" id="day"></span> <span class="anger" id="anger" aria-label="분노"></span></div>
+    <div style="text-align:right"><span class="label">공물</span> <span class="big num" id="tsum"></span> <span class="label">/</span> <span class="num gold" id="quota"></span></div>
   </div>
-
-  <div class="actions">
-    <button id="enhance">강화<small id="cost"></small></button>
-    <button id="sell">유령에게 팔기<small id="sellSub"></small></button>
-    <button id="submit">공물 바치기<small>남은 날 이월</small></button>
-  </div>
-
-  <details>
-    <summary>규칙</summary>
-    <p>강화할 때마다 비용을 내고 하루가 지나요. 결과는 다섯 가지예요: 대성공(+2), 성공(+1), 유지, 손상(-1), 파괴. 10강까지는 파괴되지 않아요.</p>
-    <p>돼지 가치는 등급이 하나 오를 때마다 1.5배가 돼요. 유령 손님에게 언제든 팔 수 있고, 팔면 새 아기돼지가 와요.</p>
-    <p>같은 돼지를 10번 강화하면 광란이 충전되고, 다음 강화 때 발동해요. 광란 중 6초 동안은 돼지가 파괴되지 않아요. 팔거나 파괴되면 게이지가 초기화돼요.</p>
-    <p>달력이 다 차면 용에게 공물을 바쳐야 해요. 돈이 모자라면 돼지를 급매하고, 그래도 모자라면 파산이에요. 미리 내면 남은 날이 다음 달로 넘어가요.</p>
-    <p>15강부터는 강화 연출이 나와요. 화면을 누르면 넘어가요.</p>
-  </details>
-</main>
-
-<canvas id="fx" aria-hidden="true"></canvas>
-<div id="banner" aria-live="assertive"><b></b><small></small></div>
-
-<div class="over" id="over" hidden>
-  <div><h2>파산!</h2><p id="overText"></p><button id="restart">다시 시작</button></div>
+  <div class="row" style="padding-inline:4px;text-shadow:0 1px 3px #000"><span><span class="label">골드</span> <b class="num gold" id="gold"></b></span><span><span class="label">크레딧</span> <b class="num" id="credits"></b></span><span id="handInfo" class="label"></span></div>
 </div>
 
+<div class="hud" id="bottom">
+  <div class="card" id="panel"></div>
+  <div id="nav"><button class="ghost" id="prev" aria-label="왼쪽 작업대">◀</button><b id="station"></b><button class="ghost" id="next" aria-label="오른쪽 작업대">▶</button></div>
+</div>
+
+<div id="frenzyBar" hidden></div>
+<div id="ring" hidden></div><div id="ringText" hidden></div>
+<div id="flash"></div>
+<div id="banner" aria-live="assertive"><b></b><small></small></div>
+
+<div class="modal" id="modal" hidden><div id="modalBody"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// Numbers matched to the reference video's +10 panel: 파괴 0 / 손상 3.8 / 유지 38.5 / 성공 50 / 대성공 7.7, value ×1.5 per level
-const MAX = 20, DAYS = 30, FRENZY_AT = 10, FRENZY_MS = 6000;
+// ===== Rules: odds, value, tribute and merchant numbers follow the ForgeTax data on forgetax.tools =====
+const BREAK = [0,1.8,5.9,12.9,24.8,29.7,34.7,38.3,41.8,44.3,46.7,49.1,50.5,51.9,53.2,54.5,55.8,57.6,59.4,61.2,63,63.9,64.8,65.7,66.6,67.5,68.4,69.3,70.2,71.1,72];
+const QP = [[1,1800],[7,7500],[14,45800],[21,232000]];
+// shortcut: only 4 tribute points are published; days between are geometric interpolation, replace with the real calendar if found
+function quota(d) {
+  let q;
+  if (d >= 21) q = 232000 * 1.2 ** (d - 21);
+  else { const i = QP.findIndex(([x]) => x > d) - 1, [d0, q0] = QP[i], [d1, q1] = QP[i + 1]; q = q0 * (q1 / q0) ** ((d - d0) / (d1 - d0)); }
+  return Math.round(q * (has("rebate") ? .9 : 1) / 10) * 10;
+}
 const NAMES = ["아기돼지","꿀꿀이","통통돼지","분홍돼지","흙돼지","씨름돼지","근육돼지","철갑돼지","은빛돼지","금빛돼지",
   "왕돼지","장군돼지","용돼지","번개돼지","불꽃돼지","얼음돼지","무지개돼지","천상돼지","우주돼지","전설의 돼지","돼지신"];
+const pname = L => L > 20 ? `돼지신 ${"★".repeat(Math.min(5, L - 20))}` : NAMES[L];
 const HSL = [[350,80,82],[350,75,78],[345,70,74],[340,70,70],[25,35,55],[20,55,60],[10,65,58],[210,10,62],[210,15,80],[45,85,60],
   [48,95,65],[5,70,50],[150,55,45],[55,100,60],[20,100,55],[195,80,75],[0,90,65],[45,60,92],[250,60,35],[280,70,55],[50,100,96]];
-const ODDS = L => { const base = Math.max(15, 95 - 4.5 * L), g = base * 0.154, b = L < 11 ? 0 : Math.min(40, (L - 10) * 3),
-  d = L < 5 ? 0 : Math.min(25, (L - 4) * 0.63), s = Math.min(base, 100 - g - b - d); return { b, d, k: Math.max(0, 100 - s - g - b - d), s, g }; };
-const VALUE = L => Math.round(355 * 1.5 ** L);
-const COST = L => Math.max(30, Math.round(VALUE(L) * 0.07));
-const QUOTA = m => Math.round(5000 * 2.5 ** (m - 1) / 100) * 100;
-const roll = L => { const o = ODDS(L); let r = Math.random() * 100;
-  for (const k of ["b","d","k","s","g"]) if ((r -= o[k]) < 0) return k; return "s"; };
-const G = n => n.toLocaleString("ko-KR") + " G";
-console.assert(Array.from({ length: MAX + 1 }, (_, L) => ODDS(L)).every(o => o.k >= 0) && Math.abs(ODDS(10).k - 38.5) < 0.1 && ODDS(10).b === 0 && VALUE(10) > 20000, "odds/value drifted from reference");
 
-const fresh = () => ({ money: 1000, level: 0, month: 1, used: 0, days: DAYS, streak: 0 });
-let s = (() => { try { return JSON.parse(localStorage.getItem("pig2")) || fresh(); } catch { return fresh(); } })();
-const save = () => { try { localStorage.setItem("pig2", JSON.stringify(s)); } catch {} };
-window.claude?.hot?.snapshot?.(() => s);
+// Relics: effects and shop day/cost from the source data; names are this game's own. gift = day-1 starter pool, day 99 = gift only
+const RELICS = [
+  ["bent","휘어진 편자","성공",2,1,"성공 티켓 +4",1],["whet","꿀꿀 숫돌","성공",2,1,"유지 티켓 2장을 성공으로 바꿈"],["stamp","등급 도장","성공",2,1,"성공/대성공마다 가치 +100G",1],
+  ["mallet","무딘 나무망치","성공",2,1,"손상 티켓 1장을 성공으로 바꿈"],["brand","첫 낙인","성공",2,1,"돼지의 첫 타격이 성공/대성공이면 +2강"],
+  ["knot2","쌍매듭","성공",3,1,"성공/대성공 2연속마다 가치 +10%"],["hand3","세 번째 발굽","성공",3,2,"성공/대성공 2연속마다 +1강"],
+  ["scorch","그을린 부적","성공",3,1,"광란 밖 성공/대성공마다 이 돼지 파괴 확률 -3% (최대 -18%)"],["echo","메아리 망치","성공",5,2,"성공/대성공 때 25% 확률로 +1강"],
+  ["cog","황금 톱니","성공",5,2,"성공마다 기본 가치 +30G"],["spike","왕의 쇠못","성공",6,2,"성공 티켓 +6"],
+  ["coal","행운의 숯","대성공",99,1,"대성공 티켓 +1",1],["gnail","금 못","대성공",3,2,"대성공 티켓 +2"],["cbell","금간 방울","대성공",4,1,"대성공마다 가치 +20%"],
+  ["lmark","번개 자국","대성공",4,1,"광란 밖 대성공 후 다음 타격 파괴 확률 ×0.6"],["fork","은 소리굽쇠","대성공",4,2,"광란 밖 대성공마다 +1강"],["die","점쟁이 주사위","대성공",9,3,"대성공 티켓 +4"],
+  ["seal","봉인 돌","유지",2,1,"유지 티켓 +2, 유지 2연속마다 +1강",1],["paper","무거운 문진","유지",2,1,"유지마다 가치 +180G"],["weight","인내의 추","유지",2,1,"유지 티켓 +3"],
+  ["tea","식은 찻잔","유지",3,1,"유지마다 가치 +6%"],["heart","봉인된 심장","유지",3,2,"유지마다 다음 대성공 +1강 (최대 +4)",1],["sleep","잠자는 불씨","유지",4,3,"유지마다 70% 확률로 +1강"],
+  ["thread","빨간 실","방어",2,1,"유지 후 다음 타격 파괴 확률 ×0.8"],
+  ["apron","기운 앞치마","손상",2,1,"손상마다 가치 +140G"],["splice","금간 이음새","손상",3,2,"손상마다 이 돼지 파괴 확률 -15% (최대 -60%)",1],
+  ["crown","금간 왕관","손상",3,1,"손상으로 잃는 가치의 50%를 지킴"],["watch","금간 손목시계","손상",3,1,"광란 밖 손상마다 광란 +1"],["oath","꺾이지 않는 맹세","손상",4,2,"손상마다 70% 확률로 +1강"],
+  ["bknot","검은 매듭","방어",2,1,"파괴 확률 ×0.9",1],["hoop","쇠테","방어",3,1,"파괴 티켓 -2"],["fence","철사 울타리","방어",4,2,"하루의 첫 파괴를 손상으로 바꿈"],
+  ["tongs","멧돼지 집게","방어",5,2,"+6 이상에서 파괴 확률 ×0.75"],["phoenix","불사조 재","방어",6,3,"돼지마다 1번, 가치 40%를 내고 파괴를 막음"],["stone","굳센 주춧돌","방어",7,4,"돼지마다 첫 파괴를 손상으로 바꿈"],
+  ["sieve","잿빛 체","파괴",2,1,"파괴될 때 +500G"],
+  ["loop","가죽 고리","광란",2,1,"광란 밖 타격 속도 +20%",1],["locket","불씨 목걸이","광란",4,2,"돼지마다 첫 타격에 광란 +2"],["glass","유리 모래시계","광란",5,2,"광란 중 대성공 +3강"],
+  ["hbell","머리 없는 종","광란",6,2,"광란이 끝날 때 +1강"],["collar","방울 목줄","광란",6,2,"광란 중 타격마다 가치 +5%"],["redsand","붉은 모래시계","광란",6,2,"광란 +1초"],
+  ["core","완벽한 마나 핵","광란",7,4,"광란 중 대성공 티켓 +6"],["wick","꺼지지 않는 심지","광란",8,4,"광란 +2초"],
+  ["pouch","숯 주머니","가치",2,1,"기본 가치 +80G"],["signet","쇠 인장","가치",2,1,"가치 +15%"],["iron","검은 쇳돌","가치",5,2,"+8 이상에서 가치 +30%"],
+  ["lheart","군주의 심장","가치",8,4,"+7 이상에서 성공/대성공마다 가치 +15%"],["lseal","군주의 인장","가치",9,3,"+12 이상에서 가치 +50%"],
+  ["rebate","봉인된 환급증","경제",5,2,"공물 요구량 -10%"],["tally","세금 장부","경제",5,3,"공물 완납마다 크레딧 +1"],["voucher","낡은 쿠폰","경제",3,2,"매일 무료 리롤 1번"],
+  ["permit","공급 허가증","경제",8,4,"매일 돼지 +1"],
+].map(([id, name, cat, day, cost, desc, gift]) => ({ id, name, cat, day, cost, desc, gift: !!gift }));
+const RB = Object.fromEntries(RELICS.map(r => [r.id, r]));
 
+// Merchant consumables: price as a share of the day's tribute (derived from the source price table)
+const ITEMS = {
+  scale:  { name: "철 비늘", desc: "다음 타격의 파괴를 막음", k: .423, stock: 3, day: 3 },
+  clock:  { name: "되감기 태엽", desc: "모루 위 마지막 타격을 되돌림 (파괴 포함)", k: 1.53, stock: 1, day: 3 },
+  chalk:  { name: "빨간 분필", desc: "다음 타격 대성공 티켓 ×2", k: .56, stock: 3, day: 6 },
+  powder: { name: "화약 주머니", desc: "다음 타격: 성공/대성공은 대성공, 나머지는 파괴", k: .9, stock: 1, day: 6 },
+  star:   { name: "차가운 별 조각", desc: "광란 +3 (광란 중 사용 불가)", k: .70, stock: 3, day: 6 },
+  note:   { name: "배달 쪽지", desc: "다음 날 돼지 +2", k: .91, stock: 3, day: 6 },
+  incense:{ name: "망각의 향", desc: "분노 -1 (게임당 1번)", k: 2.12, stock: 1, day: 9 },
+};
+
+// ===== State =====
+let uid = 1, S = null;
+const has = id => !!S && S.relics.includes(id);
+const newPig = (lvl = 0) => ({ id: uid++, lvl, base: 320 + (has("pouch") ? 80 : 0), mult: 1, flat: 0, heated: false, charge: 0, strikes: 0,
+  run: 0, holdRun: 0, heart: 0, splice: 0, scorch: 0, nbm: 1, phoenix: false, stone: false });
+const fresh = () => ({ day: 1, gold: 0, credits: 0, anger: 0, pen: [], hand: null, anvil: null, tribute: [], relics: [], shop: [], items: {},
+  armed: {}, merchant: null, extra: 0, fenceUsed: false, freeReroll: false, incenseUsed: false, pays: 0, contract: false, gift: null, uid: 1 });
+function load() { try { const d = JSON.parse(localStorage.getItem("pigforge")); if (d && d.day) { S = d; uid = d.uid || 1000; return true; } } catch {} return false; }
+const save = () => { try { S.uid = uid; localStorage.setItem("pigforge", JSON.stringify(S)); } catch {} };
+
+const gmult = L => (has("signet") ? 1.15 : 1) * (has("iron") && L >= 8 ? 1.3 : 1) * (has("lseal") && L >= 12 ? 1.5 : 1);
+const V = p => Math.round(p.base * 1.5 ** p.lvl * p.mult * gmult(p.lvl) + p.flat);
+const G = n => Math.round(n).toLocaleString("ko-KR") + "G";
+
+// ===== Forge odds: 30-ticket deck (B9 D2 H5 S12 G2); the break pile is weighted by grade =====
+let frenzyUntil = 0;
+const inFrenzy = () => performance.now() < frenzyUntil;
+function odds(p, frenzy = inFrenzy(), armed = S.armed) {
+  const c = { d: 2, h: 5, s: 12, g: 2 }; let bt = 9;
+  const add = (k, n) => c[k] += n;
+  if (has("bent")) add("s", 4); if (has("spike")) add("s", 6); if (has("whet")) { add("h", -2); add("s", 2); } if (has("mallet")) { add("d", -1); add("s", 1); }
+  if (has("coal")) add("g", 1); if (has("gnail")) add("g", 2); if (has("die")) add("g", 4); if (has("seal")) add("h", 2); if (has("weight")) add("h", 3);
+  if (has("core") && frenzy) add("g", 6); if (has("hoop")) bt -= 2;
+  for (const k in c) c[k] = Math.max(0, c[k]);
+  if (armed.chalk) c.g *= 2;
+  const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100;
+  let pb = 0;
+  if (!frenzy && B > 0) {
+    const W = 21 * B / (1 - B) * (bt / 9); pb = W / (W + N);
+    pb *= (has("bknot") ? .9 : 1) * (has("tongs") && p.lvl >= 6 ? .75 : 1) * p.nbm * (1 - p.splice) * (1 - p.scorch);
+  }
+  const r = 1 - pb;
+  return { b: pb, d: c.d / N * r, h: c.h / N * r, s: c.s / N * r, g: c.g / N * r };
+}
+{ // self-check against the published numbers
+  S = fresh(); const p = newPig(10), near = (a, b) => Math.abs(a - b) < .002;
+  console.assert(near(odds(p, false).b, .467), "base +10 break");
+  S.relics = ["bent"]; console.assert(near(odds(p, false).b, .424), "+10 bent nail");
+  S.relics = ["hoop"]; console.assert(near(odds(p, false).b, .405), "+10 iron hoop");
+  S.relics = ["bknot", "tongs"]; console.assert(near(odds(p, false).b, .315), "+10 knot+tongs");
+  S.relics = []; console.assert(near(odds(newPig(0), false).s, .571) && V(newPig(4)) === 1620, "+0 odds / +4 value");
+  S = null; uid = 1;
+}
+
+function rollOutcome(o) { let r = Math.random(); for (const k of ["b","d","h","s","g"]) if ((r -= o[k]) < 0) return k; return "s"; }
+
+// One strike: mutates the pig and state, returns the outcome
+function strike(p) {
+  let frenzyStarted = false;
+  if (!inFrenzy() && p.charge >= 10) { p.charge = 0; frenzyUntil = performance.now() + (4 + (has("redsand") ? 1 : 0) + (has("wick") ? 2 : 0)) * 1000; frenzyStarted = true; }
+  const fz = inFrenzy(), o = odds(p, fz), A = S.armed; S.armed = {};
+  let res = rollOutcome(o), saved = "";
+  if (A.powder) res = res === "s" || res === "g" ? "g" : "b";
+  p.nbm = 1;
+  if (res === "b" && A.scale) { res = "h"; saved = "철 비늘이 막았다"; }
+  if (res === "b" && has("fence") && !S.fenceUsed) { S.fenceUsed = true; res = "d"; saved = "철사 울타리가 막았다"; }
+  if (res === "b" && has("stone") && !p.stone) { p.stone = true; res = "d"; saved = "굳센 주춧돌이 막았다"; }
+  if (res === "b" && has("phoenix") && !p.phoenix) { p.phoenix = true; p.mult *= .6; res = "h"; saved = "불사조 재 (가치 -40%)"; }
+  if (res === "b") { if (has("sieve")) S.gold += 500; return { res, frenzyStarted }; }
+  const first = p.strikes === 0, up = res === "s" || res === "g";
+  if (res === "g") { p.lvl += 2; p.mult *= 2.5 / 2.25; }
+  if (res === "s") p.lvl += 1;
+  if (res === "d" && p.lvl > 0) { p.lvl -= 1; if (has("crown")) p.mult *= 1.25; }
+  if (up) {
+    p.run++; p.holdRun = 0;
+    if (has("stamp")) p.flat += 100;
+    if (has("brand") && first) p.lvl += 2;
+    if (p.run % 2 === 0) { if (has("knot2")) p.mult *= 1.1; if (has("hand3")) p.lvl += 1; }
+    if (has("scorch") && !fz) p.scorch = Math.min(.18, p.scorch + .03);
+    if (has("echo") && Math.random() < .25) p.lvl += 1;
+    if (has("lheart") && p.lvl >= 7) p.mult *= 1.15;
+  } else p.run = 0;
+  if (res === "s" && has("cog")) p.base += 30;
+  if (res === "g") {
+    if (has("cbell")) p.mult *= 1.2;
+    if (!fz && has("lmark")) p.nbm *= .6;
+    if (!fz && has("fork")) p.lvl += 1;
+    if (fz && has("glass")) p.lvl += 3;
+    if (has("heart")) { p.lvl += p.heart; p.heart = 0; }
+  }
+  if (res === "h") {
+    p.holdRun++;
+    if (has("seal") && p.holdRun % 2 === 0) p.lvl += 1;
+    if (has("paper")) p.flat += 180; if (has("tea")) p.mult *= 1.06;
+    if (has("sleep") && Math.random() < .7) p.lvl += 1;
+    if (has("thread")) p.nbm *= .8;
+    if (has("heart")) p.heart = Math.min(4, p.heart + 1);
+  } else if (!up) p.holdRun = 0;
+  if (res === "d") {
+    if (has("apron")) p.flat += 140; if (has("splice")) p.splice = Math.min(.6, p.splice + .15);
+    if (has("oath") && Math.random() < .7) p.lvl += 1; if (has("watch") && !fz) p.charge++;
+  }
+  if (fz && has("collar")) p.mult *= 1.05;
+  if (!fz) { p.charge++; if (first && has("locket")) p.charge += 2; }
+  p.charge = Math.min(10, p.charge); p.strikes++;
+  return { res, frenzyStarted, saved };
+}
+
+// ===== Day cycle =====
+function morning() {
+  const n = 3 + (has("permit") ? 1 : 0) + S.extra; S.extra = 0;
+  for (let i = 0; i < n; i++) S.pen.push(newPig());
+  S.fenceUsed = false; S.freeReroll = has("voucher"); S.armed = {};
+  S.shop = S.day >= 2 ? rollShop() : [];
+  S.merchant = S.day % 3 === 0 ? makeMerchant() : null;
+}
+function rollShop() {
+  return RELICS.filter(r => r.day <= S.day && !S.relics.includes(r.id)).sort(() => Math.random() - .5).slice(0, 3).map(r => r.id);
+}
+function makeMerchant() {
+  const v = S.day / 3, q = quota(S.day), stock = { pig: { left: [2,3,3,4,4,4,4][v - 1] ?? 5, price: Math.max(700, Math.round(.4 * q / 10) * 10) } };
+  for (const [id, it] of Object.entries(ITEMS)) {
+    if (it.day > S.day || (id === "incense" && (S.anger === 0 || S.incenseUsed))) continue;
+    stock[id] = { left: it.stock, price: Math.round(it.k * q / 10) * 10 };
+  }
+  return stock;
+}
+function ringBell() {
+  const q = quota(S.day), total = S.tribute.reduce((a, p) => a + V(p), 0), paid = total >= q, day = S.day;
+  S.gold += total; S.tribute = [];
+  if (paid) { S.pays++; if (has("tally")) S.credits++; } else S.anger++;
+  if (S.anger >= 3) { save(); ui(); return showModal(`<h2 class="bad">끝장</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p><button id="again">처음부터</button>`, () => $("again").onclick = restart); }
+  S.day++; morning();
+  banner(paid ? "공물 완납" : "공물 부족", paid ? `${G(total)} 바침 · Day ${S.day}` : `분노 ${S.anger}/3 · 철창이 흔들린다`, paid ? "s" : "b");
+  if (!paid) shakeT = .6;
+  ui();
+  if (day === 21 && !S.contract) { S.contract = true; showModal(`<h2 class="gold">계약 완료!</h2><p>21일을 버텼어요. 이제부터는 매일 공물이 20%씩 올라요.</p><button id="ok">계속하기</button>`, () => $("ok").onclick = closeModal); }
+}
+
+// ===== 3D =====
 const $ = id => document.getElementById(id);
+const canvas = $("gl"), R = new THREE.WebGLRenderer({ canvas, antialias: true });
+R.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); R.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0907); scene.fog = new THREE.Fog(0x0d0907, 4, 10);
+const cam = new THREE.PerspectiveCamera(62, 1, .05, 50); cam.position.set(0, 1.55, 0); scene.add(cam);
+scene.add(new THREE.AmbientLight(0xffe2c4, .35));
+scene.add(new THREE.HemisphereLight(0xffd7a8, 0x2a1408, .45));
+const keyLight = new THREE.PointLight(0xfff0dd, .8, 4); cam.add(keyLight);
+function resize() { R.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
+addEventListener("resize", resize);
+
+const STATIONS = [
+  { id: "anvil", name: "모루", yaw: 0, pitch: -.62 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
+  { id: "bank", name: "저금통 기계 (유물)", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 },
+];
+const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
+const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
+function box(w, h, d, mat, pos) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.copy(pos); m.lookAt(0, pos.y, 0); scene.add(m); return m; }
+function plankTex(base, line) {
+  const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
+  x.fillStyle = base; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 8; i++) { x.fillStyle = `rgba(0,0,0,${.08 + Math.random() * .12})`; x.fillRect(0, i * 32, 256, 30); x.fillStyle = line; x.fillRect(0, i * 32 + 30, 256, 2); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+{ // barn room
+  const ft = plankTex("#5a3a22", "#2a1a0e"); ft.repeat.set(6, 6);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xffffff, { map: ft })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const wt = plankTex("#4a2e1a", "#1e1209"); wt.repeat.set(10, 2);
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xffffff, { map: wt, side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
+  for (let i = 0; i < 6; i++) box(.25, 4, .25, M(0x2b1a0e), at(i * 60 + 30, 4.05, 2));
+  const hay = M(0xc9a24a, { roughness: 1 });
+  for (const y of [25, 85, 135]) box(.8, .4, .5, hay, at(y, 3.6, .2));
+}
+// Anvil + hammer
+const anvilPos = at(0, 1.6, 0);
+box(.5, .5, .4, M(0x2a2420), anvilPos.clone().setY(.25));
+box(.42, .22, .9, M(0x55585e, { metalness: .8, roughness: .35 }), anvilPos.clone().setY(.61));
+const hammer = new THREE.Group(); hammer.position.copy(anvilPos).add(new THREE.Vector3(.55, 1.15, .1)); scene.add(hammer);
+{ const h = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .6), M(0x6b4423)); h.position.y = -.3; hammer.add(h);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(.28, .14, .14), M(0x777b82, { metalness: .9, roughness: .3 })); head.position.y = -.62; hammer.add(head); }
+// Furnace
+const furnPos = at(55, 2.3);
+box(1.1, 1.3, .8, M(0x7a3b2a), furnPos.clone().setY(.65));
+const fire = new THREE.Mesh(new THREE.PlaneGeometry(.6, .45), new THREE.MeshBasicMaterial({ color: 0xff7a1a }));
+fire.position.copy(at(55, 1.88, .55)); fire.lookAt(0, .55, 0); scene.add(fire);
+const fireLight = new THREE.PointLight(0xff7a2a, 2.2, 6, 2); fireLight.position.copy(at(55, 1.6, .9)); scene.add(fireLight);
+// Pen fences
+for (const dy of [-14, 14]) box(.06, .35, 1.6, M(0x8a5a32), at(110 + dy, 2.3, .2));
+box(1.4, .35, .06, M(0x8a5a32), at(110, 2.95, .2));
+// Piggy-bank relic machine
+const bankPos = at(165, 2.4);
+const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.lookAt(0, .95, 0); scene.add(bank);
+{ const pink = M(0xf08aa8, { roughness: .4, metalness: .2 });
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.55, 24, 16), pink); b.scale.set(1.2, 1, 1); bank.add(b);
+  const sn = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .1, 16), M(0xd06a88)); sn.rotation.x = Math.PI / 2; sn.position.z = .58; bank.add(sn);
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(.3, .03, .06), M(0x111111)); slot.position.y = .55; bank.add(slot);
+  for (let i = 0; i < 3; i++) { const o = new THREE.Mesh(new THREE.SphereGeometry(.09, 12, 8), new THREE.MeshBasicMaterial({ color: [0x4dabf7, 0xffd43b, 0xff3df2][i] }));
+    o.position.set(-.3 + i * .3, -.15, .52); o.userData.orb = i; bank.add(o); }
+  box(.9, .4, .9, M(0x3a2a1e), bankPos.clone().setY(.2)); }
+// Ghost merchant: a sheet ghost with a lantern
+const ghostPos = at(-140, 2.4);
+const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.lookAt(0, .2, 0); scene.add(ghost);
+{ const gm = new THREE.MeshStandardMaterial({ color: 0xd8f3ee, transparent: true, opacity: .82, emissive: 0x335a55, roughness: .9 });
+  const top = new THREE.Mesh(new THREE.SphereGeometry(.38, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), gm); top.position.y = 1.3; ghost.add(top);
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(.38, .5, .9, 20, 1, true), gm); skirt.position.y = .85; ghost.add(skirt);
+  for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0x111111 })); e.position.set(x, 1.4, .34); ghost.add(e); }
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0x9ff7d8 })); lamp.position.set(.45, 1, .2); ghost.add(lamp);
+  const gl = new THREE.PointLight(0x9ff7d8, 1.2, 3); gl.position.copy(lamp.position); ghost.add(gl); }
+box(1.1, .7, .5, M(0x5a3a22), at(-140, 1.95, .35));
+// Tribute hatch: bars and the boar lord's eyes
+const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
+{ const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
+  for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3), M(0x3a3a3a, { metalness: .8 })); bar.position.set(i * .22, 0, .05); hatch.add(bar); }
+  hatch.userData.eyes = [-.25, .25].map(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); e.position.set(x, .2, .01); hatch.add(e); return e; }); }
+box(.6, .1, 1.8, M(0x5a3a22), at(-70, 2.9, .5));
+const bell = new THREE.Mesh(new THREE.ConeGeometry(.16, .26, 16, 1, true), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
+bell.position.copy(at(-48, 2.6, 1.5)); scene.add(bell);
+for (const y of [30, 140, -100]) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd08a })); b.position.copy(l.position); scene.add(b); }
+
+// Pig model per level
+function auraTex() { const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d");
+  const g = x.createRadialGradient(64, 64, 4, 64, 64, 64); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); }
+const AURA = auraTex();
+function makePig(p) {
+  const L = p.lvl, [h, s, l] = HSL[Math.min(20, L)], col = new THREE.Color().setHSL(h / 360, s / 100, l / 100);
+  const g = new THREE.Group(), metal = L >= 7;
+  const mat = new THREE.MeshStandardMaterial({ color: col, metalness: metal ? .75 : .05, roughness: metal ? .28 : .65,
+    emissive: p.heated ? 0xff5a10 : L >= 13 ? col : 0x000000, emissiveIntensity: p.heated ? .45 : L >= 13 ? .25 : 0 });
+  const dark = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.7), metalness: mat.metalness, roughness: mat.roughness });
+  const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
+  add(new THREE.SphereGeometry(.5, 24, 16), mat, 0, .55, 0, 1.3, 1, 1);
+  add(new THREE.SphereGeometry(.36, 20, 14), mat, .62, .72, 0);
+  add(new THREE.CylinderGeometry(.15, .15, .14, 16), dark, .96, .66, 0).rotation.z = Math.PI / 2;
+  for (const z of [-.06, .06]) add(new THREE.SphereGeometry(.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x220000 }), 1.03, .67, z);
+  const eyeM = new THREE.MeshBasicMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x111111 });
+  for (const z of [-.15, .15]) add(new THREE.SphereGeometry(.05, 10, 8), eyeM, .88, .84, z);
+  for (const z of [-.18, .18]) add(new THREE.ConeGeometry(.11, .22, 4), dark, .55, 1.08, z).rotation.x = z > 0 ? .4 : -.4;
+  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) add(new THREE.CylinderGeometry(.08, .07, .3, 10), dark, x, .15, z);
+  add(new THREE.TorusGeometry(.08, .025, 6, 12, 5), dark, -.68, .7, 0).rotation.y = Math.PI / 2;
+  if (L >= 5 && L <= 9) add(new THREE.TorusGeometry(.5, .04, 8, 24), new THREE.MeshStandardMaterial({ color: 0xcfd3d8, metalness: .9, roughness: .2 }), 0, .55, 0, 1, 1, 1.3).rotation.y = Math.PI / 2;
+  if (L >= 10) {
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffd43b, metalness: 1, roughness: .2, emissive: 0x6a4a00 });
+    add(new THREE.CylinderGeometry(.2, .2, .1, 16, 1, true), gold, .6, 1.12, 0);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; add(new THREE.ConeGeometry(.05, .16, 6), gold, .6 + Math.cos(a) * .19, 1.24, Math.sin(a) * .19); }
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: AURA, color: col, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false }));
+    sp.scale.set(2.6, 2.6, 1); sp.position.y = .6; g.add(sp); g.userData.aura = sp;
+  }
+  if (L >= 15) g.userData.wings = [-1, 1].map(side => {
+    const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(.3, .7, .9, .8); sh.quadraticCurveTo(.6, .45, .75, .2); sh.quadraticCurveTo(.4, .15, 0, 0);
+    const w = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: L >= 18 ? 0xc4b5ff : 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: .92 }));
+    const pivot = new THREE.Group(); pivot.position.set(0, .85, side * .3); w.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2; pivot.add(w); g.add(pivot); pivot.userData.side = side; return pivot; });
+  if (L >= 18) { const pts = new THREE.BufferGeometry(), arr = [];
+    for (let i = 0; i < 60; i++) { const a = Math.random() * 7, r = .8 + Math.random() * .6; arr.push(Math.cos(a) * r, .2 + Math.random() * 1.4, Math.sin(a) * r); }
+    pts.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3)); g.userData.stars = new THREE.Points(pts, new THREE.PointsMaterial({ color: 0xffffff, size: .05 })); g.add(g.userData.stars); }
+  if (L >= 20) add(new THREE.TorusGeometry(.28, .03, 8, 30), new THREE.MeshBasicMaterial({ color: 0xfff6b0 }), .5, 1.55, 0).rotation.x = Math.PI / 2;
+  g.userData.rainbow = L === 16 || L >= 20 ? mat : null;
+  g.userData.mat = mat;
+  return g;
+}
+function tickPig(g, t) {
+  const u = g.userData;
+  if (u.aura) u.aura.material.opacity = .4 + .2 * Math.sin(t * 3);
+  if (u.wings) for (const w of u.wings) w.rotation.x = Math.sin(t * 7) * .35 * w.userData.side;
+  if (u.stars) u.stars.rotation.y = t * .6;
+  if (u.rainbow) u.rainbow.color.setHSL((t * .25) % 1, .9, .62);
+}
+
+// Keep the 3D pigs in sync with state
+const slots = new Map();
+function placePig(key, p, parent, pos, scale, rotY = 0) {
+  const o0 = slots.get(key);
+  if (!p) { if (o0) { o0.group.parent.remove(o0.group); slots.delete(key); } return; }
+  const sig = `${p.id}:${p.lvl}:${p.heated}`; let o = o0;
+  if (!o || o.sig !== sig) { if (o) o.group.parent.remove(o.group); o = { sig, group: makePig(p) }; slots.set(key, o); parent.add(o.group); }
+  o.group.position.copy(pos); o.group.scale.setScalar(scale); o.group.rotation.y = rotY;
+}
+let hideAnvilPig = false;
+function sync() {
+  const used = new Set(["anvil", "hand"]);
+  placePig("anvil", hideAnvilPig ? null : S.anvil, scene, anvilPos.clone().setY(.72), .32, Math.PI / 2 + .35);
+  placePig("hand", S.hand, cam, new THREE.Vector3(.3, .2, -.9), .12, -2.2);
+  S.pen.slice(0, 12).forEach((p, i) => { const k = "pen" + i; used.add(k); placePig(k, p, scene, at(110 + (i % 4 - 1.5) * 8, 2.15 + Math.floor(i / 4) * .45, 0), .25, 1.6 + i); });
+  S.tribute.slice(0, 8).forEach((p, i) => { const k = "tr" + i; used.add(k); placePig(k, p, scene, at(-70 + (i % 4 - 1.5) * 7, 2.85 + Math.floor(i / 4) * .3, .55), .19, .6); });
+  for (const k of [...slots.keys()]) if (!used.has(k)) placePig(k, null);
+  ghost.visible = !!S.merchant;
+}
+
+// Effects
+const shards = [], sparks = [], sparkGeo = new THREE.SphereGeometry(.02, 4, 3), shardGeo = new THREE.TetrahedronGeometry(.07);
+function shatter(pos, color) {
+  for (let i = 0; i < 46; i++) {
+    const m = new THREE.Mesh(shardGeo, new THREE.MeshStandardMaterial({ color, metalness: .5, roughness: .4, transparent: true }));
+    m.position.copy(pos).add(new THREE.Vector3((Math.random() - .5) * .4, Math.random() * .4, (Math.random() - .5) * .4));
+    m.userData = { v: new THREE.Vector3((Math.random() - .5) * 4, 1.5 + Math.random() * 3, (Math.random() - .5) * 4), r: new THREE.Vector3(Math.random() * 10, Math.random() * 10, 0), life: 1.6 };
+    m.scale.setScalar(.6 + Math.random() * 1.4); scene.add(m); shards.push(m);
+  }
+}
+function sparkBurst(pos, color, n = 40) {
+  for (let i = 0; i < n; i++) { const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: color === "rainbow" ? new THREE.Color().setHSL(Math.random(), 1, .6) : color, transparent: true }));
+    m.position.copy(pos); m.userData = { v: new THREE.Vector3((Math.random() - .5) * 5, Math.random() * 4, (Math.random() - .5) * 5), life: .9 }; scene.add(m); sparks.push(m); }
+}
+
+// Camera: one view per station; swipe or arrows to turn, tap the scene at the anvil to strike
+let st = 0, yaw = 0, pitch = -.5, shakeT = 0, swing = 0, fovTarget = 62, crackT = 0, drag = null;
+canvas.addEventListener("pointerdown", e => drag = { x: e.clientX });
+canvas.addEventListener("pointerup", e => {
+  if (!drag) return; const dx = e.clientX - drag.x; drag = null;
+  if (Math.abs(dx) > 50) go(dx > 0 ? -1 : 1);
+  else if (STATIONS[st].id === "anvil" && S.anvil) doStrike();
+});
+addEventListener("keydown", e => { if (e.code === "Space" && STATIONS[st].id === "anvil") { e.preventDefault(); doStrike(); } if (e.code === "ArrowLeft") go(-1); if (e.code === "ArrowRight") go(1); });
+function go(d) { st = (st + d + STATIONS.length) % STATIONS.length; confirmBell = false; ui(); }
+
+let last = performance.now(), wasFrenzy = false;
+function loop(now) {
+  const dt = Math.min(.05, (now - last) / 1000), t = now / 1000; last = now;
+  let target = STATIONS[st].yaw; while (target - yaw > 180) target -= 360; while (target - yaw < -180) target += 360;
+  yaw += (target - yaw) * Math.min(1, dt * 7);
+  pitch += (STATIONS[st].pitch - pitch) * Math.min(1, dt * 7);
+  cam.position.set(0, 1.55, 0);
+  if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
+  cam.rotation.set(0, 0, 0); cam.rotateY(yaw * Math.PI / 180); cam.rotateX(pitch);
+  cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 4); cam.updateProjectionMatrix();
+  fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; fire.material.color.setHSL(.07 + Math.random() * .02, 1, .55);
+  ghost.position.y = .2 + Math.sin(t * 2) * .06;
+  for (const e of hatch.userData.eyes) e.scale.setScalar(S.anger ? 1 + S.anger * .35 + Math.sin(t * 8) * .1 : .7);
+  for (const c of bank.children) if (c.userData.orb !== undefined) c.position.y = -.15 + Math.sin(t * 3 + c.userData.orb) * .03;
+  swing = Math.max(0, swing - dt * 4); hammer.rotation.z = .9 - Math.sin(swing * Math.PI) * 1.4;
+  for (const [, o] of slots) tickPig(o.group, t);
+  const ap = slots.get("anvil")?.group;
+  if (ap && crackT > 0) { crackT -= dt; ap.position.x += (Math.random() - .5) * .03; ap.userData.mat.emissive.setHex(Math.random() < .5 ? 0xffffff : 0x000000); ap.userData.mat.emissiveIntensity = .8; }
+  for (let i = shards.length - 1; i >= 0; i--) { const m = shards[i], u = m.userData; u.v.y -= 9.8 * dt; m.position.addScaledVector(u.v, dt);
+    if (m.position.y < .03) { m.position.y = .03; u.v.multiplyScalar(.4); u.v.y *= -.5; }
+    m.rotation.x += u.r.x * dt; m.rotation.y += u.r.y * dt; u.life -= dt; m.material.opacity = Math.min(1, u.life);
+    if (u.life <= 0) { scene.remove(m); m.material.dispose(); shards.splice(i, 1); } }
+  for (let i = sparks.length - 1; i >= 0; i--) { const m = sparks[i], u = m.userData; u.v.y -= 6 * dt; m.position.addScaledVector(u.v, dt); u.life -= dt; m.material.opacity = u.life;
+    if (u.life <= 0) { scene.remove(m); m.material.dispose(); sparks.splice(i, 1); } }
+  const fz = inFrenzy();
+  $("frenzyBar").hidden = !fz;
+  if (fz) $("frenzyBar").style.transform = `scaleX(${(frenzyUntil - now) / 7000})`;
+  if (wasFrenzy && !fz) { if (has("hbell") && S.anvil) { S.anvil.lvl++; banner("+1강", "머리 없는 종", "s"); } ui(); }
+  wasFrenzy = fz;
+  R.render(scene, cam);
+  requestAnimationFrame(loop);
+}
+
+// ===== Strike flow =====
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-let busy = false, shownLevel = null, frenzyUntil = 0;
-const frenzyOn = () => performance.now() < frenzyUntil;
+let busy = false, nextStrikeAt = 0, lastSnap = null;
+function banner(main, sub = "", cls = "") { const b = $("banner"); b.className = ""; void b.offsetWidth; b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls; }
+function flash(a = .9) { const f = $("flash"); f.style.transition = "none"; f.style.opacity = a; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = "opacity .6s"; f.style.opacity = 0; })); }
 
-// ---------- UI ----------
-function ui() {
-  const L = shownLevel ?? s.level, o = ODDS(L), q = QUOTA(s.month);
-  $("money").textContent = G(s.money);
-  $("month").textContent = s.month; $("quota").textContent = G(q);
-  $("left").textContent = `남은 날 ${s.days - s.used}일`;
-  $("cal").innerHTML = Array.from({ length: s.days }, (_, i) =>
-    `<span class="${i < s.used ? "x" : i === s.used ? "today" : ""}">${i + 1}</span>`).join("");
-  $("name").textContent = NAMES[L]; $("lvl").textContent = "+" + L;
-  $("value").textContent = G(VALUE(L));
-  $("gain").textContent = L >= MAX ? "최대 강화" : `+${G(VALUE(L + 1) - VALUE(L))} · 1.5배`;
-  const cols = { b: "var(--break)", d: "var(--dmg)", k: "var(--keep)", s: "var(--ok)", g: "var(--great)" };
-  const lab = { b: "파괴", d: "손상", k: "유지", s: "성공", g: "대성공" };
-  $("odds").innerHTML = Object.keys(lab).map(k => `<span>${lab[k]}<b style="color:${cols[k]}">${o[k].toFixed(1)}%</b></span>`).join("");
-  $("stack").innerHTML = Object.keys(lab).map(k => `<i style="width:${o[k]}%;background:${cols[k]}"></i>`).join("");
-  $("cost").textContent = s.level >= MAX ? "최대 강화" : `${G(COST(s.level))} · 하루 소모`;
-  $("sellSub").textContent = s.level ? G(VALUE(s.level)) : "아기돼지는 안 사요";
-  $("enhance").disabled = busy || s.level >= MAX || s.money < COST(s.level);
-  $("sell").disabled = busy || s.level === 0;
-  $("submit").disabled = busy || s.money < q;
-  save();
-}
-function banner(main, sub = "", cls = "") {
-  const b = $("banner"); b.className = ""; void b.offsetWidth;
-  b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls;
-}
-const hideBanner = () => $("banner").className = "";
-function shake() { const m = $("main"); m.classList.remove("shake"); void m.offsetWidth; m.classList.add("shake"); if (navigator.vibrate) try { navigator.vibrate(120); } catch {} }
-
-// ---------- Drawing ----------
-const stage = $("stage"), sc = stage.getContext("2d"), fx = $("fx"), fc = fx.getContext("2d");
-function fit() { const d = devicePixelRatio || 1;
-  for (const c of [stage, fx]) { const r = c.getBoundingClientRect(); c.width = r.width * d; c.height = r.height * d; c.getContext("2d").setTransform(d, 0, 0, d, 0, 0); } }
-addEventListener("resize", fit);
-
-const hsl = (L, dl = 0, a = 1) => { const [h, sa, l] = HSL[L]; return `hsla(${h},${sa}%,${Math.max(0, Math.min(100, l + dl))}%,${a})`; };
-const STARS = Array.from({ length: 40 }, () => [Math.random() * 160 - 80, Math.random() * 120 - 50, Math.random() * 1.8 + .4]);
-
-function drawPig(c, x, y, sz, L, t) {
-  c.save(); c.translate(x, y); c.scale(sz, sz);
-  const rainbow = h => `hsl(${(t * 90 + h) % 360},95%,62%)`;
-  if (L >= 10) { // aura
-    const r = 120 + Math.sin(t * 3) * 8, g = c.createRadialGradient(0, 10, 30, 0, 10, r);
-    g.addColorStop(0, L >= 16 ? rainbow(0).replace("hsl", "hsla").replace(")", ",.55)") : hsl(L, 10, .5)); g.addColorStop(1, "rgba(0,0,0,0)");
-    c.fillStyle = g; c.beginPath(); c.arc(0, 10, r, 0, 7); c.fill();
-  }
-  if (L >= 15) { // god rays
-    c.save(); c.rotate(t * .5);
-    for (let i = 0; i < 12; i++) { c.rotate(Math.PI / 6); c.fillStyle = L >= 16 ? `hsla(${(t * 90 + i * 30) % 360},100%,70%,.13)` : "rgba(255,240,200,.12)";
-      c.beginPath(); c.moveTo(0, 0); c.lineTo(-14, -170); c.lineTo(14, -170); c.fill(); }
-    c.restore();
-    for (const side of [-1, 1]) { // wings
-      c.save(); c.scale(side, 1); c.rotate(Math.sin(t * 6) * .12);
-      c.fillStyle = L >= 18 ? "rgba(180,160,255,.9)" : "rgba(255,255,255,.92)";
-      for (let f = 0; f < 4; f++) { c.beginPath(); c.moveTo(55, -10); c.quadraticCurveTo(110 + f * 8, -70 + f * 18, 135 - f * 6, -20 + f * 16); c.quadraticCurveTo(100, -5 + f * 6, 55, 10); c.fill(); }
-      c.restore();
-    }
-  }
-  c.fillStyle = hsl(L, -25); // legs + tail
-  for (const lx of [-50, -22, 22, 50]) c.fillRect(lx - 9, 50, 18, 24);
-  c.strokeStyle = hsl(L, -15); c.lineWidth = 5; c.beginPath(); c.arc(-88, 0, 9, 0, 5); c.stroke();
-  let body; // body
-  if (L === 16) { body = c.createLinearGradient(-80, -50, 80, 70); for (let i = 0; i < 6; i++) body.addColorStop(i / 5, rainbow(i * 60)); }
-  else { body = c.createRadialGradient(-25, -15, 10, 0, 10, 95); body.addColorStop(0, hsl(L, 15)); body.addColorStop(.6, hsl(L)); body.addColorStop(1, hsl(L, -22)); }
-  c.fillStyle = body; c.beginPath(); c.ellipse(0, 10, 80, 60, 0, 0, 7); c.fill();
-  if (L >= 18) { c.save(); c.clip(); for (const [sx, sy, r] of STARS) { c.fillStyle = `rgba(255,255,255,${.5 + .5 * Math.sin(t * 4 + sx)})`; c.beginPath(); c.arc(sx, sy, r, 0, 7); c.fill(); } c.restore(); }
-  if (L >= 5 && L <= 9 || L === 11) { c.strokeStyle = L === 11 ? "#ffd43b" : "rgba(255,255,255,.35)"; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 10, 80, 22, 0, .2, Math.PI - .2); c.stroke(); }
-  if (L >= 7) { c.fillStyle = "rgba(255,255,255,.35)"; c.beginPath(); c.ellipse(-35, -22, 22, 9, -.5, 0, 7); c.fill(); } // metallic sheen
-  c.fillStyle = L === 16 ? rainbow(200) : hsl(L, -8); // ears
-  c.beginPath(); c.moveTo(-55, -35); c.lineTo(-62, -78); c.lineTo(-25, -48); c.moveTo(55, -35); c.lineTo(62, -78); c.lineTo(25, -48); c.fill();
-  const eye = L >= 12 ? "#ffd43b" : L >= 7 ? "#ff5a5a" : "#1a1410"; // eyes
-  if (L >= 7) { c.shadowColor = eye; c.shadowBlur = 14; }
-  c.fillStyle = eye; c.beginPath(); c.arc(-28, -8, 7, 0, 7); c.arc(28, -8, 7, 0, 7); c.fill(); c.shadowBlur = 0;
-  c.fillStyle = "#fff"; c.beginPath(); c.arc(-26, -10, 2.2, 0, 7); c.arc(30, -10, 2.2, 0, 7); c.fill();
-  c.fillStyle = hsl(L, -12); c.beginPath(); c.ellipse(0, 20, 26, 17, 0, 0, 7); c.fill(); // snout
-  c.fillStyle = "rgba(0,0,0,.55)"; c.beginPath(); c.ellipse(-8, 20, 4, 6, 0, 0, 7); c.ellipse(8, 20, 4, 6, 0, 0, 7); c.fill();
-  if (L >= 10) { // crown
-    c.fillStyle = "#ffd43b"; c.strokeStyle = "#b8860b"; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(-32, -50); c.lineTo(-38, -88); c.lineTo(-16, -66); c.lineTo(0, -96); c.lineTo(16, -66); c.lineTo(38, -88); c.lineTo(32, -50); c.closePath(); c.fill(); c.stroke();
-    c.fillStyle = "#ff4d6d"; c.beginPath(); c.arc(0, -62, 5, 0, 7); c.fill();
-  }
-  if (L >= 20) { c.strokeStyle = "#fff6b0"; c.lineWidth = 5; c.shadowColor = "#fff6b0"; c.shadowBlur = 20; c.beginPath(); c.ellipse(0, -112, 42, 10, 0, 0, 7); c.stroke(); c.shadowBlur = 0; }
-  if (L >= 13) for (let i = 0; i < 8; i++) { // orbiting sparkles
-    const a = t * 1.6 + i * Math.PI / 4, px = Math.cos(a) * 112, py = 10 + Math.sin(a) * 74, r = 4 + 2 * Math.sin(t * 5 + i);
-    c.fillStyle = L >= 16 ? rainbow(i * 45) : "#fff6b0";
-    c.beginPath(); c.moveTo(px, py - r * 2); c.lineTo(px + r * .5, py); c.lineTo(px, py + r * 2); c.lineTo(px - r * .5, py); c.moveTo(px - r * 2, py); c.lineTo(px, py + r * .5); c.lineTo(px + r * 2, py); c.lineTo(px, py - r * .5); c.fill();
-  }
-  if (L >= 18 && Math.random() < .25) { // lightning
-    c.strokeStyle = "#c9b8ff"; c.lineWidth = 2.5; c.shadowColor = "#fff"; c.shadowBlur = 10; c.beginPath();
-    let lx = (Math.random() - .5) * 200, ly = -130; c.moveTo(lx, ly); while (ly < 60) { lx += (Math.random() - .5) * 40; ly += 22; c.lineTo(lx, ly); } c.stroke(); c.shadowBlur = 0;
-  }
-  c.restore();
-}
-
-// ---------- Effects ----------
-let pigHidden = false, cine = null, shards = [], sparks = [], cracks = null, flash = 0, last = performance.now();
-const stageScale = L => stage.getBoundingClientRect().width / 260 * (.85 + L * .012);
-function pigPos() {
-  if (cine) return { x: innerWidth / 2, y: innerHeight * .45, s: Math.min(innerWidth, innerHeight) / 330 };
-  const r = stage.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 + 6, s: stageScale(shownLevel ?? s.level) };
-}
-function burst(p, color, n) {
-  for (let i = 0; i < n; i++) { const a = Math.random() * 7, v = 150 + Math.random() * 450;
-    sparks.push({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, life: 1, color: color === "rainbow" ? `hsl(${Math.random() * 360},100%,65%)` : color, r: 2 + Math.random() * 3 }); }
-}
-function crack(p, dur, branches) {
-  const paths = Array.from({ length: branches }, () => { let x = (Math.random() - .5) * 20, y = (Math.random() - .5) * 20, a = Math.random() * 7; const pts = [[x, y]];
-    for (let i = 0; i < 6; i++) { a += (Math.random() - .5) * 1.1; x += Math.cos(a) * 16; y += Math.sin(a) * 13; pts.push([x, y]); } return pts; });
-  cracks = { p, start: performance.now(), dur, paths };
-}
-function shatter(p, L) {
-  const size = 300 * p.s, d = devicePixelRatio || 1, off = document.createElement("canvas");
-  off.width = off.height = size * d; const oc = off.getContext("2d"); oc.setTransform(d, 0, 0, d, 0, 0);
-  drawPig(oc, size / 2, size / 2, p.s, L, performance.now() / 1000);
-  const N = 7, cell = size / N, pt = [];
-  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) { const edge = i % N === 0 || j % N === 0;
-    pt.push([i * cell + (edge ? 0 : (Math.random() - .5) * cell * .8), j * cell + (edge ? 0 : (Math.random() - .5) * cell * .8)]); }
-  const P = (i, j) => pt[j * (N + 1) + i];
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) for (const tri of [[P(i, j), P(i + 1, j), P(i, j + 1)], [P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)]]) {
-    const cx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3, cy = (tri[0][1] + tri[1][1] + tri[2][1]) / 3, dx = cx - size / 2, dy = cy - size / 2;
-    shards.push({ off, size, cx, cy, pts: tri.map(([a, b]) => [a - cx, b - cy]), x: p.x - size / 2 + cx, y: p.y - size / 2 + cy,
-      vx: dx * 6 + (Math.random() - .5) * 260, vy: dy * 6 - 250 - Math.random() * 250, rot: 0, vr: (Math.random() - .5) * 14, life: 1 });
-  }
-  burst(p, "#fff", 40); burst(p, hsl(L), 40);
-}
-
-function frame(now) {
-  const dt = Math.min(.05, (now - last) / 1000), t = now / 1000; last = now;
-  $("frenzy").textContent = frenzyOn() ? `광란 중! ${((frenzyUntil - now) / 1000).toFixed(1)}s` : s.streak >= FRENZY_AT ? "충전 완료 · 다음 강화 때 발동" : `${s.streak || 0} / ${FRENZY_AT}`;
-  $("frenzy").style.color = frenzyOn() || s.streak >= FRENZY_AT ? "var(--ember)" : "";
-  const r = stage.getBoundingClientRect(), L = shownLevel ?? s.level;
-  sc.clearRect(0, 0, r.width, r.height);
-  if (!pigHidden && !cine) drawPig(sc, r.width / 2, r.height / 2 + 6, stageScale(L), L, t);
-  fc.clearRect(0, 0, innerWidth, innerHeight);
-  if (cine) { // FIFA-style enhancement scene
-    const p = pigPos(), age = now - cine.start;
-    fc.fillStyle = `rgba(8,6,5,${Math.min(.92, age / 350)})`; fc.fillRect(0, 0, innerWidth, innerHeight);
-    if (cine.charging) {
-      const k = Math.min(1, age / cine.dur), jit = k > .7 ? (Math.random() - .5) * 10 * k : 0;
-      fc.save(); fc.translate(p.x, p.y);
-      fc.lineWidth = 10; fc.strokeStyle = "rgba(255,255,255,.12)"; fc.beginPath(); fc.arc(0, 0, 150 * p.s, 0, 7); fc.stroke();
-      const g = fc.createLinearGradient(-150 * p.s, 0, 150 * p.s, 0); g.addColorStop(0, "#ff8a3d"); g.addColorStop(1, "#ffd43b");
-      fc.strokeStyle = g; fc.shadowColor = "#ffd43b"; fc.shadowBlur = 20 * k; fc.beginPath(); fc.arc(0, 0, 150 * p.s, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); fc.stroke(); fc.shadowBlur = 0;
-      fc.restore();
-      if (!pigHidden) drawPig(fc, p.x + jit, p.y + jit, p.s * (1 + k * .12), L, t * (1 + k * 3));
-      fc.textAlign = "center"; fc.fillStyle = "#fff"; fc.font = `${Math.round(30 * p.s + 10)}px Jua, sans-serif`;
-      fc.fillText(`+${cine.L}  ▶  +${cine.L + 1}`, p.x, p.y - 175 * p.s);
-      fc.font = `${Math.round(18 * p.s + 8)}px Jua, sans-serif`; fc.fillStyle = "#ffd43b";
-      fc.fillText(`${(cine.dur / 1000 * (1 - k)).toFixed(1)}s`, p.x, p.y + 185 * p.s);
-    } else if (!pigHidden) drawPig(fc, p.x, p.y, p.s, L, t);
-  }
-  if (cracks) {
-    const k = Math.min(1, (now - cracks.start) / cracks.dur), { p } = cracks;
-    fc.save(); fc.translate(p.x, p.y + 10 * p.s); fc.scale(p.s, p.s); fc.lineCap = "round";
-    for (const [w, col] of [[6, "rgba(0,0,0,.7)"], [2.5, "#fff"]]) { fc.lineWidth = w; fc.strokeStyle = col;
-      for (const path of cracks.paths) { const n = Math.ceil(k * (path.length - 1)); fc.beginPath(); fc.moveTo(...path[0]); for (let i = 1; i <= n; i++) fc.lineTo(...path[i]); fc.stroke(); } }
-    fc.restore();
-  }
-  shards = shards.filter(o => o.life > 0 && o.y < innerHeight + 200);
-  for (const o of shards) {
-    o.vy += 1100 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.rot += o.vr * dt; o.life -= dt * .55;
-    fc.save(); fc.globalAlpha = Math.max(0, o.life); fc.translate(o.x, o.y); fc.rotate(o.rot);
-    fc.beginPath(); fc.moveTo(...o.pts[0]); fc.lineTo(...o.pts[1]); fc.lineTo(...o.pts[2]); fc.closePath(); fc.clip();
-    fc.drawImage(o.off, -o.cx, -o.cy, o.size, o.size); fc.restore();
-  }
-  sparks = sparks.filter(o => o.life > 0);
-  for (const o of sparks) { o.vy += 500 * dt; o.x += o.vx * dt; o.y += o.vy * dt; o.life -= dt * 1.1;
-    fc.globalAlpha = Math.max(0, o.life); fc.fillStyle = o.color; fc.beginPath(); fc.arc(o.x, o.y, o.r, 0, 7); fc.fill(); }
-  fc.globalAlpha = 1;
-  if (flash > 0) { fc.fillStyle = `rgba(255,255,255,${flash})`; fc.fillRect(0, 0, innerWidth, innerHeight); flash -= dt * 2.2; }
-  requestAnimationFrame(frame);
-}
-
-// ---------- Game flow ----------
-function tapOrWait(ms) { return new Promise(res => { const done = () => { clearTimeout(id); removeEventListener("pointerdown", done); res(); };
-  const id = setTimeout(done, ms); setTimeout(() => addEventListener("pointerdown", done), 250); }); }
-
-async function destroy(L, p) {
-  if (Math.random() < .5) { // pretend it worked
-    shownLevel = Math.min(MAX, L + 1); ui(); burst(p, "#4dabf7", 45);
-    banner("성공!", `+${shownLevel} ${NAMES[shownLevel]}`, "ok"); await sleep(1100);
-    banner("…은 구라", "", "fake"); await sleep(450);
-  }
-  shake(); crack(p, 650, 9); await sleep(700);
-  const broke = shownLevel ?? L; cracks = null; pigHidden = true;
-  shatter(p, broke); flash = 1; shake();
-  banner("파사삭", `+${broke} ${NAMES[broke]} 파괴`, "boom");
-  shownLevel = null; s.level = 0; s.streak = 0; ui();
-  await sleep(1500); pigHidden = false;
-}
-
-async function enhance() {
-  const L = s.level; if (busy || L >= MAX || s.money < COST(L)) return;
-  busy = true; s.money -= COST(L); s.used++; hideBanner(); $("ghost").hidden = true; ui();
-  if (s.streak >= FRENZY_AT) { s.streak = 0; frenzyUntil = performance.now() + FRENZY_MS; flash = .5; banner("광란!", "6초 동안 파괴 없음", "great"); await sleep(700); }
-  else if (!frenzyOn()) s.streak = (s.streak || 0) + 1;
-  let res = roll(L); const big = L >= 15, saved = res === "b" && frenzyOn();
-  if (saved) res = "k";
-  if (big) { cine = { start: performance.now(), dur: reduced || frenzyOn() ? 800 : 2500, charging: true, L }; await sleep(cine.dur); cine.charging = false; flash = .9; }
-  else { stage.classList.remove("hit"); void stage.offsetWidth; stage.classList.add("hit"); await sleep(300); }
-  const p = pigPos();
-  if (res === "g") { s.level = Math.min(MAX, L + 2); burst(p, "rainbow", 120); flash = Math.max(flash, .6); banner("대성공!!", `+${L} → +${s.level} ${NAMES[s.level]}`, "great"); }
-  else if (res === "s") { s.level = L + 1; burst(p, "#ffd43b", 60); banner("성공!", `+${s.level} ${NAMES[s.level]}`, "ok"); }
-  else if (res === "k") banner("유지", saved ? "광란이 파괴를 막았다" : "아무 일도 없었다", "keep");
-  else if (res === "d") { shake(); crack(p, 300, 3); await sleep(400); cracks = null; s.level = L - 1; banner("손상", `+${L} → +${s.level}`, "dmg"); }
-  else await destroy(L, p);
+async function doStrike() {
+  const p = S.anvil, now = performance.now();
+  if (!p || busy || now < nextStrikeAt) return;
+  if (!p.heated) return banner("차갑다", "화로에서 먼저 달구세요", "h");
+  const big = p.lvl >= 15 && !inFrenzy() && p.charge < 10, before = p.lvl, pos = anvilPos.clone().setY(.9);
+  busy = true; lastSnap = { pig: JSON.parse(JSON.stringify(p)), armed: { ...S.armed }, fence: S.fenceUsed, gold: S.gold };
   ui();
-  if (big) { await tapOrWait(2200); cine = null; }
-  busy = false; deadlineCheck(); ui();
+  if (big) { // FIFA-style build-up from +15
+    fovTarget = 32; $("ring").hidden = $("ringText").hidden = false;
+    const dur = reduced ? 700 : 2400, t0 = performance.now();
+    for (let k = 0; k < 1; k = (performance.now() - t0) / dur) {
+      $("ring").style.setProperty("--p", k); $("ringText").textContent = `+${before} ▶ +${before + 1}   ${(dur / 1000 * (1 - k)).toFixed(1)}s`;
+      if (k > .7) shakeT = .05; await sleep(30);
+    }
+    $("ring").hidden = $("ringText").hidden = true; flash(.8);
+  }
+  swing = 1; await sleep(big ? 60 : 110);
+  const fzBefore = inFrenzy(), { res, frenzyStarted, saved } = strike(p);
+  nextStrikeAt = performance.now() + (fzBefore || frenzyStarted || !has("loop") ? 560 : 560 / 1.2);
+  if (res === "b") await breakFx(p, before, big);
+  else {
+    if (res === "g") { sparkBurst(pos, "rainbow", 90); flash(.5); banner("대성공!!", `+${before} → +${p.lvl} ${pname(p.lvl)}`, "g"); }
+    if (res === "s") { sparkBurst(pos, 0xffd43b, 40); banner("성공", `+${p.lvl} ${pname(p.lvl)}`, "s"); }
+    if (res === "h") banner("유지", saved || "아무 일도 없었다", "h");
+    if (res === "d") { shakeT = .25; crackT = .2; banner("손상", saved || `+${before} → +${p.lvl}`, "d"); }
+    if (frenzyStarted) setTimeout(() => banner("광란!", "잠깐 동안 깨지지 않아요", "f"), 350);
+    if (big) { await sleep(700); fovTarget = 62; }
+  }
+  busy = false; ui();
+}
+async function breakFx(p, before, big) {
+  const pos = anvilPos.clone().setY(.9), color = new THREE.Color().setHSL(HSL[Math.min(20, before)][0] / 360, .6, .6);
+  if (Math.random() < .5) { // pretends to succeed, then breaks
+    p.lvl = before + 1; ui(); sparkBurst(pos, 0x4dabf7, 40); banner("성공!", `+${p.lvl} ${pname(p.lvl)}`, "s");
+    await sleep(reduced ? 400 : 1000); banner("…은 구라", "", "fake"); await sleep(350);
+  }
+  shakeT = .6; crackT = .65; await sleep(650);
+  hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); flash(1); shakeT = .5;
+  banner("파사삭", `+${before} ${pname(before)} 파괴`, "b"); ui();
+  await sleep(big ? 1300 : 900); hideAnvilPig = false; fovTarget = 62;
 }
 
-const GHOST = [[3, ["이걸 돈 받고 판다고?", "…귀엽긴 하네", "간식값은 쳐줄게"]], [9, ["반가움", "괜찮은 돼지군", "흥정은 안 해"]],
-  [14, ["합리적 의심", "이거 진짜 네가 키웠어?", "…소문 내지 마"]], [MAX, ["말도 안 돼", "유령인 내가 소름 돋았어", "전설이 되겠군"]]];
-function sell() {
-  if (busy || !s.level) return;
-  const lines = GHOST.find(([max]) => s.level <= max)[1];
-  $("ghostText").textContent = `“${lines[Math.floor(Math.random() * lines.length)]}”  +${G(VALUE(s.level))}`; $("ghost").hidden = false;
-  burst(pigPos(), "#ffd43b", 40); s.money += VALUE(s.level); s.level = 0; s.streak = 0; hideBanner(); deadlineCheck(); ui();
+// ===== HUD =====
+const OUT = { b: ["파괴", "var(--break)"], d: ["손상", "var(--dmg)"], h: ["유지", "var(--hold)"], s: ["성공", "var(--ok)"], g: ["대성공", "var(--great)"] };
+const pct = x => (x * 100).toFixed(1) + "%";
+const rerollCost = () => Math.round(.15 * quota(S.day) / 10) * 10; // shortcut: real reroll price unpublished, 15% of tribute is a guess
+function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pname(p.lvl)}</b>${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 광란 ${p.charge}/10</p></div>${btn}</div>`; }
+let confirmBell = false;
+function ui() {
+  sync();
+  const q = quota(S.day), tsum = S.tribute.reduce((a, p) => a + V(p), 0), s = STATIONS[st].id;
+  $("day").textContent = S.day; $("quota").textContent = G(q); $("tsum").textContent = G(tsum); $("tsum").style.color = tsum >= q ? "var(--ok)" : "";
+  $("anger").innerHTML = [0, 1, 2].map(i => `<span class="${i < S.anger ? "on" : ""}">✕</span>`).join("");
+  $("gold").textContent = G(S.gold); $("credits").textContent = S.credits;
+  $("handInfo").textContent = S.hand ? `손: +${S.hand.lvl} ${pname(S.hand.lvl)}` : "손: 비어 있음";
+  $("station").textContent = STATIONS[st].name;
+  let h = "";
+  if (s === "anvil") {
+    const p = S.anvil;
+    if (p) {
+      const o = odds(p);
+      h += `<div class="row"><b class="big">+${p.lvl} ${pname(p.lvl)}</b><span class="big num gold">${G(V(p))}</span></div>
+        <div class="odds num">${Object.keys(OUT).map(k => `<span>${OUT[k][0]}<b style="color:${OUT[k][1]}">${pct(o[k])}</b></span>`).join("")}</div>
+        <div class="stack">${Object.keys(OUT).map(k => `<i style="width:${o[k] * 100}%;background:${OUT[k][1]}"></i>`).join("")}</div>
+        <div class="charges" aria-label="광란 게이지 ${p.charge}/10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < p.charge ? "on" : ""}"></i>`).join("")}</div>
+        <div class="btns"><button id="strike" class="hot" ${busy ? "disabled" : ""}>${p.heated ? "내리치기" : "차가움 · 화로로"}<small>화면을 눌러도 쳐요</small></button>
+        <button class="ghost" id="lift" ${busy || S.hand ? "disabled" : ""}>들기</button>
+        ${["scale", "chalk", "powder", "star"].filter(k => S.items[k] || S.armed[k]).map(k => `<button class="ghost ${S.armed[k] ? "armed" : ""}" data-use="${k}" ${busy ? "disabled" : ""}>${ITEMS[k].name} ×${S.items[k] || 0}</button>`).join("")}
+        ${S.items.clock && lastSnap && !busy ? `<button class="ghost" id="undo">되감기 ×${S.items.clock}</button>` : ""}</div>`;
+    } else if (S.hand) h += `<button id="place" class="hot">모루에 올리기${S.hand.heated ? "" : "<small>달궈야 칠 수 있어요</small>"}</button>`;
+    else h += `<p class="label">돼지 우리에서 돼지를 들고, 화로에서 달군 뒤 모루에서 내리쳐요.${S.items.clock && lastSnap ? "" : ""}</p>` + (S.items.clock && lastSnap ? `<button class="ghost" id="undo">되감기로 부서진 돼지 되살리기 ×${S.items.clock}</button>` : "");
+  }
+  if (s === "furnace") h += !S.hand ? `<p class="label">손에 돼지가 없어요.</p>` : S.hand.heated ? `<p>이미 달궈졌어요. 모루로 가세요.</p>` : `<button id="heat" class="hot">달구기<small>2초</small></button>`;
+  if (s === "pen") {
+    if (S.hand) h += `<button id="drop">손에 든 돼지 내려놓기</button>`;
+    h += S.pen.length ? `<div class="list">${S.pen.map((p, i) => pigLine(p, `<button data-pick="${i}" ${S.hand ? "disabled" : ""}>들기</button>`)).join("")}</div>` : `<p class="label">우리가 비었어요. 내일 아침 돼지 3마리가 와요.</p>`;
+  }
+  if (s === "bank") {
+    if (S.day === 1 && !S.gift) h += `<button id="gift" class="hot">첫날 선물 고르기</button>`;
+    h += `<div class="row"><span>돼지 1마리 = 크레딧 1</span><button id="feed" ${S.hand ? "" : "disabled"}>손에 든 돼지 넣기</button></div>`;
+    if (S.shop.length) h += `<div class="list">${S.shop.map(id => { const r = RB[id]; return `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-buy="${id}" ${S.credits < r.cost || S.relics.length >= 8 ? "disabled" : ""}>${r.cost}크레딧</button></div>`; }).join("")}</div>`;
+    else if (S.day >= 2) h += `<p class="label">오늘 진열장이 비었어요.</p>`; else h += `<p class="label">진열장은 Day 2부터 열려요.</p>`;
+    if (S.day >= 2) h += `<button class="ghost" id="reroll" ${S.freeReroll || S.gold >= rerollCost() ? "" : "disabled"}>진열장 바꾸기 · ${S.freeReroll ? "무료" : G(rerollCost())}</button>`;
+    h += `<p class="label">내 유물 ${S.relics.length}/8</p>` + (S.relics.length ? `<div class="list">${S.relics.map(id => `<div class="item"><div><b>${RB[id].name}</b><p>${RB[id].desc}</p></div><button class="ghost" data-toss="${id}">버리기</button></div>`).join("")}</div>` : "");
+  }
+  if (s === "ghost") {
+    if (!S.merchant) h += `<p class="label">유령 상인은 3일마다 와요. 다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}</p>`;
+    else h += `<p>“흐흐… 오늘은 뭘 사겠나?”</p><div class="list">${Object.entries(S.merchant).map(([id, o]) => {
+      const nm = id === "pig" ? "기본 돼지 (+0)" : ITEMS[id].name, ds = id === "pig" ? "우리에 바로 들어가요" : ITEMS[id].desc;
+      return `<div class="item"><div><b>${nm}</b><span class="tag">남음 ${o.left}</span><p>${ds}</p></div><button data-shop="${id}" ${o.left && S.gold >= o.price ? "" : "disabled"}>${G(o.price)}</button></div>`; }).join("")}</div>
+      <p class="label">같은 물건을 또 사면 값이 3배가 돼요.</p>`;
+  }
+  if (s === "tribute") {
+    h += `<div class="row"><span>오늘 공물 <b class="num">${G(tsum)}</b> / ${G(q)}</span>${S.hand ? `<button id="offer">창구에 넣기</button>` : ""}</div>`;
+    if (S.tribute.length) h += `<div class="list">${S.tribute.map((p, i) => pigLine(p, `<button class="ghost" data-take="${i}" ${S.hand ? "disabled" : ""}>꺼내기</button>`)).join("")}</div>`;
+    h += `<p class="label">종을 치면 하루가 끝나요. 창구의 돼지 가치만큼 골드를 돌려받고, 모자라면 분노가 쌓여요. 3번이면 끝이에요.</p>
+      <button id="bell" class="${confirmBell ? "hot" : ""}">${confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
+  }
+  $("panel").innerHTML = h; save();
 }
+$("panel").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b || b.disabled) return;
+  const d = b.dataset, id = b.id;
+  if (id !== "bell") confirmBell = false;
+  if (id === "strike") return doStrike();
+  if (id === "lift") { S.hand = S.anvil; S.anvil = null; lastSnap = null; }
+  if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null; }
+  if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); }
+  if (id === "drop") { S.pen.push(S.hand); S.hand = null; }
+  if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
+  if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().setY(1.5), 0xff3df2, 30); banner("+1 크레딧", "", "f"); }
+  if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); }
+  if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); }
+  if (d.toss) S.relics = S.relics.filter(x => x !== d.toss);
+  if (id === "gift") return pickGift();
+  if (d.shop) { const o = S.merchant[d.shop]; S.gold -= o.price; o.left--; o.price *= 3;
+    if (d.shop === "pig") S.pen.push(newPig()); else if (d.shop === "note") S.extra += 2;
+    else if (d.shop === "incense") { S.anger = Math.max(0, S.anger - 1); S.incenseUsed = true; } else S.items[d.shop] = (S.items[d.shop] || 0) + 1;
+    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : ITEMS[d.shop].name, "s"); }
+  if (d.use) { const k = d.use;
+    if (k === "star") { if (inFrenzy()) return banner("안 돼요", "광란 중엔 못 써요", "h"); S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
+    else if (S.armed[k]) { delete S.armed[k]; S.items[k] = (S.items[k] || 0) + 1; }
+    else { S.armed[k] = true; S.items[k]--; banner(ITEMS[k].name, "다음 타격에 적용", "f"); } }
+  if (id === "undo" && lastSnap) { S.items.clock--; if (S.anvil) Object.assign(S.anvil, lastSnap.pig); else S.anvil = lastSnap.pig;
+    S.armed = lastSnap.armed; S.fenceUsed = lastSnap.fence; S.gold = lastSnap.gold; lastSnap = null; banner("되감기", "마지막 타격을 없던 일로", "f"); }
+  if (id === "offer") { S.tribute.push(S.hand); S.hand = null; }
+  if (d.take) S.hand = S.tribute.splice(+d.take, 1)[0];
+  if (id === "bell") { if (!confirmBell) { confirmBell = true; return ui(); } confirmBell = false; bell.rotation.z = .5; setTimeout(() => bell.rotation.z = 0, 300); return ringBell(); }
+  ui();
+});
 
-function nextMonth(carry) { s.money -= QUOTA(s.month); s.month++; s.used = 0; s.days = DAYS + carry; banner("공물 완료", `다음 달 공물 ${G(QUOTA(s.month))}`, "ok"); }
-function deadlineCheck() {
-  const stuck = s.level === 0 && s.money < COST(0) && s.money < QUOTA(s.month); // nothing to sell, nothing to enhance with
-  if (s.used < s.days && !stuck) return;
-  if (s.money >= QUOTA(s.month)) return nextMonth(0);
-  if (s.level && s.money + VALUE(s.level) >= QUOTA(s.month)) { s.money += VALUE(s.level); s.level = 0; s.streak = 0; return nextMonth(0); }
-  $("overText").textContent = `${s.month}월 용의 공물 ${G(QUOTA(s.month))}을 못 바쳤어요. ${s.month - 1}달 버텼어요.`;
-  $("over").hidden = false;
+function showModal(html, after) { $("modalBody").innerHTML = html; $("modal").hidden = false; after && after(); }
+function closeModal() { $("modal").hidden = true; ui(); }
+function pickGift() {
+  const opts = RELICS.filter(r => r.gift).sort(() => Math.random() - .5).slice(0, 3);
+  showModal(`<h2>첫날 선물</h2><p>하나만 가져갈 수 있어요. 나머지는 사라져요.</p><div class="list">${opts.map(r => `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-g="${r.id}">선택</button></div>`).join("")}</div>`,
+    () => $("modalBody").querySelectorAll("[data-g]").forEach(b => b.onclick = () => { S.relics.push(b.dataset.g); S.gift = b.dataset.g; closeModal(); banner(RB[b.dataset.g].name, "선물을 받았어요", "g"); }));
 }
+function restart() { S = fresh(); uid = 1; morning(); st = 2; closeModal(); pickGift(); }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
 
-$("enhance").onclick = enhance;
-$("sell").onclick = sell;
-$("submit").onclick = () => { if (busy || s.money < QUOTA(s.month)) return; nextMonth(s.days - s.used); ui(); };
-$("restart").onclick = () => { s = fresh(); $("over").hidden = true; hideBanner(); $("ghost").hidden = true; ui(); };
-
-fit(); deadlineCheck(); ui(); requestAnimationFrame(frame);
+// Boot
+if (!load()) { S = fresh(); morning(); st = 2; }
+yaw = STATIONS[st].yaw;
+resize(); ui(); requestAnimationFrame(loop);
+if (S.day === 1 && !S.gift) pickGift();
 </script>
