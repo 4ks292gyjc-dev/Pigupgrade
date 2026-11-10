@@ -374,8 +374,9 @@ const G = n => Math.round(n).toLocaleString("ko-KR") + "G";
 // ===== Forge odds: 30-ticket deck (B9 D2 H5 S12 G2); the break pile is weighted by grade =====
 let frenzyUntil = 0;
 const inFrenzy = () => performance.now() < frenzyUntil;
-function odds(p, frenzy = inFrenzy(), armed = S.armed) {
-  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }; let bt = sickle ? 5 : 9;
+// The ticket deck before the grade risk is weighed in: base counts and what relics, items and the pig itself changed
+function deck(p, frenzy = inFrenzy(), armed = S.armed) {
+  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }; let bt = sickle ? 5 : 9; const base = { b: bt, ...c };
   const add = (k, n) => c[k] += n;
   if (has("bent")) add("s", 4); if (has("spike")) add("s", 6); if (has("whet")) { add("h", -2); add("s", 2); } if (has("mallet")) { add("d", -1); add("s", 1); }
   if (has("coal")) add("g", 1); if (has("gnail")) add("g", 2); if (has("die")) add("g", 4); if (has("seal")) add("h", 2); if (has("weight")) add("h", 3);
@@ -386,6 +387,10 @@ function odds(p, frenzy = inFrenzy(), armed = S.armed) {
   for (const k in c) c[k] = Math.max(0, c[k]);
   if (has("obsid") && p.lvl >= 8) { const n = Math.min(2, c.s); c.s -= n; c.g += n; }
   if (armed.chalk) c.g *= 2;
+  return { c, bt, base };
+}
+function odds(p, frenzy = inFrenzy(), armed = S.armed) {
+  const { c, bt } = deck(p, frenzy, armed);
   const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100;
   let pb = 0;
   if (!frenzy && B > 0) {
@@ -558,7 +563,7 @@ function ringBell() {
 const $ = id => document.getElementById(id);
 const canvas = $("gl"), R = new THREE.WebGLRenderer({ canvas, antialias: true });
 let pixR = Math.min(devicePixelRatio || 1, 2), frameN = 0, slowT = 0; R.setPixelRatio(pixR); R.outputEncoding = THREE.sRGBEncoding;
-const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0907); scene.fog = new THREE.Fog(0x0d0907, 4, 10);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0907); scene.fog = new THREE.Fog(0x0d0907, 5, 13);
 const cam = new THREE.PerspectiveCamera(62, 1, .05, 50); cam.position.set(0, 1.55, 0); scene.add(cam);
 // Only a faint fill: the room is lit by one torch-lantern hanging from the ceiling and by the furnace
 const AMB = .07, HEMI = .08, KEY = .2;
@@ -569,7 +574,7 @@ addEventListener("resize", resize);
 
 const STATIONS = [
   { id: "anvil", name: "모루", yaw: 0, pitch: -.33 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
-  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 }, { id: "shelf", name: "진열대", yaw: -35, pitch: -.24 },
+  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "wall", name: "추첨표 · 달력", yaw: -110, pitch: .14 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 }, { id: "shelf", name: "진열대", yaw: -35, pitch: -.24 },
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
 const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
@@ -599,9 +604,9 @@ function pbr(name, rx, ry = rx) { const key = `${name}:${rx}:${ry}`; if (PBR[key
   return PBR[key] = { map: t("diff"), normalMap: t("nor"), roughnessMap: t("rough"), roughness: 1 }; }
 { // barn room
   const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xb0a08c, pbr("floor", 5))); floor.rotation.x = -Math.PI / 2; scene.add(floor);
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xa08a78, { ...pbr("wall", 8, 2), side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
-  for (let i = 0; i < 6; i++) box(.25, 4, .25, wood(0x5a3a22), at(i * 60 + 30, 4.05, 2));
-  const ceil = new THREE.Mesh(new THREE.CircleGeometry(4.3, 40), M(0x4a3626, pbr("wall", 4))); ceil.rotation.x = Math.PI / 2; ceil.position.y = 4; scene.add(ceil);
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(5.4, 5.4, 4, 48, 1, true), M(0xa08a78, { ...pbr("wall", 10, 2), side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
+  for (let i = 0; i < 8; i++) box(.25, 4, .25, wood(0x5a3a22), at(i * 45, 5.25, 2)); // posts kept clear of the notice wall at -110°
+  const ceil = new THREE.Mesh(new THREE.CircleGeometry(5.5, 48), M(0x4a3626, pbr("wall", 5))); ceil.rotation.x = Math.PI / 2; ceil.position.y = 4; scene.add(ceil);
   const hay = M(0xffffff, { map: STRAW, bumpMap: STRAW, bumpScale: .03, roughness: 1 });
   for (const y of [25, 85, 135]) box(.8, .4, .5, hay, at(y, 3.6, .2));
 }
@@ -725,7 +730,8 @@ async function ghostLeave() {
   ghostSpin = 0; ghost.visible = false; ghostLeaving = false; S.merchant = null; ghostReset(); ghost.visible = false; ui();
   banner("유령이 떠났어요", `다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}`, "h");
 }
-// Tribute hatch: bars and the boar lord's eyes
+// Tribute hatch: bars and the boar lord's eyes, set into a thick brick wall
+{ const w = new THREE.Mesh(rbox(2.9, 4, 2.1, .04), M(0x8a7060, pbr("brick", 2.2, 3))); w.position.copy(at(-70, 4.47, 2)); w.lookAt(0, 2, 0); scene.add(w); }
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
   const gate = new THREE.Group(), barM = M(0x3a3a3a, { metalness: .8, roughness: .5 }); gate.position.y = .65; hatch.add(gate); hatch.userData.gate = gate; hatch.userData.barM = barM; // pivots at the top so it folds up
@@ -1168,20 +1174,46 @@ const boardCv = Object.assign(document.createElement("canvas"), { width: 1024, h
   for (const s of [-1, 1]) { const ch = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, 1.2, 5), M(0x1c1814, { metalness: .8 })); ch.position.set(s * .5, .9, -.03); g.add(ch); } } // hung on chains
 // Calendar pinned to the wall left of the board: passed days crossed out, merchant days marked
 const calCv = Object.assign(document.createElement("canvas"), { width: 400, height: 470 }), calTex = new THREE.CanvasTexture(calCv); calTex.encoding = THREE.sRGBEncoding;
-{ const m = new THREE.Mesh(new THREE.PlaneGeometry(.62, .73), new THREE.MeshStandardMaterial({ map: calTex, roughness: .95 })); m.position.copy(at(19, 3.0, 1.55)); m.lookAt(0, 1.55, 0); m.rotation.z += .04; scene.add(m); }
+{ const m = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 1.59), new THREE.MeshBasicMaterial({ map: calTex, color: 0xc8bca8 })); m.position.copy(at(-110, 5.3, 3.08)); m.lookAt(0, 3.08, 0); m.rotation.z += .02; scene.add(m); }
 let calSig = "";
 function drawCalendar() {
   const sig = `${S.day}`; if (sig === calSig) return; calSig = sig; const x = calCv.getContext("2d"), W = 400, base = Math.floor((S.day - 1) / 30) * 30;
   x.fillStyle = "#e6dcc6"; x.fillRect(0, 0, W, 470); x.fillStyle = "rgba(90,60,30,.15)"; for (let i = 0; i < 40; i++) x.fillRect(Math.random() * W, Math.random() * 470, 30 + Math.random() * 60, 2);
   x.fillStyle = "#3a2c22"; x.font = "56px Jua, sans-serif"; x.textAlign = "center"; x.fillText(`DAY ${base + 1}–${base + 30}`, W / 2, 66);
-  x.font = "34px Jua, sans-serif"; x.textBaseline = "middle";
+  x.font = "38px Jua, sans-serif"; x.textBaseline = "middle";
   for (let i = 0; i < 30; i++) { const d = base + i + 1, cx = 34 + (i % 6) * 66, cy = 128 + Math.floor(i / 6) * 70;
-    x.fillStyle = "#3a2c22"; x.fillText(d, cx, cy);
+    x.fillStyle = "#24180e"; x.fillText(d, cx, cy);
     if (d % 3 === 0) { x.fillStyle = "#3a7a8a"; x.font = "18px Jua, sans-serif"; x.fillText("유령", cx, cy + 24); x.font = "34px Jua, sans-serif"; }
     if (d === 21) { x.strokeStyle = "#8a3a2a"; x.lineWidth = 3; x.strokeRect(cx - 28, cy - 26, 56, 52); }
     if (d < S.day) { x.strokeStyle = "rgba(190,40,30,.9)"; x.lineWidth = 6; x.beginPath(); x.moveTo(cx - 22, cy - 20); x.lineTo(cx + 22, cy + 20); x.moveTo(cx + 22, cy - 20); x.lineTo(cx - 22, cy + 20); x.stroke(); }
     if (d === S.day) { x.strokeStyle = "#2a1a10"; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy, 27, 0, 7); x.stroke(); } }
   calTex.needsUpdate = true;
+}
+// Draw sheet (추첨표) pinned under the calendar: one square per ticket in the deck; × marks tickets a relic removed, + tickets it added
+const sheetCv = Object.assign(document.createElement("canvas"), { width: 1024, height: 720 }), sheetTex = new THREE.CanvasTexture(sheetCv); sheetTex.encoding = THREE.sRGBEncoding; sheetTex.anisotropy = 4;
+{ const m = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.62), new THREE.MeshBasicMaterial({ map: sheetTex, color: 0xc8bca8 })); m.position.copy(at(-110, 5.3, 1.4)); m.lookAt(0, 1.4, 0); m.rotation.z -= .015; scene.add(m);
+  const ch = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 4, 6), M(0x2a2420, { metalness: .8, roughness: .4 })); ch.position.copy(at(-96, 5.25, 2)); scene.add(ch); // a hanging chain, as in the original
+  const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, color: 0xffb060, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); fl.scale.set(.22, .36, 1); fl.position.copy(at(-124, 5.2, 2.3)); scene.add(fl);
+  const gw = new THREE.Sprite(new THREE.SpriteMaterial({ map: AURA, color: 0xff9a3c, transparent: true, opacity: .35, blending: THREE.AdditiveBlending, depthWrite: false })); gw.scale.setScalar(2.2); gw.position.copy(fl.position); scene.add(gw);
+  const sc = new THREE.Mesh(new THREE.CylinderGeometry(.05, .03, .22, 8), M(0x2a2420, { metalness: .8 })); sc.position.copy(at(-124, 5.25, 2.1)); scene.add(sc); } // wall torch beside the sheet
+let sheetSig = "";
+function drawSheet() {
+  const p = S.anvil || { lvl: 0 }, { c, bt, base } = deck(p), cur = { b: Math.max(0, bt), ...c }, keys = ["b", "d", "h", "s", "g"];
+  const sig = keys.map(k => base[k] + ":" + cur[k]).join(); if (sig === sheetSig) return; sheetSig = sig;
+  const x = sheetCv.getContext("2d"), W = 1024, H = 720, ink = "#2a1e12";
+  x.fillStyle = "#d9c9a0"; x.fillRect(0, 0, W, H); for (let i = 0; i < 60; i++) { x.fillStyle = `rgba(120,90,50,${Math.random() * .08})`; x.beginPath(); x.arc(Math.random() * W, Math.random() * H, 30 + Math.random() * 90, 0, 7); x.fill(); }
+  x.fillStyle = "#1a1410"; x.fillRect(34, 26, 20, 20); x.fillRect(W - 54, 26, 20, 20); // pins
+  x.fillStyle = ink; x.textBaseline = "middle"; x.textAlign = "left"; x.font = "64px Jua, sans-serif"; x.fillText("추 첨 표", 70, 86);
+  x.font = "28px Jua, sans-serif"; x.fillText("× 지움    + 추가", 640, 96);
+  x.strokeStyle = ink; x.lineWidth = 3; x.beginPath(); x.moveTo(60, 140); x.lineTo(W - 60, 140); x.moveTo(60, 610); x.lineTo(W - 60, 610); x.stroke();
+  keys.forEach((k, r) => { const y = 195 + r * 88, kept = Math.min(base[k], cur[k]), gone = base[k] - kept, added = cur[k] - kept, n = kept + gone + added, step = Math.min(44, 600 / Math.max(1, n)), sz = Math.min(32, step * .74);
+    x.font = "48px Jua, sans-serif"; x.textAlign = "left"; x.fillStyle = ink; x.fillText(BNAME[k], 64, y);
+    for (let i = 0; i < n; i++) { const X = 280 + i * step, Y = y - sz / 2; x.lineWidth = 4; x.strokeStyle = ink; x.strokeRect(X, Y, sz, sz);
+      if (i >= kept && i < kept + gone) { x.strokeStyle = "#a03020"; x.beginPath(); x.moveTo(X + 3, Y + 3); x.lineTo(X + sz - 3, Y + sz - 3); x.moveTo(X + sz - 3, Y + 3); x.lineTo(X + 3, Y + sz - 3); x.stroke(); }
+      if (i >= kept + gone) { x.strokeStyle = "#2a6a3a"; x.beginPath(); x.moveTo(X + sz / 2, Y + 4); x.lineTo(X + sz / 2, Y + sz - 4); x.moveTo(X + 4, Y + sz / 2); x.lineTo(X + sz - 4, Y + sz / 2); x.stroke(); } }
+    x.textAlign = "right"; x.fillStyle = ink; x.font = "52px Jua, sans-serif"; x.fillText(cur[k], W - 64, y); });
+  x.textAlign = "left"; x.font = "38px Jua, sans-serif"; x.fillText(`총 ${keys.reduce((a, k) => a + cur[k], 0)}장`, 64, 652); x.font = "24px Jua, sans-serif"; x.fillStyle = "#7a6a52"; x.fillText("강화 위험은 모루 확률에 반영", 64, 694);
+  sheetTex.needsUpdate = true;
 }
 function drawBoard(now) {
   const p = S.anvil, fz = inFrenzy(), o = p && odds(p), left = fz ? Math.max(0, (frenzyUntil - now) / 1000) : 0;
@@ -1205,7 +1237,7 @@ function drawBoard(now) {
   let X = 44; for (const k of keys) { const w = (W - 88) * o[k]; x.fillStyle = BCOL[k]; x.shadowColor = BCOL[k]; x.shadowBlur = 10; x.fillRect(X, 446, w, 10); X += w; } x.shadowBlur = 0;
   boardTex.needsUpdate = true;
 }
-if (document.fonts) document.fonts.ready.then(() => { boardSig = calSig = ""; });
+if (document.fonts) document.fonts.ready.then(() => { boardSig = calSig = sheetSig = ""; });
 
 // Display case (진열대): three stepped pedestals under hanging spotlights in a velvet alcove, for your three best pigs
 const SHELF_YAW = -35, SHELF_SLOT = [[8, 3.2, .74], [0, 2.9, .96], [-8, 3.2, .74]]; // yaw offset, radius, pedestal top
@@ -1315,7 +1347,7 @@ function loop(now) {
     m.rotation.x += u.r.x * dt; m.rotation.y += u.r.y * dt; u.life -= dt; m.material.opacity = Math.min(1, u.life);
     if (u.life <= 0) { scene.remove(m); if (u.last) m.material.dispose(); shards.splice(i, 1); } }
   tickSparks(dt);
-  if (now - boardT > 90) { boardT = now; drawBoard(now); drawCalendar(); }
+  if (now - boardT > 90) { boardT = now; drawBoard(now); drawCalendar(); drawSheet(); }
   const fz = inFrenzy();
   { hitI *= Math.exp(-dt * 7); const fI = fz ? 1.8 + Math.sin(t * 22) * .6 : 0, cI = 1.3 * ce, top = Math.max(hitI, fI, cI);
     fxLight.intensity = top; if (top > .01) fxLight.color.setHex(top === hitI ? hitC : top === fI ? 0xff3df2 : 0xfff2d8); }
@@ -1452,6 +1484,7 @@ function ui() {
       return `<div class="item"><div><b>${nm}</b><span class="tag">남음 ${o.left}</span><p>${ds}</p></div><button data-shop="${id}" ${o.left && S.gold >= o.price && !(sp && S.hand) ? "" : "disabled"}>${G(o.price)}</button></div>`; }).join("")}</div>
       <p class="label">같은 물건을 또 사면 값이 3배가 돼요.</p>` + bag(k => k === "clock" || k === "note" || k === "incense" ? "" : `<span class="label">모루에서 사용</span>`);
   }
+  if (s === "wall") h += `<p class="label">타격할 때마다 추첨표의 티켓 중 한 장을 뽑아요. 유물이 티켓을 지우면 ×, 더하면 +로 표시돼요. 등급이 오를수록 커지는 파괴 위험은 모루 뒤 게시판의 확률에 반영돼요.</p>`;
   if (s === "shelf") {
     h += `<div class="row"><span class="label">가장 자랑스러운 돼지를 올려 두세요. 진열한 돼지는 언제든 내릴 수 있어요.</span></div><div class="list">${S.shelf.map((p, i) => p
       ? pigLine(p, `<button class="ghost" data-unshelf="${i}" ${S.hand ? "disabled" : ""}>내리기</button>`)
