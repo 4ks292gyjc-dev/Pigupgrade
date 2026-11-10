@@ -114,7 +114,7 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
     <div><span class="label">DAY</span> <span class="big num" id="day"></span> <span class="anger" id="anger" aria-label="분노"></span></div>
     <div style="text-align:right"><span class="label">공물</span> <span class="big num" id="tsum"></span> <span class="label">/</span> <span class="num gold" id="quota"></span></div>
   </div>
-  <div class="row" style="padding-inline:4px;text-shadow:0 1px 3px #000"><span><span class="label">골드</span> <b class="num gold" id="gold"></b></span><span><span class="label">크레딧</span> <b class="num" id="credits"></b></span><span id="handInfo" class="label"></span><button class="ghost" id="mute" style="min-height:32px;padding:4px 10px;font-size:13px"></button></div>
+  <div class="row" style="padding-inline:4px;text-shadow:0 1px 3px #000"><span><span class="label">골드</span> <b class="num gold" id="gold"></b></span><span><span class="label">크레딧</span> <b class="num" id="credits"></b></span><span id="handInfo" class="label"></span><span style="display:flex;gap:6px"><button class="ghost" id="mute" style="min-height:32px;padding:4px 10px;font-size:13px"></button><button class="ghost" id="pause" aria-label="일시정지" style="min-height:32px;padding:4px 11px;font-size:13px">Ⅱ</button></span></div>
 </div>
 
 <div class="hud" id="bottom">
@@ -1102,7 +1102,7 @@ function loop(now) {
   frenzyLight.intensity = fz ? 1.8 + Math.sin(t * 22) * .6 : 0;
   if (fz && Math.random() < .5) sparkBurst(anvilPos.clone().add(new THREE.Vector3((Math.random() - .5) * .7, .75, (Math.random() - .5) * .7)), 0xff3df2, 1, .35);
   $("frenzyBar").hidden = !fz;
-  if (fz) $("frenzyBar").style.transform = `scaleX(${(frenzyUntil - now) / 7000})`;
+  if (fz && !frenzyLeft) $("frenzyBar").style.transform = `scaleX(${(frenzyUntil - now) / 7000})`;
   if (wasFrenzy && !fz) { if (has("hbell") && S.anvil) { S.anvil.lvl++; banner("+1강", "머리 없는 종", "s"); sfx.play("ok"); } ui(); }
   wasFrenzy = fz;
   R.render(scene, cam);
@@ -1319,8 +1319,8 @@ function menuClick(id) {
   if (id === "mNew") { newRun(); hideMenu(); return pickGift(); }
   if (id === "mCont") { hideMenu(); if (S.day === 1 && !S.gift) pickGift(); }
 }
-function hideMenu() { menu = false; $("menu").hidden = true; document.body.classList.remove("menu"); yaw = STATIONS[st].yaw + 40; sfx.play("swish"); ui(); }
-function newRun() { resetKO(); S = fresh(); uid = 1; morning(); st = 2; save(); }
+function hideMenu() { thawFrenzy(); menu = false; $("menu").hidden = true; document.body.classList.remove("menu"); yaw = STATIONS[st].yaw + 40; sfx.play("swish"); ui(); }
+function newRun() { resetKO(); frenzyLeft = 0; frenzyUntil = 0; S = fresh(); uid = 1; morning(); st = 2; save(); }
 
 // ===== Game over: the boar lord punches the camera, the view falls and the eyes slowly close =====
 let ko = null;
@@ -1355,6 +1355,25 @@ function pickGift() {
 function restart() { newRun(); closeModal(); pickGift(); }
 $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
 $("mute").onclick = () => { sfx.toggle(); ui(); };
+// ===== Pause: resume, restart from day 1, or back to the title. A running frenzy is frozen until play resumes =====
+let paused = false, frenzyLeft = 0;
+function freezeFrenzy() { if (!frenzyLeft && inFrenzy()) { frenzyLeft = frenzyUntil - performance.now(); frenzyUntil = Infinity; } }
+function thawFrenzy() { if (frenzyLeft) { frenzyUntil = performance.now() + frenzyLeft; frenzyLeft = 0; } }
+function pause(confirmRestart = false) {
+  if (menu || ko || busy || collecting || (!paused && !$("modal").hidden)) return;
+  paused = true; freezeFrenzy(); sfx.play("tick");
+  showModal(`<h2>일시정지</h2><p>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</p>
+    <button class="hot" id="pResume">마저하기</button>
+    <button class="ghost" id="pRestart">${confirmRestart ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "처음부터 다시 시작하기"}</button>
+    <button class="ghost" id="pMain">메인 화면으로</button>`, () => {
+    $("pResume").onclick = resume;
+    $("pRestart").onclick = () => { if (!confirmRestart) return pause(true); paused = false; frenzyLeft = 0; frenzyUntil = 0; sfx.play("tick"); restart(); };
+    $("pMain").onclick = () => { paused = false; $("modal").hidden = true; save(); sfx.play("tick"); showMenu(); }; // frenzy stays frozen until 이어하기
+  });
+}
+function resume() { if (!paused) return; paused = false; thawFrenzy(); sfx.play("tick"); closeModal(); }
+$("pause").onclick = () => pause();
+addEventListener("keydown", e => { if (e.code === "Escape") paused ? resume() : pause(); });
 // iOS Safari ignores user-scalable=no: touch-action stops double-tap zoom, these stop pinch zoom
 for (const ev of ["gesturestart", "gesturechange", "dblclick"]) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
 document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
