@@ -498,8 +498,10 @@ const canvas = $("gl"), R = new THREE.WebGLRenderer({ canvas, antialias: true })
 let pixR = Math.min(devicePixelRatio || 1, 2), frameN = 0, slowT = 0; R.setPixelRatio(pixR); R.outputEncoding = THREE.sRGBEncoding;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0907); scene.fog = new THREE.Fog(0x0d0907, 4, 10);
 const cam = new THREE.PerspectiveCamera(62, 1, .05, 50); cam.position.set(0, 1.55, 0); scene.add(cam);
-const amb = new THREE.AmbientLight(0xffe2c4, .35), hemi = new THREE.HemisphereLight(0xffd7a8, 0x2a1408, .45); scene.add(amb, hemi);
-const keyLight = new THREE.PointLight(0xfff0dd, .8, 4); cam.add(keyLight);
+// Only a faint fill: the room is lit by one torch-lantern hanging from the ceiling and by the furnace
+const AMB = .07, HEMI = .08, KEY = .2;
+const amb = new THREE.AmbientLight(0xffe2c4, AMB), hemi = new THREE.HemisphereLight(0xffd7a8, 0x2a1408, HEMI); scene.add(amb, hemi);
+const keyLight = new THREE.PointLight(0xfff0dd, KEY, 4); cam.add(keyLight);
 function resize() { R.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
 addEventListener("resize", resize);
 
@@ -537,6 +539,7 @@ function pbr(name, rx, ry = rx) { const key = `${name}:${rx}:${ry}`; if (PBR[key
   const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 40), M(0xb0a08c, pbr("floor", 5))); floor.rotation.x = -Math.PI / 2; scene.add(floor);
   const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 4, 40, 1, true), M(0xa08a78, { ...pbr("wall", 8, 2), side: THREE.BackSide })); wall.position.y = 2; scene.add(wall);
   for (let i = 0; i < 6; i++) box(.25, 4, .25, wood(0x5a3a22), at(i * 60 + 30, 4.05, 2));
+  const ceil = new THREE.Mesh(new THREE.CircleGeometry(4.3, 40), M(0x4a3626, pbr("wall", 4))); ceil.rotation.x = Math.PI / 2; ceil.position.y = 4; scene.add(ceil);
   const hay = M(0xffffff, { map: STRAW, bumpMap: STRAW, bumpScale: .03, roughness: 1 });
   for (const y of [25, 85, 135]) box(.8, .4, .5, hay, at(y, 3.6, .2));
 }
@@ -602,7 +605,7 @@ function tickFire(dt, t) {
     if (u.life > 0) u.p.addScaledVector(u.v, dt); u.p.toArray(fPos, i * 3); fS[i] = u.life > 0 ? .025 : 0; fA[i] = Math.min(1, Math.max(0, u.life)); fCol[i * 3] = 1; fCol[i * 3 + 1] = .69; fCol[i * 3 + 2] = .25; });
   for (const k of ["position", "acol", "alpha", "size"]) fireGeo.attributes[k].needsUpdate = true;
 }
-const fireLight = new THREE.PointLight(0xff7a2a, 2.2, 6, 2); fireLight.position.copy(at(55, 1.6, .9)); scene.add(fireLight);
+const fireLight = new THREE.PointLight(0xff7a2a, 2.8, 8, 2); fireLight.position.copy(at(55, 1.6, .9)); scene.add(fireLight);
 // Pen fences
 for (const dy of [-14, 14]) box(.06, .35, 1.6, wood(0xa06a3a), at(110 + dy, 2.3, .2));
 box(1.4, .35, .06, wood(0xa06a3a), at(110, 2.95, .2));
@@ -685,10 +688,17 @@ async function collectTribute() {
 }
 const bell = new THREE.Mesh(new THREE.LatheGeometry([[.17, -.13], [.15, -.11], [.11, -.02], [.09, .08], [.07, .12], [.03, .14], [0, .14]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M(0xd4a840, { metalness: .9, roughness: .3, side: THREE.DoubleSide }));
 bell.position.copy(at(-48, 2.6, 1.5)); scene.add(bell);
-const LAMPS = [30, 140, -100];
-for (const y of LAMPS) { const l = new THREE.PointLight(0xffb36b, .9, 5, 2); l.position.copy(at(y, 3.3, 2.6)); scene.add(l);
-  const b = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd08a })); b.position.copy(l.position); scene.add(b);
-  const rope = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, 1.1, 5), M(0x2a2018)); rope.position.copy(l.position).setY(3.45); scene.add(rope); }
+// Torch-lantern on a chain from the ceiling, behind and above the anvil: the main light of the room
+const torch = new THREE.Group(); torch.position.copy(at(0, 2.45, 4)); scene.add(torch); // pivot at the ceiling
+{ const iron = M(0x1c1814, { metalness: .8, roughness: .45 }), H = 1.9; // H: chain length down to the flame
+  const part = (geo, y, m = iron) => { const o = new THREE.Mesh(geo, m); o.position.y = y; torch.add(o); return o; };
+  part(new THREE.CylinderGeometry(.012, .012, H - .28, 5), -(H - .28) / 2);
+  part(new THREE.ConeGeometry(.17, .14, 6), -H + .26); part(new THREE.CylinderGeometry(.13, .1, .05, 6), -H - .17);
+  for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, bar = part(new THREE.CylinderGeometry(.01, .01, .36, 4), -H + .01); bar.position.x = Math.cos(a) * .13; bar.position.z = Math.sin(a) * .13; }
+  part(new THREE.CylinderGeometry(.035, .045, .1, 8), -H - .1, M(0x3a2414)); }
+const torchFlame = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, color: 0xffc070, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); torchFlame.position.y = -1.86; torch.add(torchFlame);
+const torchGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex((x, n) => { const g = x.createRadialGradient(n / 2, n / 2, 2, n / 2, n / 2, n / 2); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, n, n); }, 64), color: 0xff9a3c, transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false })); torchGlow.scale.setScalar(1.05); torchGlow.position.y = -1.9; torch.add(torchGlow);
+const torchLight = new THREE.PointLight(0xffa550, 3.6, 8, 2); torchLight.position.y = -1.9; torch.add(torchLight);
 
 // ===== CC0 photo-scanned props from Poly Haven (models/, see models/CREDITS.md); the game runs fine before they arrive =====
 function prop(name, place) { if (!THREE.GLTFLoader) return;
@@ -700,7 +710,6 @@ prop("wine_barrel_01", m => { putOnFloor(m, 76, 3.0, .95, .6); putOnFloor(m.clon
 prop("wooden_bucket_02", m => { putOnFloor(m, -24, 1.85, .85); // quench bucket by the anvil
   const water = new THREE.Mesh(new THREE.CircleGeometry(.24, 24), M(0x1a2a30, { metalness: .2, roughness: .08 })); water.rotation.x = -Math.PI / 2; water.position.copy(m.position).setY(.26); scene.add(water); });
 prop("wooden_crate_02", m => { putOnFloor(m, -160, 2.95, .9, .3); putOnFloor(m.clone(), -160, 2.95, .75, 1.1).position.y = .4; putOnFloor(m.clone(), -121, 3.05, .85, -.4); });
-prop("wooden_lantern_01", m => LAMPS.forEach((y, i) => { const l = i ? m.clone() : m; l.position.copy(at(y, 3.3, 2.32)); l.scale.setScalar(.9); scene.add(l); }));
 
 // Pig model per level
 function auraTex() { const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d");
@@ -989,11 +998,13 @@ function loop(now) {
   }
   if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
   cam.fov += ((cineOn ? 50 : 62) - cam.fov) * Math.min(1, dt * 5); cam.updateProjectionMatrix();
-  amb.intensity = .35 * (1 - .7 * ce); hemi.intensity = .45 * (1 - .7 * ce); cineLight.intensity = 1.3 * ce; keyLight.intensity = .8 * (1 - .5 * ce);
+  amb.intensity = AMB * (1 - .7 * ce); hemi.intensity = HEMI * (1 - .7 * ce); cineLight.intensity = 1.3 * ce;
   const handPig = slots.get("hand")?.group; if (handPig) handPig.visible = cine < .05;
   if (!ringEl.hidden) { cam.updateMatrixWorld(); projV.set(anvilPos.x, .98, anvilPos.z).project(cam); const ry = (1 - projV.y) / 2 * innerHeight;
     ringEl.style.left = ringTextEl.style.left = (projV.x + 1) / 2 * innerWidth + "px"; ringEl.style.top = ry + "px"; ringTextEl.style.top = ry + ringEl.offsetHeight / 2 + 14 + "px"; }
-  fireLight.intensity = 2 + Math.sin(t * 13) * .3 + Math.random() * .3; tickFire(dt, t);
+  fireLight.intensity = 2.6 + Math.sin(t * 13) * .35 + Math.random() * .35;
+  torch.rotation.z = Math.sin(t * .9) * .035; torch.rotation.x = Math.sin(t * .7 + 1) * .025; // sways on its chain
+  { const f = .86 + Math.sin(t * 9.7) * .07 + Math.sin(t * 23.1) * .04 + Math.random() * .05; torchLight.intensity = 3.6 * f; torchFlame.scale.set(.3 * f, .42 * f + Math.sin(t * 17) * .03, 1); torchGlow.material.opacity = .32 * f; } tickFire(dt, t);
   { const d = Math.abs(((yaw - 55) % 360 + 540) % 360 - 180); sfx.ambience(.05 + Math.max(0, 1 - d / 75) * .45); } // crackle louder facing the furnace
   // drop render resolution a step while frames run slow (phones with 3x screens)
   if ((frameN = (frameN + 1) % 90) === 0) { if (slowT / 90 > 1 / 45 && pixR > 1) { pixR = Math.max(1, pixR - .25); R.setPixelRatio(pixR); resize(); } slowT = 0; } slowT += dt;
