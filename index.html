@@ -100,6 +100,11 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
 #menu .foot>button{min-height:52px;font-size:19px}
 #menu .achPanel{width:100%;max-width:440px;margin-inline:auto;align-self:end;display:grid;gap:8px;max-height:72vh}
 #menu .achPanel .scroll{overflow:auto;display:grid;gap:10px;padding-right:2px}
+#shopList .spin>div{animation:reel .09s linear infinite}
+#shopList .land{animation:land .35s ease-out}
+@keyframes reel{from{transform:translateY(-9px);opacity:.35}to{transform:translateY(9px);opacity:1}}
+@keyframes land{0%{transform:scale(1.08);box-shadow:0 0 0 2px var(--great),0 0 18px var(--great)}100%{transform:none;box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){#shopList .spin>div,#shopList .land{animation:none}}
 .dexGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .dexCell{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:4px;text-align:center;display:grid;gap:2px;align-content:start}
 .dexCell img,.dexCell span{width:100%;aspect-ratio:1;display:grid;place-items:center}
@@ -1364,7 +1369,7 @@ function ui() {
   if (s === "bank") {
     if (S.day === 1 && !S.gift) h += `<button id="gift" class="hot">첫날 선물 고르기</button>`;
     h += `<div class="row"><span>돼지 1마리 = 크레딧 1</span><button id="feed" ${S.hand ? "" : "disabled"}>손에 든 돼지 넣기</button></div>`;
-    if (S.shop.length) h += `<div class="list">${S.shop.map(id => { const r = RB[id]; return `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-buy="${id}" ${S.credits < r.cost || S.relics.length >= 8 ? "disabled" : ""}>${r.cost}크레딧</button></div>`; }).join("")}</div>`;
+    if (S.shop.length) h += `<div class="list" id="shopList">${S.shop.map(id => { const r = RB[id]; return `<div class="item"><div><b>${r.name}</b><span class="tag">${r.cat}</span><p>${r.desc}</p></div><button data-buy="${id}" ${S.credits < r.cost || S.relics.length >= 8 ? "disabled" : ""}>${r.cost}크레딧</button></div>`; }).join("")}</div>`;
     else if (S.day >= 2) h += `<p class="label">오늘 진열장이 비었어요.</p>`; else h += `<p class="label">진열장은 Day 2부터 열려요.</p>`;
     if (S.day >= 2) h += `<button class="ghost" id="reroll" ${S.freeReroll || S.gold >= rerollCost() ? "" : "disabled"}>진열장 바꾸기 · ${S.freeReroll ? "무료" : G(rerollCost())}</button>`;
     h += `<details><summary class="label">업적 ${achCount()} · 일부는 유물을 해금해요</summary><div class="list" style="margin-top:6px">${achList()}</div></details>`;
@@ -1415,8 +1420,9 @@ $("panel").addEventListener("click", async e => {
   if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
   if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().multiplyScalar(.88).setY(.75), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coins", "gem"); }
   if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); sfx.play("gem", "jach"); }
-  if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("shuffle");
-    if (has("hook") && !S.hookUsed) { const i = S.pen.findIndex(p => p.lvl === 0 && p.strikes === 0); if (i >= 0) { S.pen.splice(i, 1); S.credits += 2; S.hookUsed = true; banner("+2 크레딧", "수집가의 갈고리가 +0 돼지를 가져갔어요", "f"); } } }
+  if (id === "reroll") { if (spinning) return; if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("shuffle");
+    if (has("hook") && !S.hookUsed) { const i = S.pen.findIndex(p => p.lvl === 0 && p.strikes === 0); if (i >= 0) { S.pen.splice(i, 1); S.credits += 2; S.hookUsed = true; banner("+2 크레딧", "수집가의 갈고리가 +0 돼지를 가져갔어요", "f"); } }
+    ui(); return spinShop(); }
   if (d.toss) S.relics = S.relics.filter(x => x !== d.toss);
   if (id === "gift") return pickGift();
   if (d.shop) { const o = S.merchant[d.shop]; S.gold -= o.price; o.left--; o.price *= 3;
@@ -1441,6 +1447,25 @@ $("panel").addEventListener("click", async e => {
   ui();
 });
 
+// Reroll plays like a slot machine: the result is already decided and saved, the three slots just reel and stop one by one
+let spinning = false;
+async function spinShop() {
+  const rows = [...document.querySelectorAll("#shopList .item")]; if (!rows.length || reduced) return;
+  spinning = true; const rr = $("reroll"); if (rr) rr.disabled = true;
+  const reels = rows.map((row, i) => { const txt = row.firstElementChild, btn = row.querySelector("button"), final = txt.innerHTML, off = btn.disabled, cost = btn.textContent;
+    row.classList.add("spin"); btn.disabled = true; btn.textContent = "?";
+    return { row, txt, btn, final, off, cost, stop: performance.now() + 750 + i * 450 }; });
+  while (reels.some(r => !r.done)) {
+    const now = performance.now(); let ticked = false;
+    for (const r of reels) { if (r.done) continue;
+      if (!r.row.isConnected) { r.done = true; continue; } // the panel was redrawn (station changed): nothing left to animate
+      if (now >= r.stop) { r.done = true; r.txt.innerHTML = r.final; r.btn.disabled = r.off; r.btn.textContent = r.cost; r.row.classList.remove("spin"); r.row.classList.add("land"); sfx.play("gem"); buzz(20); continue; }
+      const x = RELICS[Math.floor(Math.random() * RELICS.length)]; r.txt.innerHTML = `<b>${x.name}</b><span class="tag">${x.cat}</span><p>${x.desc}</p>`; ticked = true; }
+    if (ticked) sfx.play("tick");
+    await sleep(75);
+  }
+  await sleep(380); spinning = false; if (rr && rr.isConnected) ui(); // let the last slot finish its landing flash
+}
 function showModal(html, after) { $("modalBody").innerHTML = html; $("modal").hidden = false; after && after(); }
 function closeModal() { $("modal").hidden = true; ui(); }
 const achCount = () => `${achs.filter(k => ACH[k]).length}/${Object.keys(ACH).length}`;
