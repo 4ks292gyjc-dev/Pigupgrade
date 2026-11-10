@@ -81,7 +81,7 @@ button.armed{outline:3px solid var(--great)}
 #ringText{position:fixed;left:50%;top:calc(40% + min(35vw,150px) + 18px);transform:translateX(-50%);z-index:3;font-family:var(--display);font-size:22px;color:var(--great);pointer-events:none;white-space:nowrap;text-shadow:0 2px 4px #000}
 #frenzyBar{position:fixed;left:0;right:0;top:0;height:5px;background:var(--frenzy);transform-origin:left;z-index:6;box-shadow:0 0 16px var(--frenzy)}
 .modal{position:fixed;inset:0;background:rgba(10,7,5,.92);display:grid;place-items:center;padding:20px;z-index:8}
-.modal>div{display:grid;gap:10px;max-width:380px;width:100%;text-align:center}
+.modal>div{display:grid;gap:10px;max-width:380px;width:100%;text-align:center;max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
 .modal h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}
 .modal p{margin:0;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){#banner b{animation:none!important}}
@@ -98,8 +98,9 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
 #menu .best{margin:10px 0 0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-shadow:0 1px 2px #000}
 #menu .foot{width:100%;max-width:340px;margin-inline:auto;display:grid;gap:8px}
 #menu .foot>button{min-height:52px;font-size:19px}
-#menu .achPanel{width:100%;max-width:440px;margin-inline:auto;align-self:end;display:grid;gap:8px;max-height:72vh}
-#menu .achPanel .scroll{overflow:auto;display:grid;gap:10px;padding-right:2px}
+#menu .achPanel{width:100%;max-width:440px;margin-inline:auto;align-self:end;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;height:min(76vh,calc(100dvh - 90px));min-height:0}
+#menu .achPanel .scroll{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;display:grid;gap:10px;padding-right:2px;align-content:start}
+#menu textarea{width:100%;box-sizing:border-box;min-height:120px;background:#140e0a;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px/1.4 monospace;user-select:text;-webkit-user-select:text;resize:none}
 #shopList .spin>div{animation:reel .09s linear infinite}
 #shopList .land{animation:land .35s ease-out}
 @keyframes reel{from{transform:translateY(-9px);opacity:.35}to{transform:translateY(9px);opacity:1}}
@@ -219,6 +220,25 @@ const ITEMS = {
   incense:{ name: "망각의 향", desc: "분노 -1 (게임당 1번)", k: 2.12, stock: 1, day: 9 },
 };
 
+// ===== Save safety: every progress key is mirrored into IndexedDB (a second store that survives some localStorage wipes) and can be exported as a code =====
+const SAVE_KEYS = ["pigforge", "pigforge-unlocks", "pigforge-ach", "pigforge-dex", "pigforge-breeds", "pigforge-mute", "pigforge-best"];
+let storeReady = false, mirrorT = 0, noFlush = false; // noFlush: set right before a reload that brings in a different save, so the old state is not written back over it
+const idbOpen = () => new Promise((ok, no) => { try { const r = indexedDB.open("pigforge", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); } catch (e) { no(e); } });
+const snapshotSave = () => { const o = {}; for (const k of SAVE_KEYS) { try { const v = localStorage.getItem(k); if (v != null) o[k] = v; } catch {} } return o; };
+function mirror() { if (!storeReady) return; clearTimeout(mirrorT); mirrorT = setTimeout(async () => { try { const db = await idbOpen(), o = snapshotSave(); if (Object.keys(o).length) db.transaction("kv", "readwrite").objectStore("kv").put(o, "save"); } catch {} }, 600); }
+(async () => { // if the browser dropped localStorage but IndexedDB still has the save, put it back and reload once
+  try { const empty = !SAVE_KEYS.some(k => localStorage.getItem(k));
+    if (empty && !sessionStorage.getItem("pf-restored")) { const db = await idbOpen(), r = db.transaction("kv").objectStore("kv").get("save");
+      const saved = await new Promise(ok => { r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); });
+      if (saved && Object.keys(saved).length) { for (const k in saved) if (SAVE_KEYS.includes(k)) localStorage.setItem(k, saved[k]); sessionStorage.setItem("pf-restored", "1"); noFlush = true; return location.reload(); } } } catch {}
+  storeReady = true; mirror(); })();
+const flushSave = () => { if (noFlush) return; try { if (S) { S.uid = uid; localStorage.setItem("pigforge", JSON.stringify(S)); } } catch {} mirror(); };
+addEventListener("pagehide", flushSave); document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
+addEventListener("pointerdown", () => { try { navigator.storage?.persist?.(); } catch {} }, { once: true }); // ask the browser not to evict our data
+function saveCode() { return btoa(unescape(encodeURIComponent(JSON.stringify({ v: 1, d: snapshotSave() })))); }
+function loadCode(code) { try { const o = JSON.parse(decodeURIComponent(escape(atob(code.replace(/\s+/g, ""))))); if (o.v !== 1 || typeof o.d !== "object" || !o.d.pigforge && !o.d["pigforge-ach"]) return false;
+  for (const k in o.d) if (SAVE_KEYS.includes(k) && typeof o.d[k] === "string") { JSON.parse(o.d[k] === "" ? "0" : o.d[k]); localStorage.setItem(k, o.d[k]); } return true; } catch { return false; } }
+
 // ===== Sound: CC0 recordings (sfx/, see sfx/CREDITS.md) played through Web Audio =====
 // Web Audio is unlocked once by the first touch, so sounds fired later (after an await) still play on iPhone.
 const SND = { // f: file variants (no immediate repeats), v: volume, p: random pitch spread
@@ -299,7 +319,7 @@ function flushToasts(delay = 1200) {
     banner("업적 달성!", a.name + (a.relic ? ` · ${RB[a.relic].name} 해금` : ""), "g"); sfx.play("jach"); }, delay + i * 2000));
   setTimeout(announceBreeds, delay + 2600);
 }
-const TRIBUTE_MULT = 1.5; // difficulty: tribute demanded vs the calendar; merchant prices keep the base quota
+const TRIBUTE_MULT = 1; // difficulty: tribute demanded vs the calendar; merchant prices keep the base quota
 const need = () => Math.max(0, Math.round(quota(S.day) * TRIBUTE_MULT - (S.carry || 0)));
 function pigName(p, L = p.lvl) {
   const f = FAMS[p.fam], look = Math.max(L, p.peak || 0);
@@ -345,7 +365,7 @@ const newPig = (lvl = 0, fam = REGULAR[Math.floor(Math.random() * REGULAR.length
 const fresh = () => ({ day: 1, gold: 0, credits: 0, anger: 0, pen: [], hand: null, anvil: null, tribute: [], relics: [], shop: [], items: {},
   armed: {}, merchant: null, shelf: [null, null, null], extra: 0, fenceUsed: false, freeReroll: false, incenseUsed: false, pays: 0, contract: false, gift: null, uid: 1 });
 function load() { try { const d = JSON.parse(localStorage.getItem("pigforge")); if (d && d.day) { S = d; S.shelf ||= [null, null, null]; uid = d.uid || 1000; return true; } } catch {} return false; }
-const save = () => { try { S.uid = uid; localStorage.setItem("pigforge", JSON.stringify(S)); } catch {} };
+const save = () => { try { S.uid = uid; localStorage.setItem("pigforge", JSON.stringify(S)); } catch {} mirror(); };
 
 const gmult = L => (has("thorn") ? 1.1 : 1) * (has("signet") ? 1.15 : 1) * (has("iron") && L >= 8 ? 1.3 : 1) * (has("lseal") && L >= 12 ? 1.5 : 1);
 const V = p => Math.round((p.base + (has("hearth") ? 20 * (S.pays || 0) : 0)) * 1.5 ** p.lvl * p.mult * gmult(p.lvl) + p.flat);
@@ -354,26 +374,45 @@ const G = n => Math.round(n).toLocaleString("ko-KR") + "G";
 // ===== Forge odds: 30-ticket deck (B9 D2 H5 S12 G2); the break pile is weighted by grade =====
 let frenzyUntil = 0;
 const inFrenzy = () => performance.now() < frenzyUntil;
-function odds(p, frenzy = inFrenzy(), armed = S.armed) {
-  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }; let bt = sickle ? 5 : 9;
-  const add = (k, n) => c[k] += n;
-  if (has("bent")) add("s", 4); if (has("spike")) add("s", 6); if (has("whet")) { add("h", -2); add("s", 2); } if (has("mallet")) { add("d", -1); add("s", 1); }
-  if (has("coal")) add("g", 1); if (has("gnail")) add("g", 2); if (has("die")) add("g", 4); if (has("seal")) add("h", 2); if (has("weight")) add("h", 3);
-  if (has("core") && frenzy) add("g", 6); if (has("hoop")) bt -= 2; if (has("seed")) add("h", 6); if (has("pearl")) add("d", 3);
-  if (has("butter")) { bt += 3; add("g", 5); } if (has("thorn")) { add("h", -2); add("d", 2); }
-  for (const src of [p.tk, p.nx, S.perm]) if (src) for (const k in src) if (k in c) add(k, src[k]);
-  if (S.mourn) add("g", S.mourn); if (S.grudge) add("g", S.grudge);
+// Ticket deck with every modifier recorded, so the ticket viewer can explain where each number comes from
+function oddsDetail(p, frenzy = inFrenzy(), armed = S.armed) {
+  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }, notes = []; let bt = sickle ? 5 : 9;
+  const add = (k, n, why) => { c[k] += n; notes.push({ k, n, why }); }, R_ = id => RB[id].name;
+  if (sickle) notes.push({ k: "*", text: `${R_("sickle")}: 모든 결과의 기본 티켓을 5장으로 맞춤` });
+  if (has("bent")) add("s", 4, R_("bent")); if (has("spike")) add("s", 6, R_("spike")); if (has("whet")) { add("h", -2, R_("whet")); add("s", 2, R_("whet")); } if (has("mallet")) { add("d", -1, R_("mallet")); add("s", 1, R_("mallet")); }
+  if (has("coal")) add("g", 1, R_("coal")); if (has("gnail")) add("g", 2, R_("gnail")); if (has("die")) add("g", 4, R_("die")); if (has("seal")) add("h", 2, R_("seal")); if (has("weight")) add("h", 3, R_("weight"));
+  if (has("core") && frenzy) add("g", 6, R_("core") + " (광란 중)"); if (has("hoop")) { bt -= 2; notes.push({ k: "b", n: -2, why: R_("hoop") }); } if (has("seed")) add("h", 6, R_("seed")); if (has("pearl")) add("d", 3, R_("pearl"));
+  if (has("butter")) { bt += 3; notes.push({ k: "b", n: 3, why: R_("butter") }); add("g", 5, R_("butter")); } if (has("thorn")) { add("h", -2, R_("thorn")); add("d", 2, R_("thorn")); }
+  const own = [[p.tk, "이 돼지가 평생 가진 티켓"], [p.nx, "직전 타격 결과가 남긴 티켓 (한 번만)"], [S.perm, "이번 판 내내 유지되는 티켓"]];
+  for (const [src, why] of own) if (src) for (const k in src) if (k in c && src[k]) add(k, src[k], why);
+  if (S.mourn) add("g", S.mourn, R_("mourning")); if (S.grudge) add("g", S.grudge, R_("grudge") + " (한 번만)");
   for (const k in c) c[k] = Math.max(0, c[k]);
-  if (has("obsid") && p.lvl >= 8) { const n = Math.min(2, c.s); c.s -= n; c.g += n; }
-  if (armed.chalk) c.g *= 2;
-  const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100;
-  let pb = 0;
+  if (has("obsid") && p.lvl >= 8) { const n = Math.min(2, c.s); c.s -= n; c.g += n; if (n) notes.push({ k: "g", n, why: R_("obsid") + " (성공 → 대성공)" }); }
+  if (armed.chalk) { notes.push({ k: "g", n: c.g, why: ITEMS.chalk.name + " (대성공 ×2)" }); c.g *= 2; }
+  const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100, mult = [];
+  let pb = 0, W = 0;
   if (!frenzy && B > 0) {
-    const W = 21 * B / (1 - B) * (bt / 9); pb = W / (W + N);
-    pb *= (has("bknot") ? .9 : 1) * (has("tongs") && p.lvl >= 6 ? .75 : 1) * p.nbm * (1 - p.splice) * (1 - p.scorch);
+    W = 21 * B / (1 - B) * (bt / 9); pb = W / (W + N);
+    const m = [[has("bknot") ? .9 : 1, R_("bknot")], [has("tongs") && p.lvl >= 6 ? .75 : 1, R_("tongs")], [p.nbm, "직전 타격이 남긴 보호"], [1 - p.splice, R_("splice")], [1 - p.scorch, R_("scorch")]];
+    for (const [x, why] of m) if (x !== 1) { pb *= x; mult.push({ x, why }); }
   }
   const r = 1 - pb;
-  return { b: pb, d: c.d / N * r, h: c.h / N * r, s: c.s / N * r, g: c.g / N * r };
+  return { o: { b: pb, d: c.d / N * r, h: c.h / N * r, s: c.s / N * r, g: c.g / N * r }, c, W, N, notes, mult, frenzy };
+}
+const odds = (p, frenzy = inFrenzy(), armed = S.armed) => oddsDetail(p, frenzy, armed).o;
+function showTickets() {
+  const p = S.anvil; if (!p || busy) return; const d = oddsDetail(p), keys = ["b", "d", "h", "s", "g"];
+  const raw = keys.map(k => d.o[k] * 1000), n = raw.map(Math.floor); let left = 1000 - n.reduce((a, b) => a + b, 0);
+  raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left-- > 0) n[i]++; }); // 1,000 tickets in total, like the original
+  const nm = Object.fromEntries(keys.map(k => [k, OUT[k][0]])), why = k => d.notes.filter(x => x.k === k || x.k === "*");
+  const rows = keys.map((k, i) => `<div class="item"><div><b style="color:${OUT[k][1]}">${nm[k]}</b><p class="num">${n[i]}장 / 1,000 · ${pct(d.o[k])}</p></div><div class="stack" style="width:90px"><i style="width:${d.o[k] * 100}%;background:${OUT[k][1]}"></i></div></div>`).join("");
+  const baseDeck = has("sickle") ? "다섯 눈금 저울 덱: 손상 5 · 유지 5 · 성공 5 · 대성공 5" : "기본 덱 30장: 파괴 9 · 손상 2 · 유지 5 · 성공 12 · 대성공 2";
+  const line = x => x.text ? `<li>${x.text}</li>` : `<li><b style="color:${OUT[x.k][1]}">${nm[x.k]}</b> 티켓 ${x.n > 0 ? "+" : ""}${x.n} <span class="label">${x.why}</span></li>`;
+  const eff = [...d.notes.map(line), ...d.mult.map(m => `<li><b style="color:${OUT.b[1]}">파괴</b> 확률 ×${m.x.toFixed(2)} <span class="label">${m.why}</span></li>`)];
+  showModal(`<h2>티켓</h2><p>타격할 때마다 티켓 1,000장 중 한 장을 뽑아요.<br>${p.heated ? "" : "(아직 달궈지지 않았어요)"}</p><div class="list">${rows}</div>
+    <div class="item" style="display:block;text-align:left"><b>${baseDeck}</b><p>${d.frenzy ? "광란 중이라 파괴 티켓이 모두 빠져 있어요." : `파괴 티켓은 등급이 오를수록 늘어요. +${p.lvl}에서 기본 파괴 확률 ${pct(BREAK[Math.min(30, p.lvl)] / 100)}.`}</p></div>
+    <div class="item" style="display:block;text-align:left"><b>지금 적용 중인 효과</b>${eff.length ? `<ul style="margin:6px 0 0;padding-left:18px;font-size:13px;display:grid;gap:3px">${eff.join("")}</ul>` : '<p>없어요. 유물이나 아이템을 얻으면 여기에 나와요.</p>'}</div>
+    <button class="hot" id="tkOk">닫기</button>`, () => $("tkOk").onclick = closeModal);
 }
 { // self-check against the published numbers
   S = fresh(); const p = newPig(10), near = (a, b) => Math.abs(a - b) < .002;
@@ -1354,7 +1393,7 @@ function ui() {
         <div class="stack">${Object.keys(OUT).map(k => `<i style="width:${o[k] * 100}%;background:${OUT[k][1]}"></i>`).join("")}</div>
         <div class="charges" aria-label="광란 게이지 ${p.charge}/10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < p.charge ? "on" : ""}"></i>`).join("")}</div>
         <div class="btns"><button id="strike" class="hot" ${busy ? "disabled" : ""}>${p.heated ? "내리치기" : "차가움 · 화로로"}<small>화면을 눌러도 쳐요</small></button>
-        <button class="ghost" id="lift" ${busy || S.hand ? "disabled" : ""}>들기</button>
+        <button class="ghost" id="lift" ${busy || S.hand ? "disabled" : ""}>들기</button><button class="ghost" id="tickets" ${busy ? "disabled" : ""}>티켓</button>
         </div>${bag(k => k === "clock"
           ? (lastSnap && !busy ? `<button class="ghost" id="undo">사용</button>` : `<span class="label">타격 후 사용</span>`)
           : `<button class="${S.armed[k] ? "hot" : "ghost"}" data-use="${k}" ${busy ? "disabled" : ""}>${S.armed[k] ? "취소" : "사용"}</button>`)}`;
@@ -1407,6 +1446,7 @@ $("panel").addEventListener("click", async e => {
   const d = b.dataset, id = b.id;
   if (id !== "bell") confirmBell = false;
   if (id === "strike") return doStrike();
+  if (id === "tickets") return showTickets();
   if (id === "lift" || d.pick || d.take) sfx.play("pick"); if (id === "place" || id === "drop") sfx.play("place"); if (id === "offer") sfx.play("offer");
   if (id === "lift") { S.hand = S.anvil; S.anvil = null; lastSnap = null; }
   if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null;
@@ -1480,7 +1520,12 @@ const alive = () => S && S.anger < 3;
 const inProgress = () => alive() && (S.day > 1 || S.gift);
 function showMenu(view = "main") {
   menu = true; confirmNew = view === "confirm"; document.body.classList.add("menu"); const m = $("menu"); m.hidden = false;
-  if (view === "dex") {
+  if (view === "save") {
+    m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>저장 백업</h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
+      <div class="scroll"><p class="label">진행 상황은 이 기기의 브라우저에 자동 저장돼요. 다른 기기로 옮기거나 백업하려면 아래 코드를 복사해서 다른 기기에서 붙여 넣으세요.</p>
+      <textarea id="sOut" readonly>${saveCode()}</textarea><button class="hot" id="sCopy">코드 복사</button>
+      <div class="label">다른 기기의 코드 불러오기 (지금 진행 상황이 바뀌어요)</div><textarea id="sIn" placeholder="여기에 붙여 넣기"></textarea><button class="ghost" id="sLoad">불러오기</button><p class="label" id="sMsg"></p></div></div>`;
+  } else if (view === "dex") {
     const cell = (k, label, q) => dex.includes(k) ? `<div class="dexCell seen"><img alt="" data-t='${JSON.stringify(q)}'><small>${label}</small></div>` : `<div class="dexCell"><span>?</span><small>${label.split(" ")[0]} ???</small></div>`;
     const groups = DEX_GROUPS.map(([g, name, n]) => `<div class="label">${name} ${dex.filter(k => k.startsWith(g + ":")).length}/${n}</div><div class="dexGrid">${Array.from({ length: n }, (_, i) =>
       g === "g" ? cell(`g:${i}`, `+${i} ${NAMES[i]}`, { lvl: i, fam: "citadel" }) : cell(`${g}:${i}`, `+${i * 2} ${FAMS[g].forms[i]} 돼지`, { lvl: i * 2, fam: g })).join("")}</div>`).join("");
@@ -1499,7 +1544,7 @@ function showMenu(view = "main") {
       <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</small></button>` : ""}
       <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mAch" style="min-height:52px;font-size:17px">업적 ${achCount()}</button><button class="ghost" id="mDex" style="min-height:52px;font-size:17px">도감 ${dex.length}/${DEX_TOTAL}</button></div>
-      <button class="ghost" id="mSnd">${sfx.muted ? "소리 끔" : "소리 켬"}</button></div>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mSave" style="min-height:52px;font-size:17px">저장 백업</button><button class="ghost" id="mSnd" style="min-height:52px;font-size:17px">${sfx.muted ? "소리 끔" : "소리 켬"}</button></div></div>`;
   }
   m.querySelectorAll("button").forEach(b => b.onclick = () => { sfx.play("tick"); menuClick(b.id); });
 }
@@ -1507,6 +1552,12 @@ function menuClick(id) {
   if (id === "mBack" && dexFromPause) { dexFromPause = false; hideMenu(); return pause(); }
   if (id === "mBack") return showMenu();
   if (id === "mDex") return showMenu("dex");
+  if (id === "mSave") return showMenu("save");
+  if (id === "sCopy") { const ta = $("sOut"), done = () => { $("sCopy").textContent = "복사됨!"; setTimeout(() => $("sCopy") && ($("sCopy").textContent = "코드 복사"), 1500); };
+    return navigator.clipboard ? navigator.clipboard.writeText(ta.value).then(done, () => { ta.select(); document.execCommand("copy"); done(); }) : (ta.select(), document.execCommand("copy"), done()); }
+  if (id === "sLoad") { const v = $("sIn").value.trim(), msg = $("sMsg"); if (!v) { msg.textContent = "코드를 붙여 넣어 주세요."; return; }
+    if (!loadCode(v)) { msg.textContent = "올바른 저장 코드가 아니에요. 처음부터 끝까지 복사했는지 확인해 주세요."; msg.style.color = "var(--break)"; return; }
+    msg.textContent = "불러왔어요! 다시 시작해요…"; msg.style.color = "var(--ok)"; noFlush = true; return setTimeout(() => location.reload(), 600); }
   if (id === "mAch") return showMenu("ach");
   if (id === "mSnd") { sfx.toggle(); return showMenu(); }
   if (id === "mNew" && inProgress() && !confirmNew) return showMenu("confirm");
