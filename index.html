@@ -374,45 +374,26 @@ const G = n => Math.round(n).toLocaleString("ko-KR") + "G";
 // ===== Forge odds: 30-ticket deck (B9 D2 H5 S12 G2); the break pile is weighted by grade =====
 let frenzyUntil = 0;
 const inFrenzy = () => performance.now() < frenzyUntil;
-// Ticket deck with every modifier recorded, so the ticket viewer can explain where each number comes from
-function oddsDetail(p, frenzy = inFrenzy(), armed = S.armed) {
-  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }, notes = []; let bt = sickle ? 5 : 9;
-  const add = (k, n, why) => { c[k] += n; notes.push({ k, n, why }); }, R_ = id => RB[id].name;
-  if (sickle) notes.push({ k: "*", text: `${R_("sickle")}: 모든 결과의 기본 티켓을 5장으로 맞춤` });
-  if (has("bent")) add("s", 4, R_("bent")); if (has("spike")) add("s", 6, R_("spike")); if (has("whet")) { add("h", -2, R_("whet")); add("s", 2, R_("whet")); } if (has("mallet")) { add("d", -1, R_("mallet")); add("s", 1, R_("mallet")); }
-  if (has("coal")) add("g", 1, R_("coal")); if (has("gnail")) add("g", 2, R_("gnail")); if (has("die")) add("g", 4, R_("die")); if (has("seal")) add("h", 2, R_("seal")); if (has("weight")) add("h", 3, R_("weight"));
-  if (has("core") && frenzy) add("g", 6, R_("core") + " (광란 중)"); if (has("hoop")) { bt -= 2; notes.push({ k: "b", n: -2, why: R_("hoop") }); } if (has("seed")) add("h", 6, R_("seed")); if (has("pearl")) add("d", 3, R_("pearl"));
-  if (has("butter")) { bt += 3; notes.push({ k: "b", n: 3, why: R_("butter") }); add("g", 5, R_("butter")); } if (has("thorn")) { add("h", -2, R_("thorn")); add("d", 2, R_("thorn")); }
-  const own = [[p.tk, "이 돼지가 평생 가진 티켓"], [p.nx, "직전 타격 결과가 남긴 티켓 (한 번만)"], [S.perm, "이번 판 내내 유지되는 티켓"]];
-  for (const [src, why] of own) if (src) for (const k in src) if (k in c && src[k]) add(k, src[k], why);
-  if (S.mourn) add("g", S.mourn, R_("mourning")); if (S.grudge) add("g", S.grudge, R_("grudge") + " (한 번만)");
+function odds(p, frenzy = inFrenzy(), armed = S.armed) {
+  const sickle = has("sickle"), c = sickle ? { d: 5, h: 5, s: 5, g: 5 } : { d: 2, h: 5, s: 12, g: 2 }; let bt = sickle ? 5 : 9;
+  const add = (k, n) => c[k] += n;
+  if (has("bent")) add("s", 4); if (has("spike")) add("s", 6); if (has("whet")) { add("h", -2); add("s", 2); } if (has("mallet")) { add("d", -1); add("s", 1); }
+  if (has("coal")) add("g", 1); if (has("gnail")) add("g", 2); if (has("die")) add("g", 4); if (has("seal")) add("h", 2); if (has("weight")) add("h", 3);
+  if (has("core") && frenzy) add("g", 6); if (has("hoop")) bt -= 2; if (has("seed")) add("h", 6); if (has("pearl")) add("d", 3);
+  if (has("butter")) { bt += 3; add("g", 5); } if (has("thorn")) { add("h", -2); add("d", 2); }
+  for (const src of [p.tk, p.nx, S.perm]) if (src) for (const k in src) if (k in c) add(k, src[k]);
+  if (S.mourn) add("g", S.mourn); if (S.grudge) add("g", S.grudge);
   for (const k in c) c[k] = Math.max(0, c[k]);
-  if (has("obsid") && p.lvl >= 8) { const n = Math.min(2, c.s); c.s -= n; c.g += n; if (n) notes.push({ k: "g", n, why: R_("obsid") + " (성공 → 대성공)" }); }
-  if (armed.chalk) { notes.push({ k: "g", n: c.g, why: ITEMS.chalk.name + " (대성공 ×2)" }); c.g *= 2; }
-  const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100, mult = [];
-  let pb = 0, W = 0;
+  if (has("obsid") && p.lvl >= 8) { const n = Math.min(2, c.s); c.s -= n; c.g += n; }
+  if (armed.chalk) c.g *= 2;
+  const N = c.d + c.h + c.s + c.g, B = BREAK[Math.min(30, p.lvl)] / 100;
+  let pb = 0;
   if (!frenzy && B > 0) {
-    W = 21 * B / (1 - B) * (bt / 9); pb = W / (W + N);
-    const m = [[has("bknot") ? .9 : 1, R_("bknot")], [has("tongs") && p.lvl >= 6 ? .75 : 1, R_("tongs")], [p.nbm, "직전 타격이 남긴 보호"], [1 - p.splice, R_("splice")], [1 - p.scorch, R_("scorch")]];
-    for (const [x, why] of m) if (x !== 1) { pb *= x; mult.push({ x, why }); }
+    const W = 21 * B / (1 - B) * (bt / 9); pb = W / (W + N);
+    pb *= (has("bknot") ? .9 : 1) * (has("tongs") && p.lvl >= 6 ? .75 : 1) * p.nbm * (1 - p.splice) * (1 - p.scorch);
   }
   const r = 1 - pb;
-  return { o: { b: pb, d: c.d / N * r, h: c.h / N * r, s: c.s / N * r, g: c.g / N * r }, c, W, N, notes, mult, frenzy };
-}
-const odds = (p, frenzy = inFrenzy(), armed = S.armed) => oddsDetail(p, frenzy, armed).o;
-function showTickets() {
-  const p = S.anvil; if (!p || busy) return; const d = oddsDetail(p), keys = ["b", "d", "h", "s", "g"];
-  const raw = keys.map(k => d.o[k] * 1000), n = raw.map(Math.floor); let left = 1000 - n.reduce((a, b) => a + b, 0);
-  raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left-- > 0) n[i]++; }); // 1,000 tickets in total, like the original
-  const nm = Object.fromEntries(keys.map(k => [k, OUT[k][0]])), why = k => d.notes.filter(x => x.k === k || x.k === "*");
-  const rows = keys.map((k, i) => `<div class="item"><div><b style="color:${OUT[k][1]}">${nm[k]}</b><p class="num">${n[i]}장 / 1,000 · ${pct(d.o[k])}</p></div><div class="stack" style="width:90px"><i style="width:${d.o[k] * 100}%;background:${OUT[k][1]}"></i></div></div>`).join("");
-  const baseDeck = has("sickle") ? "다섯 눈금 저울 덱: 손상 5 · 유지 5 · 성공 5 · 대성공 5" : "기본 덱 30장: 파괴 9 · 손상 2 · 유지 5 · 성공 12 · 대성공 2";
-  const line = x => x.text ? `<li>${x.text}</li>` : `<li><b style="color:${OUT[x.k][1]}">${nm[x.k]}</b> 티켓 ${x.n > 0 ? "+" : ""}${x.n} <span class="label">${x.why}</span></li>`;
-  const eff = [...d.notes.map(line), ...d.mult.map(m => `<li><b style="color:${OUT.b[1]}">파괴</b> 확률 ×${m.x.toFixed(2)} <span class="label">${m.why}</span></li>`)];
-  showModal(`<h2>티켓</h2><p>타격할 때마다 티켓 1,000장 중 한 장을 뽑아요.<br>${p.heated ? "" : "(아직 달궈지지 않았어요)"}</p><div class="list">${rows}</div>
-    <div class="item" style="display:block;text-align:left"><b>${baseDeck}</b><p>${d.frenzy ? "광란 중이라 파괴 티켓이 모두 빠져 있어요." : `파괴 티켓은 등급이 오를수록 늘어요. +${p.lvl}에서 기본 파괴 확률 ${pct(BREAK[Math.min(30, p.lvl)] / 100)}.`}</p></div>
-    <div class="item" style="display:block;text-align:left"><b>지금 적용 중인 효과</b>${eff.length ? `<ul style="margin:6px 0 0;padding-left:18px;font-size:13px;display:grid;gap:3px">${eff.join("")}</ul>` : '<p>없어요. 유물이나 아이템을 얻으면 여기에 나와요.</p>'}</div>
-    <button class="hot" id="tkOk">닫기</button>`, () => $("tkOk").onclick = closeModal);
+  return { b: pb, d: c.d / N * r, h: c.h / N * r, s: c.s / N * r, g: c.g / N * r };
 }
 { // self-check against the published numbers
   S = fresh(); const p = newPig(10), near = (a, b) => Math.abs(a - b) < .002;
@@ -587,7 +568,7 @@ function resize() { R.setSize(innerWidth, innerHeight, false); cam.aspect = inne
 addEventListener("resize", resize);
 
 const STATIONS = [
-  { id: "anvil", name: "모루", yaw: 0, pitch: -.62 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
+  { id: "anvil", name: "모루", yaw: 0, pitch: -.33 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
   { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 }, { id: "shelf", name: "진열대", yaw: -35, pitch: -.24 },
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
@@ -1176,15 +1157,65 @@ let cineOn = false, cine = 0, cineT = 0, chargeK = 0;
 const ringEl = $("ring"), ringTextEl = $("ringText"), projV = new THREE.Vector3();
 function setCine(on) { cineOn = on; document.body.classList.toggle("cine", on); }
 
+// Odds board on the wall behind the anvil, like the original: name, grade, tribute value, last result, frenzy squares and the five odds for the next strike
+const BCOL = { b: "#ef7a62", d: "#e9a24e", h: "#9bd06d", s: "#7fc8ef", g: "#d98ae8" }, BNAME = { b: "파괴", d: "손상", h: "유지", s: "성공", g: "대성공" };
+let boardLast = null, boardSig = "", boardT = 0;
+const boardCv = Object.assign(document.createElement("canvas"), { width: 1024, height: 500 }), boardTex = new THREE.CanvasTexture(boardCv); boardTex.encoding = THREE.sRGBEncoding; boardTex.anisotropy = 4;
+{ const g = new THREE.Group(); g.position.copy(at(0, 2.32, 1.36)); g.lookAt(0, 1.36, 0); g.scale.setScalar(.86); scene.add(g); // sized to fit a phone held upright
+  const frame = new THREE.Mesh(rbox(1.3, .66, .05, .02), M(0x2a2622, { ...pbr("iron", 1.2), metalness: .7 })); frame.position.z = -.03; g.add(frame);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.24, .605), new THREE.MeshBasicMaterial({ map: boardTex, toneMapped: false })); g.add(face);
+  for (const x of [-.6, .6]) for (const y of [-.28, .28]) { const r = new THREE.Mesh(new THREE.SphereGeometry(.014, 8, 6), M(0x6a625a, { metalness: .8 })); r.position.set(x, y, .006); g.add(r); }
+  for (const s of [-1, 1]) { const ch = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, 1.2, 5), M(0x1c1814, { metalness: .8 })); ch.position.set(s * .5, .9, -.03); g.add(ch); } } // hung on chains
+// Calendar pinned to the wall left of the board: passed days crossed out, merchant days marked
+const calCv = Object.assign(document.createElement("canvas"), { width: 400, height: 470 }), calTex = new THREE.CanvasTexture(calCv); calTex.encoding = THREE.sRGBEncoding;
+{ const m = new THREE.Mesh(new THREE.PlaneGeometry(.62, .73), new THREE.MeshStandardMaterial({ map: calTex, roughness: .95 })); m.position.copy(at(19, 3.0, 1.55)); m.lookAt(0, 1.55, 0); m.rotation.z += .04; scene.add(m); }
+let calSig = "";
+function drawCalendar() {
+  const sig = `${S.day}`; if (sig === calSig) return; calSig = sig; const x = calCv.getContext("2d"), W = 400, base = Math.floor((S.day - 1) / 30) * 30;
+  x.fillStyle = "#e6dcc6"; x.fillRect(0, 0, W, 470); x.fillStyle = "rgba(90,60,30,.15)"; for (let i = 0; i < 40; i++) x.fillRect(Math.random() * W, Math.random() * 470, 30 + Math.random() * 60, 2);
+  x.fillStyle = "#3a2c22"; x.font = "56px Jua, sans-serif"; x.textAlign = "center"; x.fillText(`DAY ${base + 1}–${base + 30}`, W / 2, 66);
+  x.font = "34px Jua, sans-serif"; x.textBaseline = "middle";
+  for (let i = 0; i < 30; i++) { const d = base + i + 1, cx = 34 + (i % 6) * 66, cy = 128 + Math.floor(i / 6) * 70;
+    x.fillStyle = "#3a2c22"; x.fillText(d, cx, cy);
+    if (d % 3 === 0) { x.fillStyle = "#3a7a8a"; x.font = "18px Jua, sans-serif"; x.fillText("유령", cx, cy + 24); x.font = "34px Jua, sans-serif"; }
+    if (d === 21) { x.strokeStyle = "#8a3a2a"; x.lineWidth = 3; x.strokeRect(cx - 28, cy - 26, 56, 52); }
+    if (d < S.day) { x.strokeStyle = "rgba(190,40,30,.9)"; x.lineWidth = 6; x.beginPath(); x.moveTo(cx - 22, cy - 20); x.lineTo(cx + 22, cy + 20); x.moveTo(cx + 22, cy - 20); x.lineTo(cx - 22, cy + 20); x.stroke(); }
+    if (d === S.day) { x.strokeStyle = "#2a1a10"; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy, 27, 0, 7); x.stroke(); } }
+  calTex.needsUpdate = true;
+}
+function drawBoard(now) {
+  const p = S.anvil, fz = inFrenzy(), o = p && odds(p), left = fz ? Math.max(0, (frenzyUntil - now) / 1000) : 0;
+  const sig = p ? `${p.id}|${p.lvl}|${V(p)}|${p.charge}|${fz ? left.toFixed(1) : "-"}|${Object.values(o).map(v => (v * 1000) | 0)}|${boardLast?.t}` : "empty";
+  if (sig === boardSig) return; boardSig = sig;
+  const x = boardCv.getContext("2d"), W = 1024, H = 500, txt = (s, X, Y, font, col, al = "left") => { x.font = font; x.fillStyle = col; x.textAlign = al; x.fillText(s, X, Y); };
+  const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#3a3633"); bg.addColorStop(1, "#24211f"); x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  x.fillStyle = "rgba(255,255,255,.025)"; for (let i = 0; i < W; i += 6) x.fillRect(i, 0, 2, H); // brushed metal
+  x.textBaseline = "alphabetic";
+  if (!p) { txt("모루가 비어 있어요", W / 2, H / 2 + 14, "46px Jua, sans-serif", "#8a8078", "center"); boardTex.needsUpdate = true; return; }
+  txt(pigName(p), 44, 92, "60px Jua, sans-serif", "#f4ece2"); txt(`+${p.lvl}`, W - 44, 92, "60px Jua, sans-serif", "#f4ece2", "right");
+  txt("공물 가치", 44, 158, "26px Jua, sans-serif", "#b8aea4"); txt(G(V(p)).replace("G", " G"), W - 44, 176, "72px Jua, sans-serif", "#f4ece2", "right");
+  const L = boardLast && boardLast.id === p.id ? boardLast : null;
+  if (L) { txt(`${BNAME[L.res]}${L.d ? ` ${L.d > 0 ? "+" : ""}${L.d}` : ""}`, 44, 228, "40px Jua, sans-serif", BCOL[L.res]);
+    if (L.gain) txt(`${L.gain > 0 ? "+" : "−"}${G(Math.abs(L.gain)).replace("G", " G")}`, 44, 262, "26px Jua, sans-serif", "#cfc6bc"); }
+  for (let i = 0; i < 10; i++) { const on = fz || i < p.charge; x.fillStyle = on ? (fz ? `hsl(${300 + Math.sin(now / 120 + i) * 20},95%,70%)` : "#f6c88a") : "#4a4440"; if (on) { x.shadowColor = x.fillStyle; x.shadowBlur = 14; } x.fillRect(W - 44 - (10 - i) * 30 + 6, 200, 22, 22); x.shadowBlur = 0; }
+  txt(fz ? `광란 ${left.toFixed(1)}s` : `${p.charge} / 10`, W - 44, 258, "26px Jua, sans-serif", fz ? "#ff9bff" : "#cfc6bc", "right");
+  const keys = ["b", "d", "h", "s", "g"], cw = (W - 88 - 4 * 18) / 5;
+  keys.forEach((k, i) => { const X = 44 + i * (cw + 18); x.fillStyle = BCOL[k]; x.fillRect(X, 296, cw, 5);
+    txt(BNAME[k], X + cw / 2, 346, "30px Jua, sans-serif", BCOL[k], "center"); txt(`${(o[k] * 100).toFixed(1)}%`, X + cw / 2, 400, "44px Jua, sans-serif", "#f4ece2", "center"); });
+  let X = 44; for (const k of keys) { const w = (W - 88) * o[k]; x.fillStyle = BCOL[k]; x.shadowColor = BCOL[k]; x.shadowBlur = 10; x.fillRect(X, 446, w, 10); X += w; } x.shadowBlur = 0;
+  boardTex.needsUpdate = true;
+}
+if (document.fonts) document.fonts.ready.then(() => { boardSig = calSig = ""; });
+
 // Display case (진열대): three stepped pedestals under hanging spotlights in a velvet alcove, for your three best pigs
 const SHELF_YAW = -35, SHELF_SLOT = [[8, 3.2, .74], [0, 2.9, .96], [-8, 3.2, .74]]; // yaw offset, radius, pedestal top
 const shelfPos = i => { const [dy, r, y] = SHELF_SLOT[i]; return at(SHELF_YAW + dy, r, y + .02); };
 const shelfSlots = [];
-{ const ca = (SHELF_YAW * Math.PI / 180) + Math.PI, len = 1.1;
+{ const ca = (SHELF_YAW * Math.PI / 180) + Math.PI, len = .78;
   const back = new THREE.Mesh(new THREE.CylinderGeometry(3.85, 3.85, 2.5, 24, 1, true, ca - len / 2, len), M(0x2a0b12, { side: THREE.BackSide, roughness: .95 })); back.position.y = 1.25; scene.add(back); // velvet
   const gold = M(0xd4a840, { metalness: .9, roughness: .3, emissive: 0x2a1c00 });
   for (const [dy, h, y] of [[0, .07, 2.46], [0, .07, .06]]) { const rim = new THREE.Mesh(new THREE.CylinderGeometry(3.84, 3.84, h, 24, 1, true, ca - len / 2, len), gold); rim.position.y = y; scene.add(rim); } // gold trim
-  for (const s of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.5, 8), gold); post.position.copy(at(SHELF_YAW + s * 31, 3.84)).setY(1.25); scene.add(post); }
+  for (const s of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.5, 8), gold); post.position.copy(at(SHELF_YAW + s * 22, 3.84)).setY(1.25); scene.add(post); }
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .32), new THREE.MeshBasicMaterial());
   const signTex = new THREE.CanvasTexture(Object.assign(document.createElement("canvas"), { width: 512, height: 110 })), sx = signTex.image.getContext("2d");
   sx.fillStyle = "#1e120c"; sx.fillRect(0, 0, 512, 110); sx.strokeStyle = "#d4a840"; sx.lineWidth = 6; sx.strokeRect(4, 4, 504, 102);
@@ -1284,6 +1315,7 @@ function loop(now) {
     m.rotation.x += u.r.x * dt; m.rotation.y += u.r.y * dt; u.life -= dt; m.material.opacity = Math.min(1, u.life);
     if (u.life <= 0) { scene.remove(m); if (u.last) m.material.dispose(); shards.splice(i, 1); } }
   tickSparks(dt);
+  if (now - boardT > 90) { boardT = now; drawBoard(now); drawCalendar(); }
   const fz = inFrenzy();
   { hitI *= Math.exp(-dt * 7); const fI = fz ? 1.8 + Math.sin(t * 22) * .6 : 0, cI = 1.3 * ce, top = Math.max(hitI, fI, cI);
     fxLight.intensity = top; if (top > .01) fxLight.color.setHex(top === hitI ? hitC : top === fI ? 0xff3df2 : 0xfff2d8); }
@@ -1326,7 +1358,8 @@ async function doStrike() {
     ringEl.hidden = ringTextEl.hidden = true; chargeK = 0; flash(.8);
   }
   swing = 1; await sleep(big ? 60 : 110);
-  const fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
+  const v0 = V(p), fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
+  boardLast = { res, d: p.lvl - before, gain: res === "b" ? -v0 : V(p) - v0, id: p.id, t: performance.now() };
   clangAlt = !clangAlt; const clang = clangAlt ? "ting" : "clang"; // 낑, 깡, 낑, 깡…
   if (big) sfx.play(clang, "heavy"); else sfx.play(clang);
   buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
@@ -1387,13 +1420,8 @@ function ui() {
   if (s === "anvil") {
     const p = S.anvil;
     if (p) {
-      const o = odds(p);
-      h += `<div class="row"><b class="big">+${p.lvl} ${pigName(p)}${breedTag(p)}</b><span class="big num gold">${G(V(p))}</span></div>
-        <div class="odds num">${Object.keys(OUT).map(k => `<span>${OUT[k][0]}<b style="color:${OUT[k][1]}">${pct(o[k])}</b></span>`).join("")}</div>
-        <div class="stack">${Object.keys(OUT).map(k => `<i style="width:${o[k] * 100}%;background:${OUT[k][1]}"></i>`).join("")}</div>
-        <div class="charges" aria-label="광란 게이지 ${p.charge}/10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < p.charge ? "on" : ""}"></i>`).join("")}</div>
-        <div class="btns"><button id="strike" class="hot" ${busy ? "disabled" : ""}>${p.heated ? "내리치기" : "차가움 · 화로로"}<small>화면을 눌러도 쳐요</small></button>
-        <button class="ghost" id="lift" ${busy || S.hand ? "disabled" : ""}>들기</button><button class="ghost" id="tickets" ${busy ? "disabled" : ""}>티켓</button>
+      h += `<div class="btns"><button id="strike" class="hot" ${busy ? "disabled" : ""}>${p.heated ? "내리치기" : "차가움 · 화로로"}<small>화면을 눌러도 쳐요</small></button>
+        <button class="ghost" id="lift" ${busy || S.hand ? "disabled" : ""}>들기</button>
         </div>${bag(k => k === "clock"
           ? (lastSnap && !busy ? `<button class="ghost" id="undo">사용</button>` : `<span class="label">타격 후 사용</span>`)
           : `<button class="${S.armed[k] ? "hot" : "ghost"}" data-use="${k}" ${busy ? "disabled" : ""}>${S.armed[k] ? "취소" : "사용"}</button>`)}`;
@@ -1446,7 +1474,6 @@ $("panel").addEventListener("click", async e => {
   const d = b.dataset, id = b.id;
   if (id !== "bell") confirmBell = false;
   if (id === "strike") return doStrike();
-  if (id === "tickets") return showTickets();
   if (id === "lift" || d.pick || d.take) sfx.play("pick"); if (id === "place" || id === "drop") sfx.play("place"); if (id === "offer") sfx.play("offer");
   if (id === "lift") { S.hand = S.anvil; S.anvil = null; lastSnap = null; }
   if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null;
