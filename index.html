@@ -635,7 +635,7 @@ const shrineFlames = [];
     part(new THREE.SphereGeometry(.022, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a2a }), s * .07, .56, .2); // ember eyes
     part(new THREE.CylinderGeometry(.028, .032, .13, 8), M(0xe6dcc4, { roughness: .6 }), s * .38, .415, .1); // candles
     const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, color: 0xffc070, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); fl.position.set(s * .38, .53, .1); fl.scale.set(.1, .16, 1); bank.add(fl); shrineFlames.push(fl); }
-  const l = new THREE.PointLight(0xffb070, .9, 2.6, 2); l.position.set(0, .45, .7); bank.add(l); }
+  oak.emissive = new THREE.Color(0x120a05); iron.emissive = new THREE.Color(0x0a0705); } // faint candle-lit warmth without another light
 // Ghost merchant: a sheet ghost with a lantern
 const ghostPos = at(-140, 2.4);
 const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.lookAt(0, .2, 0); scene.add(ghost);
@@ -649,7 +649,7 @@ box(1.1, .7, .5, wood(0x7a5030), at(-140, 1.95, .35));
 // Tribute hatch: bars and the boar lord's eyes
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
-  const gate = new THREE.Group(), barM = M(0x3a3a3a, { metalness: .8, roughness: .5 }); gate.position.y = .65; hatch.add(gate); hatch.userData.gate = gate; // pivots at the top so it folds up
+  const gate = new THREE.Group(), barM = M(0x3a3a3a, { metalness: .8, roughness: .5 }); gate.position.y = .65; hatch.add(gate); hatch.userData.gate = gate; hatch.userData.barM = barM; // pivots at the top so it folds up
   for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3, 12), barM); bar.position.set(i * .22, -.65, .05); gate.add(bar); }
 }
 // The boar lord's eyes: only two huge slit-pupilled beast eyes burning in the dark, no face
@@ -667,7 +667,6 @@ const lordEyes = [-1, 1].map(side => { const eg = new THREE.Group(); eg.position
   const pupil = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0x000000 })); pupil.position.z = .002; pupil.scale.set(.016, .07, 1); eg.add(pupil);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: auraTex(), color: 0xff3a10, transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.setScalar(.75); glow.position.z = .004; eg.add(glow);
   return { eg, iris, pupil, glow, side }; });
-const eyeLight = new THREE.PointLight(0xff3a10, .3, 2.2, 2); eyeLight.position.set(0, .2, .35); hatch.add(eyeLight);
 let eyeOpen = 1, eyeRate = 10, blinkAt = 3, eyeSeen = false, pupilX = 0;
 function tickEyes(dt, t) {
   const facing = !menu && STATIONS[st].id === "tribute", a = S.anger, raging = rageT > 0;
@@ -685,7 +684,7 @@ function tickEyes(dt, t) {
     e.iris.material.color.setRGB(1, 1 - a * .22, 1 - a * .3); // redder with every failed tribute
     e.glow.material.opacity = (.26 + a * .14 + (raging ? .4 : 0)) * eyeOpen * (.9 + Math.sin(t * 6) * .1);
   }
-  eyeLight.intensity = (.25 + a * .35 + (raging ? 1.2 : 0)) * eyeOpen;
+  { const k = (.25 + a * .35 + (raging ? 1.2 : 0)) * eyeOpen; hatch.userData.barM.emissive.setRGB(k * .3, k * .04, 0); } // the bars catch the glow of the eyes
 }
 box(.6, .1, 1.8, wood(0x7a5030), at(-70, 2.9, .5));
 // The boar lord's arm: lives in the hatch frame (+z points into the room), hidden behind the dark opening until the bell rings
@@ -789,13 +788,45 @@ function wing(side, n, color, len, y, a0, span) {
   for (let i = 0; i < n; i++) { const f = new THREE.Mesh(featherGeo, m); f.rotation.z = a0 + i * span / (n - 1); f.scale.setScalar(len * (1 - Math.abs(i - n * .4) / n * .55)); f.position.z = i * .004; holder.add(f); }
   return pivot;
 }
+// The base body is identical for every pig, so it is built and merged once and shared; only decorations are rebuilt on a level change
+let BODY = null;
+function bodyGeo() {
+  if (BODY) return BODY;
+  const g = new THREE.Group(), ph = () => new THREE.MeshBasicMaterial(), mat = ph(), dark = ph(), snoutM = ph(), holeM = ph(), whiteM = ph(), glintM = ph(), hoofM = ph(), eyeM = ph(), detail = ph(), hex = c => new THREE.Color(c);
+  mat.vertexColors = detail.vertexColors = true;
+  const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
+  // Body, rump and neck overlap so the silhouette reads as one soft barrel instead of two balls
+  add(new THREE.SphereGeometry(.5, 28, 18), mat, 0, .55, 0, 1.3, 1, 1);
+  add(new THREE.SphereGeometry(.42, 20, 14), mat, -.32, .58, 0, 1, 1, 1.08);
+  add(new THREE.SphereGeometry(.34, 20, 14), mat, .42, .63, 0, 1, .92, 1.1);
+  add(new THREE.SphereGeometry(.36, 24, 16), mat, .62, .72, 0, 1, .95, 1.05);
+  for (const z of [-.17, .17]) add(new THREE.SphereGeometry(.14, 12, 8), mat, .78, .62, z);
+  const snout = add(new THREE.LatheGeometry([[0, 0], [.13, 0], [.155, .02], [.165, .08], [.155, .13], [.12, .155], [0, .155]].map(([r, y]) => new THREE.Vector2(r, y)), 18), snoutM, .9, .66, 0);
+  snout.rotation.z = -Math.PI / 2;
+  for (const z of [-.05, .05]) add(new THREE.SphereGeometry(.03, 8, 6), holeM, 1.052, .665, z, .35, 1.3, 1);
+  for (const z of [-.16, .16]) { add(new THREE.SphereGeometry(.06, 12, 8), whiteM, .9, .83, z, .7, 1, 1);
+    add(new THREE.SphereGeometry(.038, 10, 8), eyeM, .935, .83, z * 1.02); add(new THREE.SphereGeometry(.012, 6, 4), glintM, .968, .847, z * .95);
+    add(new THREE.SphereGeometry(.065, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), mat, .9, .835, z, .75, .9, 1.05).rotation.z = -.35; } // upper lid
+  // Ears: soft extruded leaf shape, tipped forward and outward on a pivot
+  const earShape = new THREE.Shape(); earShape.moveTo(-.11, 0); earShape.quadraticCurveTo(-.11, .2, .01, .3); earShape.quadraticCurveTo(.11, .19, .11, 0); earShape.quadraticCurveTo(0, -.03, -.11, 0);
+  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: .015, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 2, curveSegments: 8 });
+  for (const side of [-1, 1]) { const piv = new THREE.Group(); piv.position.set(.55, 1, side * .2); piv.rotation.set(side * .5, 0, -.55); g.add(piv);
+    const ear = new THREE.Mesh(earGeo, dark); ear.rotation.y = Math.PI / 2; piv.add(ear); }
+  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) { add(new THREE.CylinderGeometry(.09, .07, .26, 12), dark, x, .19, z);
+    add(new THREE.CylinderGeometry(.068, .078, .07, 12), hoofM, x, .035, z); add(new THREE.BoxGeometry(.16, .06, .012), holeM, x + .02, .035, z); } // cloven split
+  const tail = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 3.4, r = .07 * (1 - i / 34); tail.push(new THREE.Vector3(-.64 - i * .007, .74 + Math.sin(a) * r, Math.cos(a) * r - .07)); }
+  add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tail), 40, .018, 6), dark, 0, 0, 0);
+  bake(g, new Map([[dark, [mat, .7]], [snoutM, [mat, .88]], [mat, [mat, 1]], [holeM, [detail, hex(0x1a0505)]], [whiteM, [detail, hex(0xf4efe8)]], [glintM, [detail, hex(0xffffff)]], [hoofM, [detail, hex(0x2a1c16)]]]));
+  const of = m => g.children.find(o => o.material === m).geometry;
+  BODY = { skin: of(mat), detail: of(detail), pupil: of(eyeM) }; for (const k in BODY) SHARED.add(BODY[k]);
+  return BODY;
+}
 function makePig(p) {
   const L = Math.max(p.lvl, p.peak || 0), F = FAMS[p.fam], [h, s, l] = HSL[Math.min(20, L)];
   const col = F?.special ? new THREE.Color().setHSL(F.hue / 360, .55, Math.min(.72, .4 + L * .016)) : new THREE.Color().setHSL(h / 360, s / 100, l / 100);
   const g = new THREE.Group(), metal = L >= 7, TH = Math.min(20, L), anim = [], keepRoots = [], keepIt = o => (keepRoots.push(o), o); // keepIt: animated parts stay out of bake()
   const mat = new THREE.MeshStandardMaterial({ color: col, metalness: metal ? .75 : .05, roughness: metal ? .28 : .65,
     emissive: p.heated ? 0xff5a10 : L >= 13 ? col : 0x000000, emissiveIntensity: p.heated ? .45 : L >= 13 ? .25 : 0 });
-  const dark = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.7), metalness: mat.metalness, roughness: mat.roughness });
   if (!p.heated && L >= 18) mat.emissiveIntensity = .45;
   const emC = mat.emissive.clone(), emI = mat.emissiveIntensity;
   const steel = new THREE.MeshStandardMaterial({ color: 0xcfd3d8, metalness: .9, roughness: .22 });
@@ -809,32 +840,7 @@ function makePig(p) {
     const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, map: AURA, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); g.add(pts); anim.push(t => pts.rotation.y = t * .6); };
   const topY = x => .55 + .5 * Math.sqrt(Math.max(0, 1 - (x / .65) ** 2)); // top of the body at x
 
-  // Body, rump and neck overlap so the silhouette reads as one soft barrel instead of two balls
-  add(new THREE.SphereGeometry(.5, 28, 18), mat, 0, .55, 0, 1.3, 1, 1);
-  add(new THREE.SphereGeometry(.42, 20, 14), mat, -.32, .58, 0, 1, 1, 1.08);
-  add(new THREE.SphereGeometry(.34, 20, 14), mat, .42, .63, 0, 1, .92, 1.1);
-  add(new THREE.SphereGeometry(.36, 24, 16), mat, .62, .72, 0, 1, .95, 1.05);
-  for (const z of [-.17, .17]) add(new THREE.SphereGeometry(.14, 12, 8), mat, .78, .62, z);
-  const snoutM = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(.88), metalness: mat.metalness, roughness: mat.roughness * .9 });
-  const snout = add(new THREE.LatheGeometry([[0, 0], [.13, 0], [.155, .02], [.165, .08], [.155, .13], [.12, .155], [0, .155]].map(([r, y]) => new THREE.Vector2(r, y)), 18), snoutM, .9, .66, 0);
-  snout.rotation.z = -Math.PI / 2;
-  const holeM = new THREE.MeshBasicMaterial({ color: 0x1a0505 });
-  for (const z of [-.05, .05]) add(new THREE.SphereGeometry(.03, 8, 6), holeM, 1.052, .665, z, .35, 1.3, 1);
   const eyeM = new THREE.MeshStandardMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x1a1210, roughness: .15, emissive: L >= 7 ? (L >= 12 ? 0x6a4a00 : 0x5a0000) : 0 });
-  const whiteM = new THREE.MeshStandardMaterial({ color: 0xf4efe8, roughness: .3 }), glintM = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  for (const z of [-.16, .16]) { add(new THREE.SphereGeometry(.06, 12, 8), whiteM, .9, .83, z, .7, 1, 1);
-    add(new THREE.SphereGeometry(.038, 10, 8), eyeM, .935, .83, z * 1.02); add(new THREE.SphereGeometry(.012, 6, 4), glintM, .968, .847, z * .95);
-    add(new THREE.SphereGeometry(.065, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), mat, .9, .835, z, .75, .9, 1.05).rotation.z = -.35; } // upper lid
-  // Ears: soft extruded leaf shape, tipped forward and outward on a pivot
-  const earShape = new THREE.Shape(); earShape.moveTo(-.11, 0); earShape.quadraticCurveTo(-.11, .2, .01, .3); earShape.quadraticCurveTo(.11, .19, .11, 0); earShape.quadraticCurveTo(0, -.03, -.11, 0);
-  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: .015, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 2, curveSegments: 8 });
-  for (const side of [-1, 1]) { const piv = new THREE.Group(); piv.position.set(.55, 1, side * .2); piv.rotation.set(side * .5, 0, -.55); g.add(piv);
-    const ear = new THREE.Mesh(earGeo, dark); ear.rotation.y = Math.PI / 2; piv.add(ear); }
-  const hoofM = new THREE.MeshStandardMaterial({ color: 0x2a1c16, roughness: .5, metalness: metal ? .6 : 0 });
-  for (const [x, z] of [[-.35, -.25], [-.35, .25], [.35, -.25], [.35, .25]]) { add(new THREE.CylinderGeometry(.09, .07, .26, 12), dark, x, .19, z);
-    add(new THREE.CylinderGeometry(.068, .078, .07, 12), hoofM, x, .035, z); add(new THREE.BoxGeometry(.16, .06, .012), holeM, x + .02, .035, z); } // cloven split
-  const tail = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 3.4, r = .07 * (1 - i / 34); tail.push(new THREE.Vector3(-.64 - i * .007, .74 + Math.sin(a) * r, Math.cos(a) * r - .07)); }
-  add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tail), 40, .018, 6), dark, 0, 0, 0);
   if (p.fam === "tree") for (const [x, z, r] of [[-.2, -.15, .5], [0, .1, -.3], [.2, -.05, .2]]) { const leaf = add(new THREE.ConeGeometry(.09, .32, 5), new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: .6 }), x, 1.1, z); leaf.rotation.set(r, 0, r); }
   if (p.fam === "fish") add(new THREE.ConeGeometry(.22, .4, 3), new THREE.MeshStandardMaterial({ color: 0x2ec4b6, metalness: .4, roughness: .3 }), -.1, 1.1, 0, .4, 1, 1.4);
   if (p.fam === "grave") { const w = keepIt(add(new THREE.SphereGeometry(.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb98cff }), .1, 1.45, .25)); glow(0xb98cff, .5, 0, 0, 0, .7, w); anim.push(t => w.position.y = 1.45 + Math.sin(t * 3) * .08); }
@@ -912,11 +918,11 @@ function makePig(p) {
   if (TH >= 19) { const md = disc(RUNE, 0xffd43b, 2.7, -.38, .85); anim.push(t => { md.rotation.z = -t * .5; md.scale.setScalar(2.7 + Math.sin(t * 2) * .08); if (TH >= 20) md.material.color.setHSL((t * .12) % 1, .9, .65); }); }
   if (TH >= 20) anim.push(t => mat.emissive.setHSL((t * .2) % 1, .9, .5));
   g.userData = { anim, mat, emC, emI, keep: keepRoots };
-  // Fold the skin shades and small details into two vertex-coloured materials so a pig costs a few draw calls, not ~45
+  // Decorations are merged per material; the shared body adds three more meshes (skin, details, pupils)
   mat.vertexColors = true;
-  const detail = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, metalness: metal ? .3 : 0 }), hex = c => new THREE.Color(c);
-  bake(g, new Map([[dark, [mat, .7]], [snoutM, [mat, .88]], [mat, [mat, 1]], [holeM, [detail, hex(0x1a0505)]], [whiteM, [detail, hex(0xf4efe8)]],
-    [glintM, [detail, hex(0xffffff)]], [hoofM, [detail, hex(0x2a1c16)]]]));
+  const detail = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, metalness: metal ? .3 : 0 }), B = bodyGeo();
+  bake(g);
+  g.add(new THREE.Mesh(B.skin, mat), new THREE.Mesh(B.detail, detail), new THREE.Mesh(B.pupil, eyeM));
   return g;
 }
 // Merge every static mesh under g into one mesh per material; fold maps a material to [target material, vertex colour or grey multiplier]
@@ -982,7 +988,7 @@ async function rage(born) {
 }
 
 // Effects
-const shards = [], sparks = [], fxList = [], sparkGeo = new THREE.SphereGeometry(.014, 4, 3), shardGeo = new THREE.TetrahedronGeometry(.07);
+const shards = [], fxList = [], shardGeo = new THREE.TetrahedronGeometry(.07);
 const ringGeo = new THREE.RingGeometry(.9, 1, 48), beamGeo = new THREE.CylinderGeometry(1, 1, 1, 24, 1, true).translate(0, .5, 0);
 function fx(obj, dur, tick) { scene.add(obj); fxList.push({ obj, t: 0, dur, tick }); }
 function shock(pos, color, size = 1.2, dur = .5) { // expanding ground ring
@@ -994,22 +1000,38 @@ function pillar(pos, color, w = .3, h = 4, dur = .9) { // beam of light; color "
   fx(m, dur, k => { m.scale.set(w * (1 + k), h * Math.min(1, k * 6), w * (1 + k)); m.material.opacity = .5 * (1 - k) ** 1.5; if (color === "rainbow") m.material.color.setHSL((k * 2) % 1, 1, .62); });
 }
 function shatter(pos, color) {
+  const mat = new THREE.MeshStandardMaterial({ color, metalness: .5, roughness: .4, transparent: true }); // one material for the whole burst
   for (let i = 0; i < 46; i++) {
-    const m = new THREE.Mesh(shardGeo, new THREE.MeshStandardMaterial({ color, metalness: .5, roughness: .4, transparent: true }));
+    const m = new THREE.Mesh(shardGeo, mat);
     m.position.copy(pos).add(new THREE.Vector3((Math.random() - .5) * .4, Math.random() * .4, (Math.random() - .5) * .4));
-    m.userData = { v: new THREE.Vector3((Math.random() - .5) * 4, 1.5 + Math.random() * 3, (Math.random() - .5) * 4), r: new THREE.Vector3(Math.random() * 10, Math.random() * 10, 0), life: 1.6 };
+    m.userData = { v: new THREE.Vector3((Math.random() - .5) * 4, 1.5 + Math.random() * 3, (Math.random() - .5) * 4), r: new THREE.Vector3(Math.random() * 10, Math.random() * 10, 0), life: 1.6, last: i === 45 };
     m.scale.setScalar(.6 + Math.random() * 1.4); scene.add(m); shards.push(m);
   }
 }
+// Sparks live in one pooled point cloud: one draw call, nothing allocated per strike
+const SPK = 500, spkPos = new Float32Array(SPK * 3).fill(-99), spkCol = new Float32Array(SPK * 3), spkBase = new Float32Array(SPK * 3), spkVel = new Float32Array(SPK * 3), spkLife = new Float32Array(SPK), spkGeo = new THREE.BufferGeometry(), spkTmp = new THREE.Color();
+spkGeo.setAttribute("position", new THREE.BufferAttribute(spkPos, 3)); spkGeo.setAttribute("color", new THREE.BufferAttribute(spkCol, 3));
+const spkPts = new THREE.Points(spkGeo, new THREE.PointsMaterial({ size: .075, map: AURA, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); spkPts.frustumCulled = false; scene.add(spkPts);
+let spkNext = 0, spkAlive = false;
 function sparkBurst(pos, color, n = 40, speed = 1) {
-  for (let i = 0; i < n; i++) { const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: color === "rainbow" ? new THREE.Color().setHSL(Math.random(), 1, .6) : color, transparent: true }));
-    m.position.copy(pos); m.userData = { v: new THREE.Vector3((Math.random() - .5) * 5 * speed, Math.random() * 4 * speed, (Math.random() - .5) * 5 * speed), life: .9 }; scene.add(m); sparks.push(m); }
+  for (let k = 0; k < n; k++) { const i = spkNext * 3; spkLife[spkNext] = .9; spkNext = (spkNext + 1) % SPK; spkAlive = true;
+    color === "rainbow" ? spkTmp.setHSL(Math.random(), 1, .6) : spkTmp.set(color); spkTmp.toArray(spkBase, i);
+    spkPos[i] = pos.x; spkPos[i + 1] = pos.y; spkPos[i + 2] = pos.z;
+    spkVel[i] = (Math.random() - .5) * 5 * speed; spkVel[i + 1] = Math.random() * 4 * speed; spkVel[i + 2] = (Math.random() - .5) * 5 * speed; }
 }
-const hitLight = new THREE.PointLight(0xffffff, 0, 5, 2); hitLight.position.copy(anvilPos).setY(1.15); scene.add(hitLight);
-const frenzyLight = new THREE.PointLight(0xff3df2, 0, 6, 2); frenzyLight.position.copy(anvilPos).setY(1.6); scene.add(frenzyLight);
-let hitI = 0;
+function tickSparks(dt) {
+  if (!spkAlive) return; spkAlive = false;
+  for (let n = 0; n < SPK; n++) { if (spkLife[n] <= 0) continue; const i = n * 3, f = Math.max(0, Math.min(1, (spkLife[n] -= dt) * 1.6));
+    spkVel[i + 1] -= 6 * dt; spkPos[i] += spkVel[i] * dt; spkPos[i + 1] += spkVel[i + 1] * dt; spkPos[i + 2] += spkVel[i + 2] * dt;
+    spkCol[i] = spkBase[i] * f; spkCol[i + 1] = spkBase[i + 1] * f; spkCol[i + 2] = spkBase[i + 2] * f;
+    if (spkLife[n] > 0) spkAlive = true; else spkPos[i + 1] = -99; }
+  spkGeo.attributes.position.needsUpdate = spkGeo.attributes.color.needsUpdate = true;
+}
+// One light serves the impact flash, the frenzy glow and the close-up rim light (every extra light costs on every pixel)
+const fxLight = new THREE.PointLight(0xffffff, 0, 5.5, 2); fxLight.position.copy(anvilPos).add(new THREE.Vector3(-.4, 1.6, .45)); scene.add(fxLight);
+let hitI = 0, hitC = 0xffffff;
 // +15 close-up: own camera path, a spotlight, two magic circles and energy drawn into the pig
-const cineCam = new THREE.PerspectiveCamera(), cineLight = new THREE.PointLight(0xfff2d8, 0, 5, 2); cineLight.position.set(-.9, 1.9, -1.1); scene.add(cineLight);
+const cineCam = new THREE.PerspectiveCamera();
 const circle = new THREE.Mesh(planeGeo, addMat({ map: RUNE, color: 0xffd43b })); circle.position.copy(anvilPos).setY(.735); circle.rotation.x = -Math.PI / 2;
 const backCircle = new THREE.Mesh(planeGeo, addMat({ map: RUNE, color: 0xff8a3d })); backCircle.position.copy(anvilPos).setY(1.05); backCircle.position.z -= .45;
 const MOTES = 90, moteDir = Array.from({ length: MOTES }, () => new THREE.Vector3().setFromSphericalCoords(1, Math.acos(Math.random() * 1.6 - .6), Math.random() * 7)), motePh = moteDir.map(() => Math.random());
@@ -1050,7 +1072,7 @@ function loop(now) {
   }
   if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
   cam.fov += ((cineOn ? 50 : 62) - cam.fov) * Math.min(1, dt * 5); cam.updateProjectionMatrix();
-  amb.intensity = AMB * (1 - .7 * ce); hemi.intensity = HEMI * (1 - .7 * ce); cineLight.intensity = 1.3 * ce;
+  amb.intensity = AMB * (1 - .7 * ce); hemi.intensity = HEMI * (1 - .7 * ce);
   const handPig = slots.get("hand")?.group; if (handPig) handPig.visible = cine < .05;
   if (!ringEl.hidden) { cam.updateMatrixWorld(); projV.set(anvilPos.x, .98, anvilPos.z).project(cam); const ry = (1 - projV.y) / 2 * innerHeight;
     ringEl.style.left = ringTextEl.style.left = (projV.x + 1) / 2 * innerWidth + "px"; ringEl.style.top = ry + "px"; ringTextEl.style.top = ry + ringEl.offsetHeight / 2 + 14 + "px"; }
@@ -1091,15 +1113,15 @@ function loop(now) {
     moteGeo.attributes.position.needsUpdate = true; motes.material.opacity = Math.min(1, ck * 2.5);
   }
   for (let i = fxList.length - 1; i >= 0; i--) { const f = fxList[i]; f.t += dt; if (f.t >= f.dur) { scene.remove(f.obj); f.obj.material.dispose(); fxList.splice(i, 1); } else f.tick(f.t / f.dur); }
-  hitI *= Math.exp(-dt * 7); hitLight.intensity = hitI;
+
   for (let i = shards.length - 1; i >= 0; i--) { const m = shards[i], u = m.userData; u.v.y -= 9.8 * dt; m.position.addScaledVector(u.v, dt);
     if (m.position.y < .03) { m.position.y = .03; u.v.multiplyScalar(.4); u.v.y *= -.5; }
     m.rotation.x += u.r.x * dt; m.rotation.y += u.r.y * dt; u.life -= dt; m.material.opacity = Math.min(1, u.life);
-    if (u.life <= 0) { scene.remove(m); m.material.dispose(); shards.splice(i, 1); } }
-  for (let i = sparks.length - 1; i >= 0; i--) { const m = sparks[i], u = m.userData; u.v.y -= 6 * dt; m.position.addScaledVector(u.v, dt); u.life -= dt; m.material.opacity = u.life;
-    if (u.life <= 0) { scene.remove(m); m.material.dispose(); sparks.splice(i, 1); } }
+    if (u.life <= 0) { scene.remove(m); if (u.last) m.material.dispose(); shards.splice(i, 1); } }
+  tickSparks(dt);
   const fz = inFrenzy();
-  frenzyLight.intensity = fz ? 1.8 + Math.sin(t * 22) * .6 : 0;
+  { hitI *= Math.exp(-dt * 7); const fI = fz ? 1.8 + Math.sin(t * 22) * .6 : 0, cI = 1.3 * ce, top = Math.max(hitI, fI, cI);
+    fxLight.intensity = top; if (top > .01) fxLight.color.setHex(top === hitI ? hitC : top === fI ? 0xff3df2 : 0xfff2d8); }
   if (fz && Math.random() < .5) sparkBurst(anvilPos.clone().add(new THREE.Vector3((Math.random() - .5) * .7, .75, (Math.random() - .5) * .7)), 0xff3df2, 1, .35);
   $("frenzyBar").hidden = !fz;
   if (fz && !frenzyLeft) $("frenzyBar").style.transform = `scaleX(${(frenzyUntil - now) / 7000})`;
@@ -1113,7 +1135,9 @@ function loop(now) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let busy = false, nextStrikeAt = 0, lastSnap = null, clangAlt = false;
-function banner(main, sub = "", cls = "") { const b = $("banner"); b.className = ""; void b.offsetWidth; b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls; }
+let bannerT = 0;
+function banner(main, sub = "", cls = "") { const b = $("banner"); b.className = ""; clearTimeout(bannerT); bannerT = setTimeout(() => b.className = "", 2400); // drop the class so its looping animations stop
+  void b.offsetWidth; b.querySelector("b").textContent = main; b.querySelector("small").textContent = sub; b.className = "show " + cls; }
 function flash(a = .9) { const f = $("flash"); f.style.transition = "none"; f.style.opacity = a; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = "opacity .6s"; f.style.opacity = 0; })); }
 
 const COL = { b: 0xff4d4d, d: 0xff9f43, h: 0x9aa0a8, s: 0x4dabf7, g: 0xffd43b };
@@ -1141,7 +1165,7 @@ async function doStrike() {
   clangAlt = !clangAlt; const clang = clangAlt ? "ting" : "clang"; // 낑, 깡, 낑, 깡…
   if (big) sfx.play(clang, "heavy"); else sfx.play(clang);
   buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
-  hitLight.color.setHex(COL[res]); hitI = Math.min(4, 1.5 * pw); if (!big) cam.fov -= 3; // impact light and a small zoom punch
+  hitC = COL[res]; hitI = Math.min(4, 1.5 * pw); if (!big) cam.fov -= 3; // impact light and a small zoom punch
   sparkBurst(top, 0xffc070, 10, .7); shock(top, 0xffe0a0, .55 * pw, .3);
   const fzNow = inFrenzy(), spd = 1 + (!fzNow && has("loop") ? .2 : 0) + (has("grip") ? .15 : 0) + (fzNow && has("bellows") ? .3 : 0);
   nextStrikeAt = performance.now() + 560 / spd;
@@ -1167,7 +1191,7 @@ async function breakFx(p, before, big) {
   }
   shakeT = .6; crackT = .65; sfx.play("crack"); await sleep(650);
   hideAnvilPig = true; S.anvil = null; sync(); shatter(pos, color); sparkBurst(pos, 0xffffff, 50); sparkBurst(pos, 0xff4d4d, 40, 1.4); flash(1); shakeT = .5;
-  hitLight.color.setHex(0xff2a2a); hitI = 5; pillar(top, 0xff2a2a, .16, 3, .6); shock(top, 0xff4d4d, 2, .5); setTimeout(() => shock(top, 0x661111, 3.2, .8), 130);
+  hitC = 0xff2a2a; hitI = 5; pillar(top, 0xff2a2a, .16, 3, .6); shock(top, 0xff4d4d, 2, .5); setTimeout(() => shock(top, 0x661111, 3.2, .8), 130);
   sfx.play("shatter", "shards"); if (big) sfx.play("heavy", "roar"); buzz([80, 40, 160]);
   banner("파사삭", `+${before} ${pigName(p, before)} 파괴`, "b"); ui();
   await sleep(big ? 1300 : 900); hideAnvilPig = false; setCine(false);
