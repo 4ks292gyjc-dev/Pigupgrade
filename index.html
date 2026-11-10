@@ -507,7 +507,7 @@ addEventListener("resize", resize);
 
 const STATIONS = [
   { id: "anvil", name: "모루", yaw: 0, pitch: -.62 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
-  { id: "bank", name: "저금통 기계 (유물)", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 },
+  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 },
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
 const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
@@ -609,16 +609,33 @@ const fireLight = new THREE.PointLight(0xff7a2a, 2.8, 8, 2); fireLight.position.
 // Pen fences
 for (const dy of [-14, 14]) box(.06, .35, 1.6, wood(0xa06a3a), at(110 + dy, 2.3, .2));
 box(1.4, .35, .06, wood(0xa06a3a), at(110, 2.95, .2));
-// Piggy-bank relic machine
+// Relic shrine: an iron-bound reliquary on a stone plinth, three relics glowing in its alcove, watched by an iron boar head
 const bankPos = at(165, 2.4);
-const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.lookAt(0, .95, 0); scene.add(bank);
-{ const pink = M(0xf08aa8, { roughness: .4, metalness: .2 });
-  const b = new THREE.Mesh(new THREE.SphereGeometry(.55, 24, 16), pink); b.scale.set(1.2, 1, 1); bank.add(b);
-  const sn = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .1, 16), M(0xd06a88)); sn.rotation.x = Math.PI / 2; sn.position.z = .58; bank.add(sn);
-  const slot = new THREE.Mesh(new THREE.BoxGeometry(.3, .03, .06), M(0x111111)); slot.position.y = .55; bank.add(slot);
-  for (let i = 0; i < 3; i++) { const o = new THREE.Mesh(new THREE.SphereGeometry(.09, 12, 8), new THREE.MeshBasicMaterial({ color: [0x4dabf7, 0xffd43b, 0xff3df2][i] }));
-    o.position.set(-.3 + i * .3, -.15, .52); o.userData.orb = i; bank.add(o); }
-  box(.9, .4, .9, wood(0x5a3e28), bankPos.clone().setY(.2)); }
+const bank = new THREE.Group(); bank.position.copy(bankPos).setY(.95); bank.lookAt(0, .95, 0); scene.add(bank); // +z faces the player
+const shrineFlames = [];
+{ const iron = M(0x3a3836, { ...pbr("iron", 1.5), metalness: .7 }), oak = wood(0x3e2a1c), glowTex = auraTex();
+  const part = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); bank.add(o); return o; };
+  box(1.05, .4, .75, M(0x9a9088, pbr("brick", .9)), bankPos.clone().setY(.2)); // stone plinth
+  part(rbox(.95, .92, .45), oak, 0, -.09, 0); // cabinet
+  for (const y of [-.5, .32]) part(rbox(.99, .06, .49, .01), iron, 0, y, 0); // iron bands
+  for (const x of [-.46, .46]) for (const y of [-.4, -.1, .2]) part(new THREE.SphereGeometry(.022, 8, 6), iron, x, y, .23); // rivets
+  part(new THREE.PlaneGeometry(.7, .5), new THREE.MeshBasicMaterial({ color: 0x070403 }), 0, -.05, .228); // dark alcove
+  for (const [w, h, x, y] of [[.76, .04, 0, .21], [.76, .04, 0, -.31], [.04, .56, -.36, -.05], [.04, .56, .36, -.05]]) part(rbox(w, h, .05, .008), iron, x, y, .235); // alcove frame
+  part(rbox(.66, .025, .12, .006), oak, 0, -.2, .27); // shelf
+  [0x4dabf7, 0xffd43b, 0xff3df2].forEach((c, k) => { // the three relics on offer
+    const gem = part(new THREE.OctahedronGeometry(.07), new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: .7, metalness: .3, roughness: .15 }), -.22 + k * .22, -.06, .29);
+    gem.scale.y = 1.35; gem.userData.orb = k;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: c, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false })); sp.scale.setScalar(.34); gem.add(sp); });
+  part(rbox(.4, .05, .14, .01), iron, 0, -.4, .25); part(new THREE.PlaneGeometry(.3, .07), new THREE.MeshBasicMaterial({ color: 0x050302 }), 0, -.372, .26).rotation.x = -Math.PI / 2; // offering slot
+  // iron boar head on top
+  part(new THREE.SphereGeometry(.17, 16, 12), iron, 0, .52, .05).scale.set(1.1, .95, 1);
+  part(new THREE.CylinderGeometry(.075, .085, .12, 12), iron, 0, .49, .22).rotation.x = Math.PI / 2;
+  for (const s of [-1, 1]) { part(new THREE.ConeGeometry(.06, .14, 4), iron, s * .13, .68, .02).rotation.z = -s * .45;
+    part(new THREE.ConeGeometry(.02, .1, 6), M(0xe8dcc0, { roughness: .4 }), s * .075, .5, .25).rotation.z = -s * .35; // tusks
+    part(new THREE.SphereGeometry(.022, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a2a }), s * .07, .56, .2); // ember eyes
+    part(new THREE.CylinderGeometry(.028, .032, .13, 8), M(0xe6dcc4, { roughness: .6 }), s * .38, .415, .1); // candles
+    const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, color: 0xffc070, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); fl.position.set(s * .38, .53, .1); fl.scale.set(.1, .16, 1); bank.add(fl); shrineFlames.push(fl); }
+  const l = new THREE.PointLight(0xffb070, .9, 2.6, 2); l.position.set(0, .45, .7); bank.add(l); }
 // Ghost merchant: a sheet ghost with a lantern
 const ghostPos = at(-140, 2.4);
 const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.lookAt(0, .2, 0); scene.add(ghost);
@@ -1017,7 +1034,8 @@ function loop(now) {
     tickPig(f.m, t);
     if (k >= 1) { scene.remove(f.m); flights.splice(i, 1); flying.delete(f.p.id); disposePig(f.m); sync(); sfx.play("thud"); shakeT = .25; sparkBurst(f.to.clone().setY(.25), 0xb08060, 18); }
   }
-  for (const c of bank.children) if (c.userData.orb !== undefined) c.position.y = -.15 + Math.sin(t * 3 + c.userData.orb) * .03;
+  for (const c of bank.children) if (c.userData.orb !== undefined) { c.position.y = -.06 + Math.sin(t * 2 + c.userData.orb * 2) * .025; c.rotation.y = t * .8 + c.userData.orb; }
+  for (const f of shrineFlames) f.scale.set(.1 + Math.random() * .015, .16 + Math.sin(t * 15 + f.position.x * 9) * .02, 1);
   swing = Math.max(0, swing - dt * 4); hammer.rotation.z = HAMMER_UP * (1 - Math.sin(swing * Math.PI));
   for (const [, o] of slots) tickPig(o.group, t);
   const ap = slots.get("anvil")?.group, ck = chargeK;
@@ -1208,7 +1226,7 @@ $("panel").addEventListener("click", async e => {
   if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; sfx.play("fireWhoosh"); const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); sfx.play("fireDone"); }
   if (id === "drop") { S.pen.push(S.hand); S.hand = null; }
   if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
-  if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().setY(1.5), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coins", "gem"); }
+  if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().multiplyScalar(.88).setY(.75), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coins", "gem"); }
   if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); sfx.play("gem", "jach"); }
   if (id === "reroll") { if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("shuffle");
     if (has("hook") && !S.hookUsed) { const i = S.pen.findIndex(p => p.lvl === 0 && p.strikes === 0); if (i >= 0) { S.pen.splice(i, 1); S.credits += 2; S.hookUsed = true; banner("+2 크레딧", "수집가의 갈고리가 +0 돼지를 가져갔어요", "f"); } } }
