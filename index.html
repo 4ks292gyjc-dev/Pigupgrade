@@ -100,6 +100,13 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
 #menu .foot>button{min-height:52px;font-size:19px}
 #menu .achPanel{width:100%;max-width:440px;margin-inline:auto;align-self:end;display:grid;gap:8px;max-height:72vh}
 #menu .achPanel .scroll{overflow:auto;display:grid;gap:10px;padding-right:2px}
+.dexGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dexCell{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:4px;text-align:center;display:grid;gap:2px;align-content:start}
+.dexCell img,.dexCell span{width:100%;aspect-ratio:1;display:grid;place-items:center}
+.dexCell span{font-family:var(--display);font-size:26px;color:var(--line)}
+.dexCell small{font-size:10px;line-height:1.25;color:var(--muted);font-weight:700}
+.dexCell.seen small{color:var(--text)}
+.item img.vthumb{width:54px;height:54px;flex:none}
 #menu .achPanel h2{margin:0;font-family:var(--display);font-weight:400;font-size:26px}
 .item.done{border-color:rgba(255,212,59,.5)} .item.done .label{color:var(--great)} .item.locked{opacity:.6}
 /* Knock-out: eyelids close from top and bottom */
@@ -285,6 +292,7 @@ function achieve(id) { if (achieved(id)) return; achs.push(id); toasts.push(id);
 function flushToasts(delay = 1200) {
   toasts.splice(0).forEach((id, i) => setTimeout(() => { const a = ACH[id];
     banner("업적 달성!", a.name + (a.relic ? ` · ${RB[a.relic].name} 해금` : ""), "g"); sfx.play("jach"); }, delay + i * 2000));
+  setTimeout(announceBreeds, delay + 2600);
 }
 const TRIBUTE_MULT = 1.5; // difficulty: tribute demanded vs the calendar; merchant prices keep the base quota
 const need = () => Math.max(0, Math.round(quota(S.day) * TRIBUTE_MULT - (S.carry || 0)));
@@ -294,10 +302,39 @@ function pigName(p, L = p.lvl) {
   return f && L >= 10 ? `${f.name} ${pname(L)}` : pname(L);
 }
 
+// ===== Collection (도감) and breeds: discovering forms and earning achievements unlocks new pig breeds, which then turn up in deliveries =====
+let dex = []; try { dex = JSON.parse(localStorage.getItem("pigforge-dex")) || []; } catch {}
+const DEX_GROUPS = [["g", "일반 등급", 21], ["tree", "세계수", 11], ["fish", "바다", 11], ["grave", "장례", 11]], DEX_TOTAL = 54;
+const dexKey = p => { const L = Math.min(20, Math.max(p.lvl, p.peak || 0)); return FAMS[p.fam]?.special ? `${p.fam}:${L >> 1}` : `g:${L}`; };
+function dexSee(p) { const k = dexKey(p); if (dex.includes(k)) return; dex.push(k); try { localStorage.setItem("pigforge-dex", JSON.stringify(dex)); } catch {} setTimeout(announceBreeds, 1600); }
+const BREEDS = { // cosmetic only: every breed forges the same
+  base: { name: "토종", desc: "늘 오던 분홍 돼지" },
+  spot: { name: "얼룩", desc: "검은 점박이", dex: 5 },
+  gold: { name: "황금", desc: "온몸이 금으로 번쩍여요", ach: "first10" },
+  neon: { name: "광란", desc: "어둠 속에서 자줏빛으로 빛나요", ach: "firstfrenzy" },
+  black: { name: "흑", desc: "숯처럼 검은 가죽에 붉은 눈", ach: "firstdeath" },
+  crystal: { name: "수정", desc: "각진 수정으로 깎은 몸", dex: 15 },
+  lava: { name: "용암", desc: "식은 바위 틈으로 마그마가 맥박쳐요", ach: "broken10" },
+  ghost: { name: "유령", desc: "반쯤 비쳐 보이는 창백한 몸", ach: "soldout" },
+  royal: { name: "왕실", desc: "자줏빛 가죽에 금 목걸이", ach: "clear" },
+  cosmos: { name: "성좌", desc: "밤하늘을 두른 몸에 별이 떠돌아요", dex: 30 },
+};
+const breedOpen = id => { const b = BREEDS[id]; return id === "base" || (b.ach ? achieved(b.ach) : dex.length >= b.dex); };
+const breedCond = b => b.ach ? `업적 「${ACH[b.ach].name}」 달성` : `도감 ${b.dex}종 발견`;
+const openBreeds = () => Object.keys(BREEDS).filter(id => id !== "base" && breedOpen(id));
+const rollBreed = () => { const o = openBreeds(); return o.length && Math.random() < .5 ? o[Math.floor(Math.random() * o.length)] : "base"; };
+let knownBreeds = []; try { knownBreeds = JSON.parse(localStorage.getItem("pigforge-breeds")) || []; } catch {}
+function announceBreeds() {
+  const fresh = openBreeds().filter(id => !knownBreeds.includes(id)); if (!fresh.length) return;
+  if (menu || paused || busy || !$("modal").hidden) return setTimeout(announceBreeds, 2500); // wait until the banner can be seen
+  knownBreeds.push(...fresh); try { localStorage.setItem("pigforge-breeds", JSON.stringify(knownBreeds)); } catch {}
+  fresh.forEach((id, i) => setTimeout(() => { banner("변종 해금!", `${BREEDS[id].name} 돼지가 배달에 섞여 와요`, "f"); sfx.play("jach"); }, i * 2400));
+}
+
 // ===== State =====
 let uid = 1, S = null;
 const has = id => !!S && S.relics.includes(id);
-const newPig = (lvl = 0, fam = REGULAR[Math.floor(Math.random() * REGULAR.length)]) => ({ id: uid++, lvl, peak: lvl, fam,
+const newPig = (lvl = 0, fam = REGULAR[Math.floor(Math.random() * REGULAR.length)]) => ({ id: uid++, lvl, peak: lvl, fam, breed: FAMS[fam].special ? "base" : rollBreed(),
   base: (FAMS[fam].special ? 640 : 320) + (has("pouch") ? 80 : 0), mult: 1, flat: 0, heated: false, charge: 0, strikes: 0,
   run: 0, holdRun: 0, heart: 0, splice: 0, scorch: 0, nbm: 1, phoenix: false, stone: false, sCount: 0, pearl: 0 });
 const fresh = () => ({ day: 1, gold: 0, credits: 0, anger: 0, pen: [], hand: null, anvil: null, tribute: [], relics: [], shop: [], items: {},
@@ -824,14 +861,21 @@ function bodyGeo() {
 function makePig(p) {
   const L = Math.max(p.lvl, p.peak || 0), F = FAMS[p.fam], [h, s, l] = HSL[Math.min(20, L)];
   const col = F?.special ? new THREE.Color().setHSL(F.hue / 360, .55, Math.min(.72, .4 + L * .016)) : new THREE.Color().setHSL(h / 360, s / 100, l / 100);
-  const g = new THREE.Group(), metal = L >= 7, TH = Math.min(20, L), anim = [], keepRoots = [], keepIt = o => (keepRoots.push(o), o); // keepIt: animated parts stay out of bake()
+  const breed = !F?.special && BREEDS[p.breed] ? p.breed : "base", BC = { gold: 0xffc93b, neon: 0x3a1446, black: 0x17120f, crystal: 0x9fd8ff, lava: 0x241410, ghost: 0xcfeee6, royal: 0x5a2a8a, cosmos: 0x10163a }[breed];
+  if (BC) col.set(BC).offsetHSL(0, 0, L * .004);
+  const g = new THREE.Group(), metal = L >= 7 || breed === "gold", TH = Math.min(20, L), anim = [], keepRoots = [], keepIt = o => (keepRoots.push(o), o); // keepIt: animated parts stay out of bake()
   const mat = new THREE.MeshStandardMaterial({ color: col, metalness: metal ? .75 : .05, roughness: metal ? .28 : .65,
     emissive: p.heated ? 0xff5a10 : L >= 13 ? col : 0x000000, emissiveIntensity: p.heated ? .45 : L >= 13 ? .25 : 0 });
   if (!p.heated && L >= 18) mat.emissiveIntensity = .45;
-  const emC = mat.emissive.clone(), emI = mat.emissiveIntensity;
+  let emC, emI; // captured after the breed tweaks below
   const steel = new THREE.MeshStandardMaterial({ color: 0xcfd3d8, metalness: .9, roughness: .22 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xffd43b, metalness: 1, roughness: .2, emissive: 0x6a4a00, side: THREE.DoubleSide });
-  const trim = L >= 10 ? gold : steel;
+  const trim = L >= 10 || breed === "royal" ? gold : steel;
+  if (!p.heated) { const em = { gold: [0x8a5a00, .6], neon: [0xff3df2, .3], lava: [0xff4a10, .12], ghost: [0x2a5a52, .5], crystal: [0x1a4a7a, .3], cosmos: [0x2233aa, .28] }[breed]; if (em) { mat.emissive.setHex(em[0]); mat.emissiveIntensity = Math.max(mat.emissiveIntensity, em[1]); } }
+  if (breed === "gold") { mat.metalness = .8; mat.roughness = .25; }
+  if (breed === "ghost") { mat.transparent = true; mat.opacity = .55; }
+  if (breed === "crystal") { mat.flatShading = true; mat.transparent = true; mat.opacity = .88; mat.metalness = .1; mat.roughness = .05; }
+  emC = mat.emissive.clone(); emI = mat.emissiveIntensity;
   const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
   const glow = (color, size, x, y, z, op = .7, parent = g) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: AURA, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false })); sp.scale.set(size, size, 1); sp.position.set(x, y, z); parent.add(sp); return sp; };
   const disc = (tex, color, size, x, op) => { const holder = new THREE.Group(); holder.rotation.y = Math.PI / 2; holder.position.set(x, .8, 0); const m = new THREE.Mesh(planeGeo, addMat({ map: tex, color, opacity: op })); m.scale.setScalar(size); holder.add(m); g.add(keepIt(holder)); return m; };
@@ -839,6 +883,16 @@ function makePig(p) {
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
     const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, map: AURA, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); g.add(pts); anim.push(t => pts.rotation.y = t * .6); };
   const topY = x => .55 + .5 * Math.sqrt(Math.max(0, 1 - (x / .65) ** 2)); // top of the body at x
+  // breed marks: balls sunk into the hide so only a round cap shows
+  const caps = (m, r, f, list) => { for (const [th, ph] of list) add(new THREE.SphereGeometry(r, 12, 8), m, Math.cos(ph) * Math.cos(th) * .65 * f, .55 + Math.sin(ph) * .5 * f, Math.cos(ph) * Math.sin(th) * .5 * f); };
+  if (breed === "spot") caps(new THREE.MeshStandardMaterial({ color: 0x1c120e, roughness: .7 }), .27, .58, [[2.2, .5], [1.2, .9], [-1.9, .6], [-.9, .2], [.9, .1], [2.9, 0], [-2.6, 1], [-1.4, 1.1]]);
+  if (breed === "lava") { caps(new THREE.MeshBasicMaterial({ color: 0xff7a1a }), .2, .68, [[2.2, .5], [1.3, .8], [-1.9, .6], [-.9, .25], [.9, .15], [2.9, .1], [-2.6, .9]]); const lg = glow(0xff5a1a, 2.2, 0, .6, 0, .3);
+    anim.push(t => { const k = .5 + .5 * Math.sin(t * 2.4); lg.material.opacity = .2 + .2 * k; if (!p.heated && !g.userData.dirty) mat.emissiveIntensity = Math.max(emI, .1 + .22 * k); }); }
+  if (breed === "neon") glow(0xff3df2, 2.2, 0, .6, 0, .3);
+  if (breed === "black") for (const z of [-.16, .16]) glow(0xff2a1a, .26, .98, .83, z, .6);
+  if (breed === "ghost") { const w = glow(0x9ff7d8, 2.3, 0, .6, 0, .25); anim.push(t => w.material.opacity = .18 + .1 * Math.sin(t * 1.7)); }
+  if (breed === "royal") add(new THREE.TorusGeometry(.4, .035, 8, 28), gold, .3, .64, 0, 1, 1, 1).rotation.y = Math.PI / 2;
+  if (breed === "cosmos") { specks(0xffffff, 40, .05); glow(0x4a5cff, 2.4, 0, .6, 0, .25); }
 
   const eyeM = new THREE.MeshStandardMaterial({ color: L >= 12 ? 0xffd43b : L >= 7 ? 0xff4a4a : 0x1a1210, roughness: .15, emissive: L >= 7 ? (L >= 12 ? 0x6a4a00 : 0x5a0000) : 0 });
   if (p.fam === "tree") for (const [x, z, r] of [[-.2, -.15, .5], [0, .1, -.3], [.2, -.05, .2]]) { const leaf = add(new THREE.ConeGeometry(.09, .32, 5), new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: .6 }), x, 1.1, z); leaf.rotation.set(r, 0, r); }
@@ -948,6 +1002,21 @@ function bake(g, fold = new Map()) {
   }
 }
 function disposePig(g) { g.traverse(o => { if (o.material) o.material.dispose(); if (o.geometry && !o.isSprite && !SHARED.has(o.geometry)) o.geometry.dispose(); }); } // textures and SHARED geometry are kept
+// Small portraits for the collection: render a pig to a texture once and keep it as an image
+const thumbs = {}, GAMMA = Uint8ClampedArray.from({ length: 256 }, (_, i) => 255 * (i / 255) ** (1 / 2.2));
+function thumb(q) {
+  const key = `${q.fam}:${q.lvl}:${q.breed || "base"}`; if (thumbs[key]) return thumbs[key];
+  const N = 160, rt = new THREE.WebGLRenderTarget(N, N), sc = new THREE.Scene(), c = new THREE.PerspectiveCamera(32, 1, .1, 20), sun = new THREE.DirectionalLight(0xfff0dd, 1.2);
+  sun.position.set(2, 3, 3); sc.add(new THREE.AmbientLight(0xffffff, .85), sun);
+  const m = makePig({ id: 0, peak: q.lvl, heated: false, ...q }); m.rotation.y = -Math.PI / 2 + .5; tickPig(m, 1); sc.add(m);
+  c.position.set(0, 1, 4.4); c.lookAt(0, .78, 0);
+  const a0 = R.getClearAlpha(); R.setClearAlpha(0); R.setRenderTarget(rt); R.clear(); R.render(sc, c);
+  const px = new Uint8Array(N * N * 4); R.readRenderTargetPixels(rt, 0, 0, N, N, px); R.setRenderTarget(null); R.setClearAlpha(a0);
+  const cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"), im = x.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let i = 0; i < N * 4; i++) { const v = px[(N - 1 - y) * N * 4 + i]; im.data[y * N * 4 + i] = i % 4 === 3 ? v : GAMMA[v]; } // flip rows, linear → sRGB
+  x.putImageData(im, 0, 0); disposePig(m); rt.dispose();
+  return thumbs[key] = cv.toDataURL();
+}
 function tickPig(g, t) { for (const f of g.userData.anim) f(t); }
 
 // Keep the 3D pigs in sync with state
@@ -957,6 +1026,7 @@ function placePig(key, p, parent, pos, scale) {
   if (!p) { if (o0) { o0.group.parent.remove(o0.group); disposePig(o0.group); slots.delete(key); } return; }
   const sig = `${p.id}:${p.lvl}:${p.peak}:${p.heated}`; let o = o0;
   if (!o || o.sig !== sig) { if (o) { o.group.parent.remove(o.group); disposePig(o.group); } o = { sig, group: makePig(p) }; slots.set(key, o); parent.add(o.group); }
+  dexSee(p);
   o.group.position.copy(pos); o.group.scale.setScalar(scale);
   o.group.rotation.y = parent === scene ? Math.atan2(pos.z, -pos.x) : -Math.PI / 2; // turn the snout toward the viewer
 }
@@ -1206,7 +1276,8 @@ function bag(btn) {
   const ks = Object.keys(ITEMS).filter(k => S.items[k] > 0 || S.armed[k]);
   return ks.length ? `<p class="label">내 아이템</p><div class="list">${ks.map(k => `<div class="item"><div><b>${ITEMS[k].name}</b><span class="tag">×${S.items[k] || 0}${S.armed[k] ? " · 적용 대기" : ""}</span><p>${ITEMS[k].desc}</p></div>${btn ? btn(k) : ""}</div>`).join("")}</div>` : "";
 }
-function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pigName(p)}</b>${FAMS[p.fam]?.special ? '<span class="tag" style="background:var(--frenzy);color:#1a120c">특수</span>' : ""}${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 광란 ${p.charge}/10</p></div>${btn}</div>`; }
+const breedTag = p => BREEDS[p.breed] && p.breed !== "base" ? `<span class="tag" style="background:var(--great);color:#1a120c">${BREEDS[p.breed].name}</span>` : "";
+function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pigName(p)}</b>${breedTag(p)}${FAMS[p.fam]?.special ? '<span class="tag" style="background:var(--frenzy);color:#1a120c">특수</span>' : ""}${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 광란 ${p.charge}/10</p></div>${btn}</div>`; }
 let confirmBell = false;
 function ui() {
   sync();
@@ -1222,7 +1293,7 @@ function ui() {
     const p = S.anvil;
     if (p) {
       const o = odds(p);
-      h += `<div class="row"><b class="big">+${p.lvl} ${pigName(p)}</b><span class="big num gold">${G(V(p))}</span></div>
+      h += `<div class="row"><b class="big">+${p.lvl} ${pigName(p)}${breedTag(p)}</b><span class="big num gold">${G(V(p))}</span></div>
         <div class="odds num">${Object.keys(OUT).map(k => `<span>${OUT[k][0]}<b style="color:${OUT[k][1]}">${pct(o[k])}</b></span>`).join("")}</div>
         <div class="stack">${Object.keys(OUT).map(k => `<i style="width:${o[k] * 100}%;background:${OUT[k][1]}"></i>`).join("")}</div>
         <div class="charges" aria-label="광란 게이지 ${p.charge}/10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < p.charge ? "on" : ""}"></i>`).join("")}</div>
@@ -1318,25 +1389,38 @@ const mwList = () => Object.entries(FAMS).map(([k, f]) =>
   `<div class="item ${unlocked(k) ? "done" : "locked"}"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b><span class="tag">${f.name}${f.special ? " · 특수" : ""}</span><p>${unlocked(k) ? RB[f.mw].desc : `${f.name} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("");
 
 // ===== Title menu =====
-let menu = false, confirmNew = false, bestDay = 0; try { bestDay = +localStorage.getItem("pigforge-best") || 0; } catch {}
+let dexFromPause = false, menu = false, confirmNew = false, bestDay = 0; try { bestDay = +localStorage.getItem("pigforge-best") || 0; } catch {}
 const alive = () => S && S.anger < 3;
 const inProgress = () => alive() && (S.day > 1 || S.gift);
 function showMenu(view = "main") {
   menu = true; confirmNew = view === "confirm"; document.body.classList.add("menu"); const m = $("menu"); m.hidden = false;
-  if (view === "ach") {
+  if (view === "dex") {
+    const cell = (k, label, q) => dex.includes(k) ? `<div class="dexCell seen"><img alt="" data-t='${JSON.stringify(q)}'><small>${label}</small></div>` : `<div class="dexCell"><span>?</span><small>${label.split(" ")[0]} ???</small></div>`;
+    const groups = DEX_GROUPS.map(([g, name, n]) => `<div class="label">${name} ${dex.filter(k => k.startsWith(g + ":")).length}/${n}</div><div class="dexGrid">${Array.from({ length: n }, (_, i) =>
+      g === "g" ? cell(`g:${i}`, `+${i} ${NAMES[i]}`, { lvl: i, fam: "citadel" }) : cell(`${g}:${i}`, `+${i * 2} ${FAMS[g].forms[i]} 돼지`, { lvl: i * 2, fam: g })).join("")}</div>`).join("");
+    const breeds = Object.entries(BREEDS).filter(([id]) => id !== "base").map(([id, b]) => `<div class="item ${breedOpen(id) ? "done" : "locked"}">
+      <div style="display:flex;gap:8px;align-items:center">${breedOpen(id) ? `<img class="vthumb" alt="" data-t='${JSON.stringify({ lvl: 9, fam: "citadel", breed: id })}'>` : ""}<div><b>${breedOpen(id) ? b.name + " 돼지" : "???"}</b><p>${breedOpen(id) ? b.desc : breedCond(b)}</p></div></div>
+      <span class="label">${breedOpen(id) ? "해금" : "잠김"}</span></div>`).join("");
+    m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>도감 <span class="gold">${dex.length}/${DEX_TOTAL}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
+      <div class="scroll">${groups}<div class="label">변종 ${openBreeds().length}/${Object.keys(BREEDS).length - 1} · 업적과 도감을 채우면 새 변종이 배달 돼지에 섞여 와요 (겉모습만 달라요)</div><div class="list">${breeds}</div></div></div>`;
+    const imgs = [...m.querySelectorAll("img[data-t]")]; // portraits are drawn a few per frame so the list opens instantly
+    (function next() { const im = imgs.shift(); if (!im || !im.isConnected) return; im.src = thumb(JSON.parse(im.dataset.t)); setTimeout(next, 0); })();
+  } else if (view === "ach") {
     m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>업적 <span class="gold">${achCount()}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
       <div class="scroll"><div class="list">${achList()}</div><div class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 유물 진열장에 나와요</div><div class="list">${mwList()}</div></div></div>`;
   } else {
     m.innerHTML = `<div class="head"><p class="kicker">멧돼지 군주의 대장간</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}</div>
       <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</small></button>` : ""}
       <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
-      <button class="ghost" id="mAch">업적 ${achCount()}</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mAch" style="min-height:52px;font-size:17px">업적 ${achCount()}</button><button class="ghost" id="mDex" style="min-height:52px;font-size:17px">도감 ${dex.length}/${DEX_TOTAL}</button></div>
       <button class="ghost" id="mSnd">${sfx.muted ? "소리 끔" : "소리 켬"}</button></div>`;
   }
   m.querySelectorAll("button").forEach(b => b.onclick = () => { sfx.play("tick"); menuClick(b.id); });
 }
 function menuClick(id) {
+  if (id === "mBack" && dexFromPause) { dexFromPause = false; hideMenu(); return pause(); }
   if (id === "mBack") return showMenu();
+  if (id === "mDex") return showMenu("dex");
   if (id === "mAch") return showMenu("ach");
   if (id === "mSnd") { sfx.toggle(); return showMenu(); }
   if (id === "mNew" && inProgress() && !confirmNew) return showMenu("confirm");
@@ -1389,7 +1473,9 @@ function pause(confirmRestart = false) {
   showModal(`<h2>일시정지</h2><p>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</p>
     <button class="hot" id="pResume">마저하기</button>
     <button class="ghost" id="pRestart">${confirmRestart ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "처음부터 다시 시작하기"}</button>
+    <button class="ghost" id="pDex">도감 ${dex.length}/${DEX_TOTAL}</button>
     <button class="ghost" id="pMain">메인 화면으로</button>`, () => {
+    $("pDex").onclick = () => { paused = false; $("modal").hidden = true; dexFromPause = true; sfx.play("tick"); showMenu("dex"); };
     $("pResume").onclick = resume;
     $("pRestart").onclick = () => { if (!confirmRestart) return pause(true); paused = false; frenzyLeft = 0; frenzyUntil = 0; sfx.play("tick"); restart(); };
     $("pMain").onclick = () => { paused = false; $("modal").hidden = true; save(); sfx.play("tick"); showMenu(); }; // frenzy stays frozen until 이어하기
