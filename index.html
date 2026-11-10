@@ -338,8 +338,8 @@ const newPig = (lvl = 0, fam = REGULAR[Math.floor(Math.random() * REGULAR.length
   base: (FAMS[fam].special ? 640 : 320) + (has("pouch") ? 80 : 0), mult: 1, flat: 0, heated: false, charge: 0, strikes: 0,
   run: 0, holdRun: 0, heart: 0, splice: 0, scorch: 0, nbm: 1, phoenix: false, stone: false, sCount: 0, pearl: 0 });
 const fresh = () => ({ day: 1, gold: 0, credits: 0, anger: 0, pen: [], hand: null, anvil: null, tribute: [], relics: [], shop: [], items: {},
-  armed: {}, merchant: null, extra: 0, fenceUsed: false, freeReroll: false, incenseUsed: false, pays: 0, contract: false, gift: null, uid: 1 });
-function load() { try { const d = JSON.parse(localStorage.getItem("pigforge")); if (d && d.day) { S = d; uid = d.uid || 1000; return true; } } catch {} return false; }
+  armed: {}, merchant: null, shelf: [null, null, null], extra: 0, fenceUsed: false, freeReroll: false, incenseUsed: false, pays: 0, contract: false, gift: null, uid: 1 });
+function load() { try { const d = JSON.parse(localStorage.getItem("pigforge")); if (d && d.day) { S = d; S.shelf ||= [null, null, null]; uid = d.uid || 1000; return true; } } catch {} return false; }
 const save = () => { try { S.uid = uid; localStorage.setItem("pigforge", JSON.stringify(S)); } catch {} };
 
 const gmult = L => (has("thorn") ? 1.1 : 1) * (has("signet") ? 1.15 : 1) * (has("iron") && L >= 8 ? 1.3 : 1) * (has("lseal") && L >= 12 ? 1.5 : 1);
@@ -544,7 +544,7 @@ addEventListener("resize", resize);
 
 const STATIONS = [
   { id: "anvil", name: "모루", yaw: 0, pitch: -.62 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
-  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 },
+  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 }, { id: "shelf", name: "진열대", yaw: -35, pitch: -.24 },
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
 const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
@@ -676,13 +676,30 @@ const shrineFlames = [];
 // Ghost merchant: a sheet ghost with a lantern
 const ghostPos = at(-140, 2.4);
 const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.lookAt(0, .2, 0); scene.add(ghost);
-{ const gm = new THREE.MeshStandardMaterial({ color: 0xd8f3ee, transparent: true, opacity: .82, emissive: 0x335a55, roughness: .9 });
+{ const gm = new THREE.MeshStandardMaterial({ color: 0xd8f3ee, transparent: true, opacity: .82, emissive: 0x335a55, roughness: .9 }), eyeG = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true });
   const top = new THREE.Mesh(new THREE.SphereGeometry(.38, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), gm); top.position.y = 1.3; ghost.add(top);
   const skirt = new THREE.Mesh(new THREE.CylinderGeometry(.38, .5, .9, 20, 1, true), gm); skirt.position.y = .85; ghost.add(skirt);
-  for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0x111111 })); e.position.set(x, 1.4, .34); ghost.add(e); }
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0x9ff7d8 })); lamp.position.set(.45, 1, .2); ghost.add(lamp);
-  const gl = new THREE.PointLight(0x9ff7d8, 1.2, 3); gl.position.copy(lamp.position); ghost.add(gl); }
+  for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), eyeG); e.position.set(x, 1.4, .34); ghost.add(e); }
+  const lampM = new THREE.MeshBasicMaterial({ color: 0x9ff7d8, transparent: true }), lamp = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), lampM); lamp.position.set(.45, 1, .2); ghost.add(lamp);
+  const gl = new THREE.PointLight(0x9ff7d8, 1.2, 3); gl.position.copy(lamp.position); ghost.add(gl);
+  ghost.userData = { mats: [[gm, .82], [eyeG, 1], [lampM, 1]], gl, glI: 1.2 }; }
 box(1.1, .7, .5, wood(0x7a5030), at(-140, 1.95, .35));
+// The ghost fades in when he arrives and, once you have bought everything, bows, spins up into a thread of light and is gone
+let ghostLeaving = false, ghostRise = 0, ghostSpin = 0;
+function ghostSet(k) { const u = ghost.userData; for (const [m, o] of u.mats) m.opacity = o * k; u.gl.intensity = u.glI * k; }
+function ghostReset() { ghost.scale.set(1, 1, 1); ghostRise = 0; ghostSpin = 0; ghost.lookAt(0, ghost.position.y, 0); ghostSet(1); }
+function ghostArrive() { ghostReset(); ghostSet(0); sparkBurst(ghostPos.clone().setY(1), 0x9ff7d8, 24, .6); tween(reduced ? 200 : 1100, k => ghostSet(k)); }
+async function ghostLeave() {
+  if (ghostLeaving) return; ghostLeaving = true; const spots = () => ghostPos.clone().multiplyScalar(.97).setY(.9 + ghostRise);
+  banner("품절!", "유령 상인이 흡족하게 떠나요", "g"); sfx.play("coins", "gem");
+  if (!reduced) { await tween(550, k => { ghost.scale.set(1 + .1 * Math.sin(k * Math.PI), 1 - .22 * Math.sin(k * Math.PI), 1 + .1 * Math.sin(k * Math.PI)); }); // a little bow
+    ghost.scale.set(1, 1, 1); sfx.play("swish");
+    let nx = 0; await tween(2300, k => { ghostSpin = 2 + k * k * 22; ghostRise = k * k * 2.3; const w = 1 - k * .85; ghost.scale.set(w, 1 + k * .7, w); ghostSet(Math.max(0, 1 - k * 1.15));
+      if (k > nx) { nx = k + .04; sparkBurst(spots(), 0x9ff7d8, 3, .35); } }); }
+  shock(ghostPos.clone().setY(.1), 0x9ff7d8, 1.4, .6); sparkBurst(spots(), 0xd8fff4, 40, 1); sfx.play("swish");
+  ghostSpin = 0; ghost.visible = false; ghostLeaving = false; S.merchant = null; ghostReset(); ghost.visible = false; ui();
+  banner("유령이 떠났어요", `다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}`, "h");
+}
 // Tribute hatch: bars and the boar lord's eyes
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
@@ -1029,6 +1046,7 @@ function placePig(key, p, parent, pos, scale) {
   dexSee(p);
   o.group.position.copy(pos); o.group.scale.setScalar(scale);
   o.group.rotation.y = parent === scene ? Math.atan2(pos.z, -pos.x) : -Math.PI / 2; // turn the snout toward the viewer
+  o.group.userData.baseY = o.group.rotation.y;
 }
 let hideAnvilPig = false, hideTribute = false;
 function sync() {
@@ -1038,7 +1056,9 @@ function sync() {
   S.pen.slice(0, 12).forEach((p, i) => { if (flying.has(p.id)) return; const k = "pen" + i; used.add(k); placePig(k, p, scene, penSlot(i), .25); });
   if (!hideTribute) S.tribute.slice(0, 8).forEach((p, i) => { const k = "tr" + i; used.add(k); placePig(k, p, scene, at(-70 + (i % 4 - 1.5) * 7, 2.85 + Math.floor(i / 4) * .3, .55), .19); });
   for (const k of [...slots.keys()]) if (!used.has(k)) placePig(k, null);
-  ghost.visible = !!S.merchant;
+  const gv = !!S.merchant || ghostLeaving; if (gv && !ghost.visible) ghostArrive(); ghost.visible = gv;
+  S.shelf.forEach((p, i) => { const k = "sh" + i; used.add(k); placePig(k, p, scene, shelfPos(i), .27); });
+  shelfFx();
 }
 
 // Rage: after a failed tribute the boar lord throws the morning delivery through the hatch into the pen
@@ -1112,6 +1132,36 @@ let cineOn = false, cine = 0, cineT = 0, chargeK = 0;
 const ringEl = $("ring"), ringTextEl = $("ringText"), projV = new THREE.Vector3();
 function setCine(on) { cineOn = on; document.body.classList.toggle("cine", on); }
 
+// Display case (진열대): three stepped pedestals under hanging spotlights in a velvet alcove, for your three best pigs
+const SHELF_YAW = -35, SHELF_SLOT = [[8, 3.2, .74], [0, 2.9, .96], [-8, 3.2, .74]]; // yaw offset, radius, pedestal top
+const shelfPos = i => { const [dy, r, y] = SHELF_SLOT[i]; return at(SHELF_YAW + dy, r, y + .02); };
+const shelfSlots = [];
+{ const ca = (SHELF_YAW * Math.PI / 180) + Math.PI, len = 1.1;
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(3.85, 3.85, 2.5, 24, 1, true, ca - len / 2, len), M(0x2a0b12, { side: THREE.BackSide, roughness: .95 })); back.position.y = 1.25; scene.add(back); // velvet
+  const gold = M(0xd4a840, { metalness: .9, roughness: .3, emissive: 0x2a1c00 });
+  for (const [dy, h, y] of [[0, .07, 2.46], [0, .07, .06]]) { const rim = new THREE.Mesh(new THREE.CylinderGeometry(3.84, 3.84, h, 24, 1, true, ca - len / 2, len), gold); rim.position.y = y; scene.add(rim); } // gold trim
+  for (const s of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.5, 8), gold); post.position.copy(at(SHELF_YAW + s * 31, 3.84)).setY(1.25); scene.add(post); }
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .32), new THREE.MeshBasicMaterial());
+  const signTex = new THREE.CanvasTexture(Object.assign(document.createElement("canvas"), { width: 512, height: 110 })), sx = signTex.image.getContext("2d");
+  sx.fillStyle = "#1e120c"; sx.fillRect(0, 0, 512, 110); sx.strokeStyle = "#d4a840"; sx.lineWidth = 6; sx.strokeRect(4, 4, 504, 102);
+  sx.fillStyle = "#ffd978"; sx.font = "56px Jua, sans-serif"; sx.textAlign = "center"; sx.textBaseline = "middle"; sx.fillText("명예의 진열대", 256, 58); signTex.encoding = THREE.sRGBEncoding;
+  sign.material = new THREE.MeshBasicMaterial({ map: signTex }); sign.position.copy(at(SHELF_YAW, 3.7, 1.95)); sign.lookAt(0, 1.95, 0); scene.add(sign);
+  const stone = M(0x34302c, { roughness: .3, metalness: .15 }), beamMat = addMat({ map: BEAM, color: 0xffe9b0, opacity: .12 }), cone = new THREE.ConeGeometry(.3, 1.7, 24, 1, true);
+  for (let i = 0; i < 3; i++) { const top = SHELF_SLOT[i][2], g = new THREE.Group(); g.position.copy(at(SHELF_YAW + SHELF_SLOT[i][0], SHELF_SLOT[i][1])); g.lookAt(0, 0, 0); scene.add(g);
+    const part = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
+    part(new THREE.CylinderGeometry(.27, .3, .1, 24), stone, 0, .05, 0); part(new THREE.CylinderGeometry(.2, .24, top - .15, 24), stone, 0, (top - .15) / 2 + .1, 0); part(new THREE.CylinderGeometry(.27, .21, .09, 24), stone, 0, top - .045, 0);
+    part(new THREE.TorusGeometry(.265, .02, 8, 36), gold, 0, top - .005, 0).rotation.x = Math.PI / 2;
+    const disc = part(new THREE.CircleGeometry(.24, 28), addMat({ color: 0xffd978, opacity: .35 }), 0, top + .004, 0); disc.rotation.x = -Math.PI / 2;
+    const beam = part(cone, beamMat.clone(), 0, top + .85, 0);
+    const plateTex = new THREE.CanvasTexture(Object.assign(document.createElement("canvas"), { width: 256, height: 64 })), plate = part(new THREE.PlaneGeometry(.3, .075), new THREE.MeshBasicMaterial({ map: plateTex }), 0, top - .2, .245); plateTex.encoding = THREE.sRGBEncoding;
+    const hood = part(new THREE.ConeGeometry(.1, .14, 12), M(0x1c1814, { metalness: .8, roughness: .4 }), 0, top + 1.75, 0); part(new THREE.CylinderGeometry(.006, .006, .75, 5), M(0x1c1814), 0, top + 2.15, 0); // spotlight on a rod
+    part(new THREE.SphereGeometry(.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff0c0 }), 0, top + 1.67, 0);
+    shelfSlots.push({ disc, beam, plateTex, key: "" }); } }
+const TIER = L => L >= 20 ? 0xff9bff : L >= 18 ? 0xb9a8ff : L >= 15 ? 0x9fe3ff : L >= 10 ? 0xffd43b : 0xfff0c8;
+function shelfFx() { shelfSlots.forEach((s, i) => { const p = S.shelf[i], L = p ? Math.min(20, Math.max(p.lvl, p.peak || 0)) : 0, c = p ? TIER(L) : 0x806a40, key = p ? `${p.id}:${p.lvl}:${p.breed}` : "";
+  s.disc.material.color.setHex(c); s.disc.material.opacity = p ? .5 : .1; s.beam.material.color.setHex(c); s.beam.material.opacity = p ? .1 + L * .004 : .03;
+  if (s.key === key) return; s.key = key; const x = s.plateTex.image.getContext("2d"); x.fillStyle = "#1e120c"; x.fillRect(0, 0, 256, 64); x.strokeStyle = "#d4a840"; x.lineWidth = 3; x.strokeRect(2, 2, 252, 60);
+  x.fillStyle = p ? "#ffe9a8" : "#7a6a50"; x.font = "26px Jua, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(p ? `+${p.lvl} ${pigName(p)}` : "빈 자리", 128, 34, 240); s.plateTex.needsUpdate = true; }); }
 // Camera: one view per station; swipe or arrows to turn, tap the scene at the anvil to strike
 let st = 0, yaw = 0, pitch = -.5, shakeT = 0, swing = 0, crackT = 0, drag = null;
 canvas.addEventListener("pointerdown", e => drag = { x: e.clientX });
@@ -1152,7 +1202,8 @@ function loop(now) {
   { const d = Math.abs(((yaw - 55) % 360 + 540) % 360 - 180); sfx.ambience(.05 + Math.max(0, 1 - d / 75) * .45); } // crackle louder facing the furnace
   // drop render resolution a step while frames run slow (phones with 3x screens)
   if ((frameN = (frameN + 1) % 90) === 0) { if (slowT / 90 > 1 / 45 && pixR > 1) { pixR = Math.max(1, pixR - .25); R.setPixelRatio(pixR); resize(); } slowT = 0; } slowT += dt;
-  ghost.position.y = .2 + Math.sin(t * 2) * .06;
+  ghost.position.y = .2 + Math.sin(t * 2) * .06 + ghostRise; if (ghostSpin) ghost.rotateY(ghostSpin * dt);
+  for (const [k, o] of slots) if (k.startsWith("sh")) o.group.rotation.y = o.group.userData.baseY + Math.sin(t * .7 + +k[2] * 2) * .38; // the displayed pigs sway to show off
   rageT = Math.max(0, rageT - dt);
   tickEyes(dt, t);
   for (let i = flights.length - 1; i >= 0; i--) {
@@ -1321,12 +1372,18 @@ function ui() {
     h += `<p class="label">내 유물 ${S.relics.length}/8</p>` + (S.relics.length ? `<div class="list">${S.relics.map(id => `<div class="item"><div><b>${RB[id].name}</b><p>${RB[id].desc}</p></div><button class="ghost" data-toss="${id}">버리기</button></div>`).join("")}</div>` : "");
   }
   if (s === "ghost") {
-    if (!S.merchant) h += `<p class="label">유령 상인은 3일마다 와요. 다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}</p>`;
+    if (ghostLeaving) h += `<p class="label">유령이 흡족해하며 떠나는 중…</p>`;
+    else if (!S.merchant) h += `<p class="label">유령 상인은 3일마다 와요. 다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}</p>`;
     else h += `<p>“흐흐… 오늘은 뭘 사겠나?”</p><div class="list">${Object.entries(S.merchant).map(([id, o]) => {
       const sp = id === "special", nm = id === "pig" ? "기본 돼지 (+0)" : sp ? `${FAMS[o.fam].name} 특수 돼지 (+${o.lvl})` : ITEMS[id].name;
       const ds = id === "pig" ? "우리에 바로 들어가요" : sp ? "기본 가치 2배 · 사면 바로 손에 들려요 (손이 비어 있어야 해요)" : ITEMS[id].desc;
       return `<div class="item"><div><b>${nm}</b><span class="tag">남음 ${o.left}</span><p>${ds}</p></div><button data-shop="${id}" ${o.left && S.gold >= o.price && !(sp && S.hand) ? "" : "disabled"}>${G(o.price)}</button></div>`; }).join("")}</div>
       <p class="label">같은 물건을 또 사면 값이 3배가 돼요.</p>` + bag(k => k === "clock" || k === "note" || k === "incense" ? "" : `<span class="label">모루에서 사용</span>`);
+  }
+  if (s === "shelf") {
+    h += `<div class="row"><span class="label">가장 자랑스러운 돼지를 올려 두세요. 진열한 돼지는 언제든 내릴 수 있어요.</span></div><div class="list">${S.shelf.map((p, i) => p
+      ? pigLine(p, `<button class="ghost" data-unshelf="${i}" ${S.hand ? "disabled" : ""}>내리기</button>`)
+      : `<div class="item"><div><b>빈 자리 ${i + 1}</b><p>${S.hand ? `손에 든 돼지: +${S.hand.lvl} ${pigName(S.hand)}` : "돼지를 손에 들고 오세요"}</p></div><button data-shelf="${i}" ${S.hand ? "" : "disabled"}>올리기</button></div>`).join("")}</div>`;
   }
   if (s === "tribute") {
     const short = Math.max(0, q - tsum);
@@ -1365,9 +1422,9 @@ $("panel").addEventListener("click", async e => {
   if (d.shop) { const o = S.merchant[d.shop]; S.gold -= o.price; o.left--; o.price *= 3;
     if (d.shop === "pig") S.pen.push(newPig()); else if (d.shop === "special") S.hand = newPig(o.lvl, o.fam); else if (d.shop === "note") S.extra += 2;
     else if (d.shop === "incense") { S.anger = Math.max(0, S.anger - 1); S.incenseUsed = true; } else S.items[d.shop] = (S.items[d.shop] || 0) + 1;
-    if (Object.values(S.merchant).every(x => !x.left)) achieve("soldout");
+    const soldOut = Object.values(S.merchant).every(x => !x.left); if (soldOut) achieve("soldout");
     flushToasts(1400);
-    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coins"); }
+    banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coins"); if (soldOut) setTimeout(ghostLeave, 700); }
   if (d.use) { const k = d.use;
     if (k === "star") { if (inFrenzy()) { sfx.play("error"); return banner("안 돼요", "광란 중엔 못 써요", "h"); } S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
     else if (S.armed[k]) { delete S.armed[k]; S.items[k] = (S.items[k] || 0) + 1; }
@@ -1376,6 +1433,10 @@ $("panel").addEventListener("click", async e => {
     S.armed = lastSnap.armed; S.fenceUsed = lastSnap.fence; S.gold = lastSnap.gold; lastSnap = null; banner("되감기", "마지막 타격을 없던 일로", "f"); }
   if (id === "offer") { S.tribute.push(S.hand); S.hand = null; }
   if (d.take) S.hand = S.tribute.splice(+d.take, 1)[0];
+  if (d.shelf !== undefined && S.hand && !S.shelf[+d.shelf]) { const p = S.hand, i = +d.shelf, L = Math.min(20, Math.max(p.lvl, p.peak || 0)), at0 = shelfPos(i).clone().setY(SHELF_SLOT[i][2]);
+    S.shelf[i] = p; S.hand = null; sfx.play("place", L >= 10 ? "gem" : ""); sparkBurst(at0.clone().setY(at0.y + .3), TIER(L), 20 + L * 3, .8); shock(at0, TIER(L), .8 + L * .05, .6);
+    if (L >= 10) pillar(at0, TIER(L), .12, 3, .9); banner("진열!", `+${p.lvl} ${pigName(p)}`, L >= 15 ? "g" : "s"); }
+  if (d.unshelf !== undefined && !S.hand && S.shelf[+d.unshelf]) { S.hand = S.shelf[+d.unshelf]; S.shelf[+d.unshelf] = null; sfx.play("pick"); }
   if (id === "bell") { if (!confirmBell) { confirmBell = true; return ui(); } confirmBell = false; return collectTribute(); }
   ui();
 });
