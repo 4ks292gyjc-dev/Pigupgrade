@@ -1173,12 +1173,31 @@ const boardCv = Object.assign(document.createElement("canvas"), { width: 1024, h
   for (const x of [-.6, .6]) for (const y of [-.28, .28]) { const r = new THREE.Mesh(new THREE.SphereGeometry(.014, 8, 6), M(0x6a625a, { metalness: .8 })); r.position.set(x, y, .006); g.add(r); }
   for (const s of [-1, 1]) { const ch = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, 1.2, 5), M(0x1c1814, { metalness: .8 })); ch.position.set(s * .5, .9, -.03); g.add(ch); } } // hung on chains
 // Calendar pinned to the wall left of the board: passed days crossed out, merchant days marked
-const calCv = Object.assign(document.createElement("canvas"), { width: 400, height: 470 }), calTex = new THREE.CanvasTexture(calCv); calTex.encoding = THREE.sRGBEncoding;
-{ const m = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 1.59), new THREE.MeshBasicMaterial({ map: calTex, color: 0xc8bca8 })); m.position.copy(at(-110, 5.3, 3.08)); m.lookAt(0, 3.08, 0); m.rotation.z += .02; scene.add(m); }
+// A sheet of paper pinned to the wall: torn edges (same each redraw), stains and a soft shadow; returns the context translated to the padded content area
+function paper(cv, seed, pins, px, py) {
+  const x = cv.getContext("2d"), W = cv.width, H = cv.height, m = 16; let s = seed; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H);
+  const pts = [], edge = (ax, ay, bx, by, n) => { for (let i = 0; i < n; i++) { const k = i / n, nx = ay - by, ny = bx - ax, l = Math.hypot(nx, ny), j = (rnd() - .5) * 9; pts.push([ax + (bx - ax) * k + nx / l * j, ay + (by - ay) * k + ny / l * j]); } };
+  edge(m + 6, m, W - m, m + 4, 40); edge(W - m, m + 4, W - m - 3, H - m, 40); edge(W - m - 3, H - m, m, H - m - 5, 40); edge(m, H - m - 5, m + 6, m, 40);
+  x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath();
+  x.save(); x.shadowColor = "rgba(0,0,0,.55)"; x.shadowBlur = 14; x.shadowOffsetY = 6; x.fillStyle = "#d9c9a0"; x.fill(); x.restore();
+  x.save(); x.clip();
+  const g = x.createRadialGradient(W * .45, H * .4, 40, W / 2, H / 2, Math.max(W, H) * .75); g.addColorStop(0, "#e2d4ae"); g.addColorStop(1, "#b39c6c"); x.fillStyle = g; x.fillRect(0, 0, W, H); // darker, aged edges
+  for (let i = 0; i < 70; i++) { x.fillStyle = `rgba(110,80,40,${rnd() * .07})`; x.beginPath(); x.arc(rnd() * W, rnd() * H, 20 + rnd() * 90, 0, 7); x.fill(); }
+  x.strokeStyle = "rgba(90,60,30,.12)"; x.lineWidth = 2; x.beginPath(); x.moveTo(W * .5 + 4, m); x.lineTo(W * .5 - 3, H - m); x.stroke(); // old fold
+  x.restore();
+  for (const [a, b] of pins) { x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.arc(a * W + 3, b * H + 4, 9, 0, 7); x.fill(); x.fillStyle = "#3a2e26"; x.beginPath(); x.arc(a * W, b * H, 9, 0, 7); x.fill(); x.fillStyle = "#8a7a6a"; x.beginPath(); x.arc(a * W - 3, b * H - 3, 3, 0, 7); x.fill(); }
+  x.translate(px, py); return x;
+}
+// Plane bent slightly like paper, with the lower right corner peeling off the wall
+function paperGeo(w, h) { const g = new THREE.PlaneGeometry(w, h, 10, 10), a = g.attributes.position;
+  for (let i = 0; i < a.count; i++) { const u = a.getX(i) / w + .5, v = a.getY(i) / h + .5; a.setZ(i, .015 * Math.sin(u * Math.PI) + .09 * Math.max(0, (u - .72) / .28) ** 2 * Math.max(0, (.3 - v) / .3) ** 2); }
+  g.computeVertexNormals(); return g; }
+const calCv = Object.assign(document.createElement("canvas"), { width: 520, height: 600 }), calTex = new THREE.CanvasTexture(calCv); calTex.encoding = THREE.sRGBEncoding;
+{ const m = new THREE.Mesh(paperGeo(1.4, 1.615), new THREE.MeshBasicMaterial({ map: calTex, color: 0xc8bca8, transparent: true, alphaTest: .02 })); m.position.copy(at(-110, 5.3, 3.14)); m.lookAt(0, 3.14, 0); m.rotation.z += .02; scene.add(m); }
 let calSig = "";
 function drawCalendar() {
-  const sig = `${S.day}`; if (sig === calSig) return; calSig = sig; const x = calCv.getContext("2d"), W = 400, base = Math.floor((S.day - 1) / 30) * 30;
-  x.fillStyle = "#e6dcc6"; x.fillRect(0, 0, W, 470); x.fillStyle = "rgba(90,60,30,.15)"; for (let i = 0; i < 40; i++) x.fillRect(Math.random() * W, Math.random() * 470, 30 + Math.random() * 60, 2);
+  const sig = `${S.day}`; if (sig === calSig) return; calSig = sig; const x = paper(calCv, 7919, [[.5, .06]], 60, 70), W = 400, base = Math.floor((S.day - 1) / 30) * 30; // 400×470 content inside the margins
   x.fillStyle = "#3a2c22"; x.font = "56px Jua, sans-serif"; x.textAlign = "center"; x.fillText(`DAY ${base + 1}–${base + 30}`, W / 2, 66);
   x.font = "38px Jua, sans-serif"; x.textBaseline = "middle";
   for (let i = 0; i < 30; i++) { const d = base + i + 1, cx = 34 + (i % 6) * 66, cy = 128 + Math.floor(i / 6) * 70;
@@ -1187,11 +1206,11 @@ function drawCalendar() {
     if (d === 21) { x.strokeStyle = "#8a3a2a"; x.lineWidth = 3; x.strokeRect(cx - 28, cy - 26, 56, 52); }
     if (d < S.day) { x.strokeStyle = "rgba(190,40,30,.9)"; x.lineWidth = 6; x.beginPath(); x.moveTo(cx - 22, cy - 20); x.lineTo(cx + 22, cy + 20); x.moveTo(cx + 22, cy - 20); x.lineTo(cx - 22, cy + 20); x.stroke(); }
     if (d === S.day) { x.strokeStyle = "#2a1a10"; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy, 27, 0, 7); x.stroke(); } }
-  calTex.needsUpdate = true;
+  x.setTransform(1, 0, 0, 1, 0, 0); calTex.needsUpdate = true;
 }
 // Draw sheet (추첨표) pinned under the calendar: one square per ticket in the deck; × marks tickets a relic removed, + tickets it added
-const sheetCv = Object.assign(document.createElement("canvas"), { width: 1024, height: 720 }), sheetTex = new THREE.CanvasTexture(sheetCv); sheetTex.encoding = THREE.sRGBEncoding; sheetTex.anisotropy = 4;
-{ const m = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.62), new THREE.MeshBasicMaterial({ map: sheetTex, color: 0xc8bca8 })); m.position.copy(at(-110, 5.3, 1.4)); m.lookAt(0, 1.4, 0); m.rotation.z -= .015; scene.add(m);
+const sheetCv = Object.assign(document.createElement("canvas"), { width: 1240, height: 940 }), sheetTex = new THREE.CanvasTexture(sheetCv); sheetTex.encoding = THREE.sRGBEncoding; sheetTex.anisotropy = 4;
+{ const m = new THREE.Mesh(paperGeo(2.45, 1.857), new THREE.MeshBasicMaterial({ map: sheetTex, color: 0xc8bca8, transparent: true, alphaTest: .02 })); m.position.copy(at(-110, 5.3, 1.36)); m.lookAt(0, 1.36, 0); m.rotation.z -= .015; scene.add(m);
   const ch = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 4, 6), M(0x2a2420, { metalness: .8, roughness: .4 })); ch.position.copy(at(-96, 5.25, 2)); scene.add(ch); // a hanging chain, as in the original
   const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: FLAME, color: 0xffb060, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); fl.scale.set(.22, .36, 1); fl.position.copy(at(-124, 5.2, 2.3)); scene.add(fl);
   const gw = new THREE.Sprite(new THREE.SpriteMaterial({ map: AURA, color: 0xff9a3c, transparent: true, opacity: .35, blending: THREE.AdditiveBlending, depthWrite: false })); gw.scale.setScalar(2.2); gw.position.copy(fl.position); scene.add(gw);
@@ -1200,9 +1219,7 @@ let sheetSig = "";
 function drawSheet() {
   const p = S.anvil || { lvl: 0 }, { c, bt, base } = deck(p), cur = { b: Math.max(0, bt), ...c }, keys = ["b", "d", "h", "s", "g"];
   const sig = keys.map(k => base[k] + ":" + cur[k]).join(); if (sig === sheetSig) return; sheetSig = sig;
-  const x = sheetCv.getContext("2d"), W = 1024, H = 720, ink = "#2a1e12";
-  x.fillStyle = "#d9c9a0"; x.fillRect(0, 0, W, H); for (let i = 0; i < 60; i++) { x.fillStyle = `rgba(120,90,50,${Math.random() * .08})`; x.beginPath(); x.arc(Math.random() * W, Math.random() * H, 30 + Math.random() * 90, 0, 7); x.fill(); }
-  x.fillStyle = "#1a1410"; x.fillRect(34, 26, 20, 20); x.fillRect(W - 54, 26, 20, 20); // pins
+  const x = paper(sheetCv, 104729, [[.06, .07], [.94, .065]], 108, 110), W = 1024, H = 720, ink = "#2a1e12"; // 1024×720 content inside the margins
   x.fillStyle = ink; x.textBaseline = "middle"; x.textAlign = "left"; x.font = "64px Jua, sans-serif"; x.fillText("추 첨 표", 70, 86);
   x.font = "28px Jua, sans-serif"; x.fillText("× 지움    + 추가", 640, 96);
   x.strokeStyle = ink; x.lineWidth = 3; x.beginPath(); x.moveTo(60, 140); x.lineTo(W - 60, 140); x.moveTo(60, 610); x.lineTo(W - 60, 610); x.stroke();
@@ -1213,7 +1230,7 @@ function drawSheet() {
       if (i >= kept + gone) { x.strokeStyle = "#2a6a3a"; x.beginPath(); x.moveTo(X + sz / 2, Y + 4); x.lineTo(X + sz / 2, Y + sz - 4); x.moveTo(X + 4, Y + sz / 2); x.lineTo(X + sz - 4, Y + sz / 2); x.stroke(); } }
     x.textAlign = "right"; x.fillStyle = ink; x.font = "52px Jua, sans-serif"; x.fillText(cur[k], W - 64, y); });
   x.textAlign = "left"; x.font = "38px Jua, sans-serif"; x.fillText(`총 ${keys.reduce((a, k) => a + cur[k], 0)}장`, 64, 652); x.font = "24px Jua, sans-serif"; x.fillStyle = "#7a6a52"; x.fillText("강화 위험은 모루 확률에 반영", 64, 694);
-  sheetTex.needsUpdate = true;
+  x.setTransform(1, 0, 0, 1, 0, 0); sheetTex.needsUpdate = true;
 }
 function drawBoard(now) {
   const p = S.anvil, fz = inFrenzy(), o = p && odds(p), left = fz ? Math.max(0, (frenzyUntil - now) / 1000) : 0;
