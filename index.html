@@ -536,7 +536,7 @@ function morning() {
   for (let i = 0; i < n; i++) { const p = newPig(start); if (has("contract")) p.heated = true; born.push(p); }
   if (S.testament) born[0].lvl = born[0].peak = Math.max(born[0].lvl, S.testament);
   S.extra = 0; S.badgeNext = false; S.testament = 0; S.pen.push(...born);
-  S.fenceUsed = false; S.freeReroll = has("voucher"); S.armed = {}; S.ledgerToday = 0; S.hookUsed = false;
+  S.fenceUsed = false; S.freeReroll = has("voucher"); S.rerolls = 0; S.armed = {}; S.ledgerToday = 0; S.hookUsed = false;
   S.shop = S.day >= 2 ? rollShop() : [];
   S.merchant = S.day % 3 === 0 ? makeMerchant() : null;
   return born;
@@ -656,7 +656,7 @@ const hammerStandIn = new THREE.Group(); hammer.add(hammerStandIn);
   const steel = M(0x9aa0a8, { metalness: .7, roughness: .3 });
   const head = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), steel); head.position.x = -.62; hammerStandIn.add(head);
   const collar = new THREE.Mesh(new THREE.TorusGeometry(.036, .012, 8, 20), steel); collar.rotation.y = Math.PI / 2; collar.position.x = -.56; hammerStandIn.add(collar); }
-const HAMMER_UP = -1.05;
+const HAMMER_UP = -.85; // resting head sits just above the pig, in view below the top bar
 // Furnace
 const furnPos = at(55, 2.3);
 box(1.1, 1.3, .8, M(0xc0a090, pbr("brick", 1.4)), furnPos.clone().setY(.65));
@@ -1329,7 +1329,7 @@ function shelfFx() { shelfSlots.forEach((s, i) => { const p = S.shelf[i], L = p 
   if (s.key === key) return; s.key = key; const x = s.plateTex.image.getContext("2d"); x.fillStyle = "#1e120c"; x.fillRect(0, 0, 256, 64); x.strokeStyle = "#d4a840"; x.lineWidth = 3; x.strokeRect(2, 2, 252, 60);
   x.fillStyle = p ? "#ffe9a8" : "#7a6a50"; x.font = "26px Jua, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(p ? `+${p.lvl} ${pigName(p)}` : "빈 자리", 128, 34, 240); s.plateTex.needsUpdate = true; }); }
 // Camera: one view per station; swipe or arrows to turn, tap the scene at the anvil to strike
-let st = 0, yaw = 0, pitch = -.5, shakeT = 0, swing = 0, crackT = 0, drag = null;
+let st = 0, yaw = 0, pitch = -.5, shakeT = 0, crackT = 0, drag = null, hamT0 = -1e9, hamRate = 1, hitT = -1e9;
 canvas.addEventListener("pointerdown", e => drag = { x: e.clientX });
 canvas.addEventListener("pointerup", e => {
   if (!drag || menu || ko) return; const dx = e.clientX - drag.x; drag = null;
@@ -1357,6 +1357,7 @@ function loop(now) {
     cam.position.lerp(cineCam.position, ce); cam.quaternion.slerp(cineCam.quaternion, ce);
   }
   if (shakeT > 0) { shakeT -= dt; cam.position.x += (Math.random() - .5) * .08; cam.position.y += (Math.random() - .5) * .08; }
+  { const hk = (now - hitT) / 1000; if (hk < .3) { cam.position.y -= .045 * Math.exp(-14 * hk); cam.rotateX(-.025 * Math.exp(-14 * hk)); } } // camera kick on impact
   cam.fov += ((cineOn ? 50 : 62) - cam.fov) * Math.min(1, dt * 5); cam.updateProjectionMatrix();
   amb.intensity = AMB * (1 - .7 * ce); hemi.intensity = HEMI * (1 - .7 * ce);
   const handPig = slots.get("hand")?.group; if (handPig) handPig.visible = cine < .05;
@@ -1380,12 +1381,19 @@ function loop(now) {
   }
   for (const c of bank.children) if (c.userData.orb !== undefined) { c.position.y = -.06 + Math.sin(t * 2 + c.userData.orb * 2) * .025; c.rotation.y = t * .8 + c.userData.orb; }
   for (const f of shrineFlames) f.scale.set(.1 + Math.random() * .015, .16 + Math.sin(t * 15 + f.position.x * 9) * .02, 1);
-  swing = Math.max(0, swing - dt * 4); hammer.rotation.z = HAMMER_UP * (1 - Math.sin(swing * Math.PI));
+  { // hammer: rest → wind-up past overhead (0–.13s) → slam with a slight overshoot (.13–.2s) → damped recoil (.2–.6s)
+    const s = (now - hamT0) / 1000 * hamRate, eo = k => 1 - (1 - k) ** 3; let a = HAMMER_UP;
+    if (s < .13) a = HAMMER_UP - .95 * eo(s / .13); // swing back out of view
+    else if (s < .2) { const k = (s - .13) / .07; a = (HAMMER_UP - .95) * (1 - k * k) + .06 * k * k; }
+    else if (s < .6) { const k = (s - .2) / .4; a = HAMMER_UP * (1 - Math.exp(-5 * k) * Math.cos(9 * k)) * Math.min(1, k * 3.5); }
+    hammer.rotation.z = a; }
   for (const [, o] of slots) tickPig(o.group, t);
   const ap = slots.get("anvil")?.group, ck = chargeK;
   if (ap) { // charging lifts the pig and heats it white; cracking makes it flicker
     const u = ap.userData;
     ap.position.set(anvilPos.x + (crackT > 0 ? (Math.random() - .5) * .04 : 0), .72 + ck * .17 + (ck ? Math.sin(t * 11) * .006 : 0), anvilPos.z);
+    const hk = (now - hitT) / 1000, sq = hk < .45 ? .22 * Math.exp(-9 * hk) * Math.cos(26 * hk) : 0; // squash and wobble back after the blow
+    ap.scale.set(.32 * (1 + sq * .55), .32 * (1 - sq), .32 * (1 + sq * .55));
     if (crackT > 0) { u.mat.emissive.setHex(Math.random() < .5 ? 0xffffff : 0x000000); u.mat.emissiveIntensity = .8; u.dirty = true; }
     else if (ck > 0) { u.mat.emissive.setRGB(1, .85, .55); u.mat.emissiveIntensity = ck * 1.1; u.dirty = true; }
     else if (u.dirty) { u.mat.emissive.copy(u.emC); u.mat.emissiveIntensity = u.emI; u.dirty = false; }
@@ -1448,14 +1456,14 @@ async function doStrike() {
     }
     ringEl.hidden = ringTextEl.hidden = true; chargeK = 0; flash(.8);
   }
-  swing = 1; await sleep(big ? 60 : 110);
+  hamRate = inFrenzy() ? 1.45 : 1; hamT0 = performance.now(); await sleep(200 / hamRate); hitT = performance.now(); // strike lands at the bottom of the slam
   const v0 = V(p), lane0 = p.lane, fam0 = p.fam, fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
   const branch = res !== "b" && (p.fam !== fam0 ? `${FAMS[p.fam].name} 계열로 진화!` : p.lane !== lane0 ? `${LANES[p.lane].name} 갈래로!` : "");
   boardLast = { res, d: p.lvl - before, gain: res === "b" ? -v0 : V(p) - v0, id: p.id, t: performance.now() };
   clangAlt = !clangAlt; const clang = clangAlt ? "ting" : "clang"; // 낑, 깡, 낑, 깡…
   if (big) sfx.play(clang, "heavy"); else sfx.play(clang);
   buzz(res === "b" ? 0 : res === "g" ? [30, 40, 60] : 25);
-  hitC = COL[res]; hitI = Math.min(4, 1.5 * pw); if (!big) cam.fov -= 3; // impact light and a small zoom punch
+  hitC = COL[res]; hitI = Math.min(4, 1.5 * pw); if (!big) cam.fov -= 4; // impact light and a small zoom punch
   sparkBurst(top, 0xffc070, 10, .7); shock(top, 0xffe0a0, .55 * pw, .3);
   const fzNow = inFrenzy(), spd = 1 + (!fzNow && has("loop") ? .2 : 0) + (has("grip") ? .15 : 0) + (fzNow && has("bellows") ? .3 : 0);
   nextStrikeAt = performance.now() + 560 / spd;
@@ -1491,7 +1499,8 @@ async function breakFx(p, before, big) {
 // ===== HUD =====
 const OUT = { b: ["파괴", "var(--break)"], d: ["손상", "var(--dmg)"], h: ["유지", "var(--hold)"], s: ["성공", "var(--ok)"], g: ["대성공", "var(--great)"] };
 const pct = x => (x * 100).toFixed(1) + "%";
-const rerollCost = () => Math.round(.15 * quota(S.day) / 10) * 10; // shortcut: real reroll price unpublished, 15% of tribute is a guess
+// forgetax.tools: 15% of the day's tribute (at least 150 G), ×2.5 for every paid reroll already made that day
+const rerollCost = () => Math.round(Math.max(150, .15 * quota(S.day)) * 2.5 ** (S.rerolls || 0));
 // Owned items with their effect text, so the player knows what each does before using it
 function bag(btn) {
   const ks = Object.keys(ITEMS).filter(k => S.items[k] > 0 || S.armed[k]);
@@ -1581,7 +1590,7 @@ $("panel").addEventListener("click", async e => {
   if (d.pick) S.hand = S.pen.splice(+d.pick, 1)[0];
   if (id === "feed") { S.hand = null; S.credits++; sparkBurst(bankPos.clone().multiplyScalar(.88).setY(.75), 0xff3df2, 30); banner("+1 크레딧", "", "f"); sfx.play("coins", "gem"); }
   if (d.buy) { const r = RB[d.buy]; S.credits -= r.cost; S.relics.push(r.id); S.shop = S.shop.filter(x => x !== r.id); banner(r.name, r.desc, "g"); sfx.play("gem", "jach"); }
-  if (id === "reroll") { if (spinning) return; if (S.freeReroll) S.freeReroll = false; else S.gold -= rerollCost(); S.shop = rollShop(); sfx.play("shuffle");
+  if (id === "reroll") { if (spinning) return; if (S.freeReroll) S.freeReroll = false; else { S.gold -= rerollCost(); S.rerolls = (S.rerolls || 0) + 1; } S.shop = rollShop(); sfx.play("shuffle");
     if (has("hook") && !S.hookUsed) { const i = S.pen.findIndex(p => p.lvl === 0 && p.strikes === 0); if (i >= 0) { S.pen.splice(i, 1); S.credits += 2; S.hookUsed = true; banner("+2 크레딧", "수집가의 갈고리가 +0 돼지를 가져갔어요", "f"); } }
     ui(); return spinShop(); }
   if (d.toss) S.relics = S.relics.filter(x => x !== d.toss);
