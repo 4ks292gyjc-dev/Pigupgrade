@@ -42,7 +42,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14
 #panel{max-height:46vh;overflow:auto;display:grid;gap:8px}
 #panel p{margin:0}
 #nav{display:grid;grid-template-columns:48px 1fr 48px;gap:6px;align-items:center}
-#nav b{font-family:var(--display);font-weight:400;font-size:18px;text-align:center;text-shadow:0 2px 4px #000}
+#nav b{font-family:var(--display);font-weight:400;font-size:18px;text-align:center;justify-self:center;padding:5px 14px;border-radius:4px;background:rgba(22,15,11,.82);border:1px solid var(--frame)}
 button{font-family:var(--display);font-size:16px;letter-spacing:.02em;border:1px solid #4a3220;border-radius:4px;padding:10px;cursor:pointer;color:#2a1a0e;min-height:44px;
   background:linear-gradient(180deg,var(--parch-hi),var(--parch-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 2px 0 #3a2616,0 3px 6px rgba(0,0,0,.4)}
 button:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 #3a2616}
@@ -64,21 +64,21 @@ button.armed{outline:3px solid var(--great)}
 .item p{margin:0;font-size:12px;color:var(--muted)}
 .item b{font-family:var(--display);font-weight:400;font-size:15px}
 .tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:2px;background:var(--line);color:var(--text);margin-left:4px}
-#banner{position:fixed;left:50%;top:32%;z-index:5;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%)}
+#banner{position:fixed;left:50%;top:32%;z-index:5;text-align:center;pointer-events:none;opacity:0;width:100%;transform:translate(-50%,-50%);isolation:isolate;padding:14px 0}
+#banner::before{content:"";position:absolute;inset:0 4%;z-index:-1;background:radial-gradient(closest-side,rgba(12,8,5,.78),rgba(12,8,5,.5) 60%,transparent);border-radius:50%} /* a dark pad so any background reads the same */
 #banner.show{animation:bIn .45s cubic-bezier(.2,1.6,.4,1) forwards,bOut .4s ease-in 1.8s forwards}
 @keyframes bOut{to{opacity:0}}
 #banner b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(48px,16vw,110px);line-height:1.05;letter-spacing:-.01em;
-  background:linear-gradient(180deg,#fff 8%,currentColor 48%,color-mix(in srgb,currentColor 55%,#000) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 5px 0 rgba(0,0,0,.85)) drop-shadow(0 0 22px color-mix(in srgb,currentColor 35%,transparent))}
-#banner small{display:block;font-size:16px;font-weight:700;letter-spacing:.04em;color:var(--text);text-shadow:0 1px 0 #000,0 0 6px #000;margin-top:8px}
+  -webkit-text-stroke:1.5px rgba(10,6,3,.9);paint-order:stroke fill;text-shadow:0 4px 0 rgba(0,0,0,.75),0 0 18px rgba(0,0,0,.55)} /* plain fill + stroke: cheap to animate, readable on light and dark */
+#banner small{display:inline-block;font-size:15px;font-weight:700;letter-spacing:.03em;color:var(--text);margin-top:8px;padding:3px 10px;border-radius:3px;background:rgba(12,8,5,.72)}
 #banner.g b{color:var(--great)} #banner.s b{color:var(--ok)} #banner.h b{color:var(--hold)} #banner.d b{color:var(--dmg)}
-#banner.b b,#banner.fake b{color:var(--break);animation:jit .07s infinite} #banner.f b{color:var(--frenzy)}
+#banner.b b,#banner.fake b{color:var(--break);animation:jit .07s 6} #banner.f b{color:var(--frenzy)}
 @keyframes bIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes jit{25%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(4px,-2px) skewX(-8deg)}}
 #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
 #ring{position:fixed;left:50%;top:40%;width:min(70vw,300px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:3;pointer-events:none;
   background:conic-gradient(var(--great) calc(var(--p,0)*1turn),rgba(255,255,255,.08) 0);-webkit-mask:radial-gradient(closest-side,transparent 88%,#000 89%);mask:radial-gradient(closest-side,transparent 88%,#000 89%)}
-#ringText{position:fixed;left:50%;top:calc(40% + min(35vw,150px) + 18px);transform:translateX(-50%);z-index:3;font-family:var(--display);font-size:22px;color:var(--great);pointer-events:none;white-space:nowrap;text-shadow:0 2px 4px #000}
+#ringText{position:fixed;left:50%;top:calc(40% + min(35vw,150px) + 18px);transform:translateX(-50%);z-index:3;font-family:var(--display);font-size:22px;color:var(--great);pointer-events:none;white-space:nowrap;padding:3px 12px;border-radius:4px;background:rgba(12,8,5,.75)}
 #frenzyBar{position:fixed;left:0;right:0;top:0;height:5px;background:var(--frenzy);transform-origin:left;z-index:6;box-shadow:0 0 16px var(--frenzy)}
 .modal{position:fixed;inset:0;background:rgba(10,7,5,.92);display:grid;place-items:center;padding:20px;z-index:8}
 .modal>div{display:grid;gap:10px;max-width:380px;width:100%;text-align:center;max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
@@ -127,7 +127,7 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
     <div><span class="label">DAY</span> <span class="big num" id="day"></span> <span class="anger" id="anger" aria-label="분노"></span></div>
     <div style="text-align:right"><span class="label">공물</span> <span class="big num" id="tsum"></span> <span class="label">/</span> <span class="num gold" id="quota"></span></div>
   </div>
-  <div class="row" style="padding-inline:4px;text-shadow:0 1px 3px #000"><span><span class="label">골드</span> <b class="num gold" id="gold"></b></span><span><span class="label">크레딧</span> <b class="num" id="credits"></b></span><span id="handInfo" class="label"></span><span style="display:flex;gap:6px"><button class="ghost" id="mute" style="min-height:32px;padding:4px 10px;font-size:13px"></button><button class="ghost" id="pause" aria-label="일시정지" style="min-height:32px;padding:4px 11px;font-size:13px">Ⅱ</button></span></div>
+  <div class="row" style="padding:4px 8px;border-radius:4px;background:rgba(22,15,11,.8);border:1px solid rgba(107,82,54,.5)"><span><span class="label">골드</span> <b class="num gold" id="gold"></b></span><span><span class="label">크레딧</span> <b class="num" id="credits"></b></span><span id="handInfo" class="label"></span><span style="display:flex;gap:6px"><button class="ghost" id="mute" style="min-height:32px;padding:4px 10px;font-size:13px"></button><button class="ghost" id="pause" aria-label="일시정지" style="min-height:32px;padding:4px 11px;font-size:13px">Ⅱ</button></span></div>
 </div>
 
 <div class="hud" id="bottom">
@@ -586,7 +586,7 @@ function ringBell() {
 // ===== 3D =====
 const $ = id => document.getElementById(id);
 const canvas = $("gl"), R = new THREE.WebGLRenderer({ canvas, antialias: true });
-let pixR = Math.min(devicePixelRatio || 1, 2), frameN = 0, slowT = 0; R.setPixelRatio(pixR); R.outputEncoding = THREE.sRGBEncoding;
+let pixR = Math.min(devicePixelRatio || 1, matchMedia("(pointer: coarse)").matches ? 1.5 : 2), frameN = 0, slowT = 0; R.setPixelRatio(pixR); R.outputEncoding = THREE.sRGBEncoding;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0d0907); scene.fog = new THREE.Fog(0x0d0907, 5, 13);
 const cam = new THREE.PerspectiveCamera(62, 1, .05, 50); cam.position.set(0, 1.55, 0); scene.add(cam);
 // Only a faint fill: the room is lit by one torch-lantern hanging from the ceiling and by the furnace
@@ -735,12 +735,12 @@ const ghost = new THREE.Group(); ghost.position.copy(ghostPos).setY(.2); ghost.l
   const skirt = new THREE.Mesh(new THREE.CylinderGeometry(.38, .5, .9, 20, 1, true), gm); skirt.position.y = .85; ghost.add(skirt);
   for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), eyeG); e.position.set(x, 1.4, .34); ghost.add(e); }
   const lampM = new THREE.MeshBasicMaterial({ color: 0x9ff7d8, transparent: true }), lamp = new THREE.Mesh(new THREE.SphereGeometry(.08, 10, 8), lampM); lamp.position.set(.45, 1, .2); ghost.add(lamp);
-  const gl = new THREE.PointLight(0x9ff7d8, 1.2, 3); gl.position.copy(lamp.position); ghost.add(gl);
-  ghost.userData = { mats: [[gm, .82], [eyeG, 1], [lampM, 1]], gl, glI: 1.2 }; }
+  const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: auraTex(), color: 0x9ff7d8, transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false })); gl.scale.setScalar(.9); gl.position.copy(lamp.position); ghost.add(gl);
+  ghost.userData = { mats: [[gm, .82], [eyeG, 1], [lampM, 1], [gl.material, .5]] }; } // a glow sprite, not a light: adding/removing lights recompiles every material
 box(1.1, .7, .5, wood(0x7a5030), at(-140, 1.95, .35));
 // The ghost fades in when he arrives and, once you have bought everything, bows, spins up into a thread of light and is gone
 let ghostLeaving = false, ghostRise = 0, ghostSpin = 0;
-function ghostSet(k) { const u = ghost.userData; for (const [m, o] of u.mats) m.opacity = o * k; u.gl.intensity = u.glI * k; }
+function ghostSet(k) { for (const [m, o] of ghost.userData.mats) m.opacity = o * k; }
 function ghostReset() { ghost.scale.set(1, 1, 1); ghostRise = 0; ghostSpin = 0; ghost.lookAt(0, ghost.position.y, 0); ghostSet(1); }
 function ghostArrive() { ghostReset(); ghostSet(0); sparkBurst(ghostPos.clone().setY(1), 0x9ff7d8, 24, .6); tween(reduced ? 200 : 1100, k => ghostSet(k)); }
 async function ghostLeave() {
@@ -1276,7 +1276,7 @@ function drawSheet() {
 }
 function drawBoard(now) {
   const p = S.anvil, fz = inFrenzy(), o = p && odds(p), left = fz ? Math.max(0, (frenzyUntil - now) / 1000) : 0;
-  const sig = p ? `${p.id}|${p.lvl}|${V(p)}|${p.charge}|${fz ? left.toFixed(1) : "-"}|${Object.values(o).map(v => (v * 1000) | 0)}|${boardLast?.t}` : "empty";
+  const sig = p ? `${p.id}|${p.lvl}|${V(p)}|${p.charge}|${fz ? Math.ceil(left) : "-"}|${Object.values(o).map(v => (v * 1000) | 0)}|${boardLast?.t}` : "empty";
   if (sig === boardSig) return; boardSig = sig;
   const x = boardCv.getContext("2d"), W = 1024, H = 500, txt = (s, X, Y, font, col, al = "left") => { x.font = font; x.fillStyle = col; x.textAlign = al; x.fillText(s, X, Y); };
   const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#3a3633"); bg.addColorStop(1, "#24211f"); x.fillStyle = bg; x.fillRect(0, 0, W, H);
@@ -1288,8 +1288,8 @@ function drawBoard(now) {
   const L = boardLast && boardLast.id === p.id ? boardLast : null;
   if (L) { txt(`${BNAME[L.res]}${L.d ? ` ${L.d > 0 ? "+" : ""}${L.d}` : ""}`, 44, 228, "40px Jua, sans-serif", BCOL[L.res]);
     if (L.gain) txt(`${L.gain > 0 ? "+" : "−"}${G(Math.abs(L.gain)).replace("G", " G")}`, 44, 262, "26px Jua, sans-serif", "#cfc6bc"); }
-  for (let i = 0; i < 10; i++) { const on = fz || i < p.charge; x.fillStyle = on ? (fz ? `hsl(${300 + Math.sin(now / 120 + i) * 20},95%,70%)` : "#f6c88a") : "#4a4440"; if (on) { x.shadowColor = x.fillStyle; x.shadowBlur = 14; } x.fillRect(W - 44 - (10 - i) * 30 + 6, 200, 22, 22); x.shadowBlur = 0; }
-  txt(fz ? `광란 ${left.toFixed(1)}s` : `${p.charge} / 10`, W - 44, 258, "26px Jua, sans-serif", fz ? "#ff9bff" : "#cfc6bc", "right");
+  for (let i = 0; i < 10; i++) { const on = fz || i < p.charge; x.fillStyle = on ? (fz ? "#ff8af0" : "#f6c88a") : "#4a4440"; if (on) { x.shadowColor = x.fillStyle; x.shadowBlur = 14; } x.fillRect(W - 44 - (10 - i) * 30 + 6, 200, 22, 22); x.shadowBlur = 0; }
+  txt(fz ? `광란 ${Math.ceil(left)}s` : `${p.charge} / 10`, W - 44, 258, "26px Jua, sans-serif", fz ? "#ff9bff" : "#cfc6bc", "right");
   const keys = ["b", "d", "h", "s", "g"], cw = (W - 88 - 4 * 18) / 5;
   keys.forEach((k, i) => { const X = 44 + i * (cw + 18); x.fillStyle = BCOL[k]; x.fillRect(X, 296, cw, 5);
     txt(BNAME[k], X + cw / 2, 346, "30px Jua, sans-serif", BCOL[k], "center"); txt(`${(o[k] * 100).toFixed(1)}%`, X + cw / 2, 400, "44px Jua, sans-serif", "#f4ece2", "center"); });
@@ -1762,5 +1762,8 @@ const buzz = ms => { try { navigator.vibrate?.(ms); } catch {} };
 if (!load() || !alive()) { S = fresh(); morning(); st = 2; }
 yaw = STATIONS[st].yaw;
 resize(); ui(); requestAnimationFrame(loop);
+setTimeout(() => { // warm-up: build each effect once out of sight and compile all shaders now, not on the first big moment
+  const far = new THREE.Vector3(0, -40, 0); shatter(far, new THREE.Color(0xffffff)); pillar(far, "rainbow"); shock(far, 0xffffff); sparkBurst(far, 0xffffff, 1);
+  try { R.compile(scene, cam); } catch {} }, 1500);
 showMenu();
 </script>
