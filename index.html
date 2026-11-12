@@ -85,6 +85,32 @@ button.armed{outline:3px solid var(--great)}
 .modal h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}
 .modal p{margin:0;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){#banner b{animation:none!important}}
+/* Tutorial: liquid-glass cards that tilt in 3D as you scroll, while the camera flies between stations */
+.glassPill{min-height:30px;padding:5px 14px;font-size:13px;border-radius:999px;color:#fff;letter-spacing:.04em;
+  background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.35);
+  -webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 4px 14px rgba(0,0,0,.35)}
+#tut{position:fixed;inset:0;z-index:10;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+#tut::-webkit-scrollbar{display:none}
+#tut section{height:100dvh;scroll-snap-align:center;display:grid;align-items:end;justify-items:center;padding:0 16px calc(48px + env(safe-area-inset-bottom,0px));box-sizing:border-box;perspective:900px}
+.glass{position:relative;width:100%;max-width:420px;box-sizing:border-box;border-radius:26px;padding:20px 20px 18px;color:#fff;transform-origin:50% 100%;will-change:transform,opacity;
+  background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.05) 45%,rgba(255,255,255,.1));
+  -webkit-backdrop-filter:blur(18px) saturate(175%);backdrop-filter:blur(18px) saturate(175%);border:1px solid rgba(255,255,255,.3);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -1px 0 rgba(255,255,255,.15),inset 0 0 30px rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.5)}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(90% 55% at var(--sx,30%) 0%,rgba(255,255,255,.4),transparent 60%)} /* specular sheen that slides with the scroll */
+.glass .step{font-size:11px;font-weight:700;letter-spacing:.2em;color:rgba(255,255,255,.7)}
+.glass h2{margin:4px 0 8px;font-family:var(--display);font-weight:400;font-size:26px;text-shadow:0 2px 8px rgba(0,0,0,.45)}
+.glass p{margin:0 0 6px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.92);text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.glass b{color:#ffe08a}
+.glass .tip{margin-top:10px;padding:8px 12px;border-radius:14px;font-size:12.5px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14)}
+.glass .acts{display:flex;gap:8px;margin-top:14px}.glass .acts button{flex:1;min-height:46px;border-radius:16px}
+#tutTop{position:fixed;z-index:11;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));display:flex;gap:8px;align-items:center}
+#tutDots{position:fixed;z-index:11;right:max(10px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:grid;gap:7px;padding:9px 6px;border-radius:999px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#tutDots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);transition:.25s}#tutDots i.on{background:#fff;transform:scale(1.5)}
+.scrollHint{margin-top:12px;font-size:12px;color:rgba(255,255,255,.75);animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
+@media (prefers-reduced-motion:reduce){.glass{transform:none!important}.scrollHint{animation:none}}
 /* Title menu over the slowly turning forge */
 body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
 .hud{transition:opacity .4s}
@@ -142,6 +168,7 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
 
 <div class="lid" id="lidT"></div><div class="lid" id="lidB"></div>
 <div id="menu" hidden></div>
+<div id="tut" hidden></div><div id="tutTop" hidden><button class="glassPill" id="tutSkip">건너뛰기</button></div><div id="tutDots" hidden></div>
 <div class="modal" id="modal" hidden><div id="modalBody"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1343,7 +1370,8 @@ function go(d) { if (menu || ko || collecting) return; st = (st - d + STATIONS.l
 let last = performance.now(), wasFrenzy = false;
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000), t = now / 1000; last = now;
-  if (menu) { yaw = (yaw + dt * 5) % 360; pitch += (-.2 - pitch) * Math.min(1, dt * 2); }
+  if (tut) { let ty = tut.yaw; while (ty - yaw > 180) ty -= 360; while (ty - yaw < -180) ty += 360; yaw += (ty - yaw) * Math.min(1, dt * 6); pitch += (tut.pitch - pitch) * Math.min(1, dt * 6); ghost.visible = true; }
+  else if (menu) { yaw = (yaw + dt * 5) % 360; pitch += (-.2 - pitch) * Math.min(1, dt * 2); }
   else { let target = STATIONS[st].yaw; while (target - yaw > 180) target -= 360; while (target - yaw < -180) target += 360;
     yaw += (target - yaw) * Math.min(1, dt * 7);
     pitch += (STATIONS[st].pitch - pitch) * Math.min(1, dt * 7); }
@@ -1672,7 +1700,7 @@ function showMenu(view = "main") {
     m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>업적 <span class="gold">${achCount()}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
       <div class="scroll"><div class="list">${achList()}</div><div class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 유물 진열장에 나와요</div><div class="list">${mwList()}</div></div></div>`;
   } else {
-    m.innerHTML = `<div class="head"><p class="kicker">멧돼지 군주의 대장간</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}</div>
+    m.innerHTML = `<div class="head"><p class="kicker">멧돼지 군주의 대장간</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}<button class="glassPill" id="mTut" style="margin-top:14px">튜토리얼</button></div>
       <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/3 · 골드 ${G(S.gold)}</small></button>` : ""}
       <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mAch" style="min-height:52px;font-size:17px">업적 ${achCount()}</button><button class="ghost" id="mDex" style="min-height:52px;font-size:17px">도감 ${dex.length}/${DEX_TOTAL}</button></div>
@@ -1680,10 +1708,51 @@ function showMenu(view = "main") {
   }
   m.querySelectorAll("button").forEach(b => b.onclick = () => { sfx.play("tick"); menuClick(b.id); });
 }
+// ===== Tutorial: scroll through liquid-glass cards; each card flies the camera to its station =====
+const TUT = [
+  { at: "anvil", pitch: -.12, t: "멧돼지 군주의 대장간", b: ["당신은 군주에게 빚진 대장장이예요. 돼지를 <b>강화</b>해서 가치를 올리고, 매일 <b>공물</b>을 바쳐 살아남아야 해요."], tip: "아래로 스크롤해서 대장간을 둘러보세요", hint: true },
+  { at: "pen", t: "1. 돼지 우리", b: ["매일 아침 돼지 <b>3마리</b>가 들어와요.", "돼지를 <b>들기</b>로 손에 들고 작업대로 가져가요."], tip: "화면을 좌우로 밀거나 ◀ ▶ 로 작업대를 옮겨 다녀요" },
+  { at: "furnace", t: "2. 화로", b: ["차가운 돼지는 칠 수 없어요. 화로에서 <b>2초</b> 달궈 주세요.", "한 번 달구면 계속 뜨거워요."] },
+  { at: "anvil", t: "3. 모루", b: ["달군 돼지를 올리고 <b>내리치기</b>! 화면을 눌러도 쳐요.", "결과는 <b>대성공 +2 · 성공 +1 · 유지 · 손상 −1 · 파괴</b> 다섯 가지예요.", "1강마다 가치가 <b>1.5배</b>, 등급이 오를수록 파괴 확률도 올라요."], tip: "모루 뒤 게시판에 다음 타격 확률이 늘 떠 있어요" },
+  { at: "anvil", pitch: -.2, t: "4. 광란", b: ["같은 돼지를 <b>10번</b> 치면 게시판의 칸이 다 차고, 다음 타격부터 <b>4초 동안 절대 깨지지 않아요</b>.", "15강부터는 한 번 칠 때마다 긴장감 넘치는 클로즈업이 나와요."] },
+  { at: "wall", t: "5. 추첨표 · 달력", b: ["타격마다 추첨표의 티켓 한 장을 뽑아요. 유물이 티켓을 <b>+ 더하거나 × 지워요</b>.", "달력에는 지난 날과 유령 상인이 오는 날이 표시돼요."] },
+  { at: "tribute", t: "6. 공물 창구", b: ["강화한 돼지를 창구에 넣고 <b>종</b>을 치면 하루가 끝나요.", "돼지 가치 합이 공물보다 적으면 <b>분노</b>가 쌓이고, <b>3번</b>이면 끝장이에요.", "바친 돼지 가치만큼 골드를 돌려받아요."], tip: "공물은 날마다 커져요. 21일을 버티면 계약 완료!" },
+  { at: "bank", t: "7. 유물 제단", b: ["돼지 1마리를 넣으면 <b>크레딧 1</b>.", "크레딧으로 유물을 사요. 유물은 티켓·확률·가치를 바꿔 줘요.", "골드로 진열장을 다시 돌릴 수 있어요 (돌릴수록 비싸져요)."] },
+  { at: "ghost", t: "8. 유령 상인", b: ["<b>3일마다</b> 찾아와 기본 돼지, 특수 돼지, 강화 아이템을 팔아요.", "물건을 전부 사면 흡족해하며 떠나요."] },
+  { at: "shelf", t: "9. 테크트리 · 진열대", b: ["+5에서 그동안의 결과로 <b>강철 · 광휘 · 가시</b> 갈래가 정해지고, +10을 넘기는 타격으로 계열이 갈라져요.", "자랑하고 싶은 돼지는 진열대에 올려 두세요."], tip: "변종 돼지는 저마다 능력이 달라요. 도감에서 확인하세요" },
+  { at: "anvil", pitch: -.12, t: "준비 완료!", b: ["이제 군주를 만족시킬 차례예요. 행운을 빌어요."], end: true },
+];
+let tut = null;
+function tutView(f) { // f: fractional card index → interpolated camera yaw/pitch between the two cards' stations
+  const i = Math.max(0, Math.min(TUT.length - 1, Math.floor(f))), j = Math.min(TUT.length - 1, i + 1), k = Math.max(0, Math.min(1, f - i)), sm = k * k * (3 - 2 * k);
+  const S0 = STATIONS.find(s => s.id === TUT[i].at), S1 = STATIONS.find(s => s.id === TUT[j].at), p0 = TUT[i].pitch ?? S0.pitch, p1 = TUT[j].pitch ?? S1.pitch;
+  let d = S1.yaw - S0.yaw; while (d > 180) d -= 360; while (d < -180) d += 360;
+  return { yaw: S0.yaw + d * sm, pitch: p0 + (p1 - p0) * sm };
+}
+function startTut() {
+  $("menu").hidden = true; const el = $("tut"), dots = $("tutDots");
+  el.innerHTML = TUT.map((c, i) => `<section><div class="glass"><div class="step">${c.end ? "TUTORIAL" : i ? `STEP ${i} / ${TUT.length - 2}` : "TUTORIAL"}</div><h2>${c.t}</h2>${c.b.map(x => `<p>${x}</p>`).join("")}${c.tip ? `<div class="tip">${c.tip}</div>` : ""}${c.hint ? `<div class="scrollHint">⌄ 스크롤</div>` : ""}${c.end ? `<div class="acts"><button class="hot" id="tutGo">${inProgress() ? "이어하기" : "시작하기"}</button><button class="glassPill" id="tutMenu" style="min-height:46px">메뉴로</button></div>` : ""}</div></section>`).join("");
+  dots.innerHTML = TUT.map(() => "<i></i>").join(""); el.hidden = dots.hidden = $("tutTop").hidden = false; el.scrollTop = 0;
+  tut = tutView(0); onTutScroll(); sfx.play("swish");
+  $("tutGo").onclick = () => { endTut(); hideMenu(); if (!inProgress()) { newRun(); pickGift(); } else if (S.day === 1 && !S.gift) pickGift(); };
+  $("tutMenu").onclick = () => { endTut(); showMenu(); };
+}
+let tutStep = 0;
+function onTutScroll() {
+  if (!tut) return; const el = $("tut"), h = el.clientHeight, f = el.scrollTop / h; tut = tutView(f);
+  el.querySelectorAll(".glass").forEach((g, i) => { const d = i - f, a = Math.min(1, Math.abs(d)); // cards tilt back and sink as they leave the centre
+    g.style.transform = reduced ? "" : `translateZ(${-a * 160}px) rotateX(${d * 28}deg) scale(${1 - a * .08})`; g.style.opacity = 1 - a * .85; g.style.setProperty("--sx", `${30 + d * 60}%`); });
+  const s = Math.round(f); if (s !== tutStep) { tutStep = s; sfx.play("tick"); }
+  $("tutDots").querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i === s));
+}
+function endTut() { tut = null; $("tut").hidden = $("tutDots").hidden = $("tutTop").hidden = true; $("tut").innerHTML = ""; ui(); }
+$("tut").addEventListener("scroll", onTutScroll, { passive: true });
+$("tutSkip").onclick = () => { endTut(); showMenu(); };
 function menuClick(id) {
   if (id === "mBack" && dexFromPause) { dexFromPause = false; hideMenu(); return pause(); }
   if (id === "mBack") return showMenu();
   if (id === "mDex") return showMenu("dex");
+  if (id === "mTut") return startTut();
   if (id === "mSave") return showMenu("save");
   if (id === "sCopy") { const ta = $("sOut"), done = () => { $("sCopy").textContent = "복사됨!"; setTimeout(() => $("sCopy") && ($("sCopy").textContent = "코드 복사"), 1500); };
     return navigator.clipboard ? navigator.clipboard.writeText(ta.value).then(done, () => { ta.select(); document.execCommand("copy"); done(); }) : (ta.select(), document.execCommand("copy"), done()); }
