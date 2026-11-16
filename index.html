@@ -184,7 +184,10 @@ function quota(d) {
 }
 const NAMES = ["아기돼지","꿀꿀이","통통돼지","분홍돼지","흙돼지","씨름돼지","근육돼지","철갑돼지","은빛돼지","금빛돼지",
   "왕돼지","장군돼지","용돼지","번개돼지","불꽃돼지","얼음돼지","무지개돼지","천상돼지","우주돼지","전설의 돼지","돼지신"];
-const pname = L => L > 20 ? `돼지신 ${"★".repeat(Math.min(5, L - 20))}` : NAMES[L];
+// Nov update: appearance changes every 3 grades and reaches its final form at +30; the cap is +299
+const MAXL = 299, vis = L => Math.min(20, Math.floor(L / 3) * 2); // grade → one of the 11 looks (0,2,…,20 on the old 0–20 scale)
+const stars = L => L > 30 ? " " + "★".repeat(Math.min(9, Math.ceil((L - 30) / 30))) : "";
+const pname = L => NAMES[vis(L)] + stars(L);
 const HSL = [[350,80,82],[350,75,78],[345,70,74],[340,70,70],[25,35,55],[20,55,60],[10,65,58],[210,10,62],[210,15,80],[45,85,60],
   [48,95,65],[5,70,50],[150,55,45],[55,100,60],[20,100,55],[195,80,75],[0,90,65],[45,60,92],[250,60,35],[280,70,55],[50,100,96]];
 
@@ -382,16 +385,18 @@ const TRIBUTE_MULT = 1; // difficulty: tribute demanded vs the calendar; merchan
 const need = () => Math.max(0, Math.round(quota(S.day) * TRIBUTE_MULT - (S.carry || 0)));
 function pigName(p, L = p.lvl) {
   const f = FAMS[p.fam], look = Math.max(L, p.peak || 0);
-  if (f?.special) return `${f.forms[Math.min(10, look >> 1)]} 돼지`;
-  if (f && look >= 10) return look > 20 ? `${f.forms[5]} 돼지 ${"★".repeat(Math.min(5, look - 20))}` : `${f.forms[Math.min(5, (look - 10) >> 1)]} 돼지`;
+  if (f?.special) return `${f.forms[Math.min(10, Math.floor(look / 3))]} 돼지${stars(look)}`;
+  if (f && look >= 10) return `${f.forms[Math.min(5, Math.floor((look - 10) / 4))]} 돼지${stars(look)}`; // forms at +10, 14, 18, 22, 26 and 30
   return p.lane && look >= 5 ? `${LANES[p.lane].name} ${pname(L)}` : pname(L);
 }
 
 // ===== Collection (도감) and breeds: discovering forms and earning achievements unlocks new pig breeds, which then turn up in deliveries =====
 let dex = []; try { dex = JSON.parse(localStorage.getItem("pigforge-dex")) || []; } catch {}
-const DEX_GROUPS = [["g", "일반 등급", 21], ["tree", "세계수", 11], ["fish", "바다", 11], ["grave", "장례", 11]], DEX_TOTAL = 54 + 3 + 36; // + lanes + six forms of each regular family
-const dexKey = p => { const L = Math.min(20, Math.max(p.lvl, p.peak || 0)); return FAMS[p.fam]?.special ? `${p.fam}:${L >> 1}` : `g:${L}`; };
-const treeKeys = p => { const L = Math.max(p.lvl, p.peak || 0), k = []; if (FAMS[p.fam]?.special) return k; if (p.lane) k.push(`lane:${p.lane}`); if (p.fam && L >= 10) k.push(`f:${p.fam}:${Math.min(5, (L - 10) >> 1)}`); return k; };
+const DEX_GROUPS = [["v", "일반 등급", 11], ["tree", "세계수", 11], ["fish", "바다", 11], ["grave", "장례", 11]], DEX_TOTAL = 44 + 3 + 36; // + lanes + six forms of each regular family
+const dexKey = p => { const s = Math.min(10, Math.floor(Math.max(p.lvl, p.peak || 0) / 3)); return FAMS[p.fam]?.special ? `${p.fam}:${s}` : `v:${s}`; };
+const DEX_VALID = new Set([...DEX_GROUPS.flatMap(([g, , n]) => Array.from({ length: n }, (_, i) => `${g}:${i}`)), "lane:iron", "lane:gold", "lane:thorn", ...["citadel", "saw", "holy", "rune", "fang", "split"].flatMap(f => Array.from({ length: 6 }, (_, i) => `f:${f}:${i}`))]);
+const dexCount = () => dex.filter(k => DEX_VALID.has(k)).length;
+const treeKeys = p => { const L = Math.max(p.lvl, p.peak || 0), k = []; if (FAMS[p.fam]?.special) return k; if (p.lane) k.push(`lane:${p.lane}`); if (p.fam && L >= 10) k.push(`f:${p.fam}:${Math.min(5, Math.floor((L - 10) / 4))}`); return k; };
 function dexSee(p) { const ks = [dexKey(p), ...treeKeys(p)].filter(k => !dex.includes(k)); if (!ks.length) return; dex.push(...ks); const k = ks[0]; try { localStorage.setItem("pigforge-dex", JSON.stringify(dex)); } catch {} setTimeout(announceBreeds, 1600); }
 const BREEDS = { // each breed has one ability (fx) and nudges the tech tree (lean)
   base: { name: "토종", desc: "늘 오던 분홍 돼지", fx: "특별한 능력 없음" },
@@ -405,7 +410,7 @@ const BREEDS = { // each breed has one ability (fx) and nudges the tech tree (le
   royal: { name: "왕실", desc: "자줏빛 가죽에 금 목걸이", fx: "성공할 때마다 가치 +3% · 강철로 기울어요", lean: "h", ach: "clear" },
   cosmos: { name: "성좌", desc: "밤하늘을 두른 몸에 별이 떠돌아요", fx: "이 돼지의 광란 +1초", dex: 30 },
 };
-const breedOpen = id => { const b = BREEDS[id]; return id === "base" || (b.ach ? achieved(b.ach) : dex.length >= b.dex); };
+const breedOpen = id => { const b = BREEDS[id]; return id === "base" || (b.ach ? achieved(b.ach) : dexCount() >= b.dex); };
 const breedCond = b => b.ach ? `업적 「${ACH[b.ach].name}」 달성` : `도감 ${b.dex}종 발견`;
 const openBreeds = () => Object.keys(BREEDS).filter(id => id !== "base" && breedOpen(id));
 const rollBreed = () => { const o = openBreeds(); return o.length && Math.random() < .5 ? o[Math.floor(Math.random() * o.length)] : "base"; };
@@ -432,7 +437,7 @@ const save = () => { try { S.uid = uid; localStorage.setItem("pigforge", JSON.st
 
 const gmult = L => (has("thorn") ? 1.1 : 1) * (has("signet") ? 1.15 : 1) * (has("iron") && L >= 8 ? 1.3 : 1) * (has("lseal") && L >= 12 ? 1.5 : 1);
 const V = p => Math.round((p.base + (has("hearth") ? 20 * (S.pays || 0) : 0)) * 1.5 ** p.lvl * p.mult * gmult(p.lvl) * (p.breed === "gold" ? 1.1 : 1) + p.flat);
-const G = n => Math.round(n).toLocaleString("ko-KR") + "G";
+const G = n => Math.abs(n) < 1e15 ? Math.round(n).toLocaleString("ko-KR") + "G" : (n / 10 ** Math.floor(Math.log10(Math.abs(n)))).toFixed(2) + "e" + Math.floor(Math.log10(Math.abs(n))) + "G"; // +299 values run to 10^52: short form past a quadrillion
 
 // ===== Forge odds: 30-ticket deck (B9 D2 H5 S12 G2); the break pile is weighted by grade =====
 let frenzyUntil = 0;
@@ -567,7 +572,7 @@ function strike(p) {
   if (!fz) { p.charge += (p.breed === "neon" ? 2 : 1) + (has("syringe") ? 1 : 0); if (first && has("locket")) p.charge += 2; }
   if (res === "d" && p.breed === "lava") p.mult *= 1.08; if (res === "s" && p.breed === "royal") p.mult *= 1.03;
   if (res !== "s") { p.hist ||= {}; p.hist[res] = (p.hist[res] || 0) + 1; } evolve(p, res);
-  p.charge = Math.min(10, p.charge); p.strikes++; p.peak = Math.max(p.peak || 0, p.lvl); p.peakV = Math.max(p.peakV || 0, V(p));
+  p.lvl = Math.min(MAXL, p.lvl); p.charge = Math.min(10, p.charge); p.strikes++; p.peak = Math.max(p.peak || 0, p.lvl); p.peakV = Math.max(p.peakV || 0, V(p));
   if (p.lvl >= 10) achieve("first10");
   let twin = false, mastered = null;
   if (has("twins") && Math.random() < .02) { S.pen.push({ ...JSON.parse(JSON.stringify(p)), id: uid++ }); twin = true; }
@@ -980,10 +985,10 @@ function bodyGeo() {
   return BODY;
 }
 function makePig(p) {
-  const L = Math.max(p.lvl, p.peak || 0), F = FAMS[p.fam], [h, s, l] = HSL[Math.min(20, L)];
+  const LL = Math.max(p.lvl, p.peak || 0), L = vis(LL), F = FAMS[p.fam], [h, s, l] = HSL[L]; // L: look on the old 0–20 scale
   const col = F?.special ? new THREE.Color().setHSL(F.hue / 360, .55, Math.min(.72, .4 + L * .016)) : new THREE.Color().setHSL(h / 360, s / 100, l / 100);
   const breed = !F?.special && BREEDS[p.breed] ? p.breed : "base", BC = { gold: 0xffc93b, neon: 0x3a1446, black: 0x17120f, crystal: 0x9fd8ff, lava: 0x241410, ghost: 0xcfeee6, royal: 0x5a2a8a, cosmos: 0x10163a }[breed];
-  const TC = !F?.special && ({ citadel: 0x8a8478, saw: 0x6f8a9c, holy: 0xf2e6c4, rune: 0x3a5aa8, fang: 0xa8322a, split: 0x7a4ab8 }[L >= 10 && p.fam] || (L >= 5 && { iron: 0x9aa4ae, gold: 0xe8b84a, thorn: 0x7a2e24 }[p.lane]));
+  const TC = !F?.special && ({ citadel: 0x8a8478, saw: 0x6f8a9c, holy: 0xf2e6c4, rune: 0x3a5aa8, fang: 0xa8322a, split: 0x7a4ab8 }[LL >= 10 && p.fam] || (LL >= 5 && { iron: 0x9aa4ae, gold: 0xe8b84a, thorn: 0x7a2e24 }[p.lane]));
   if (TC) col.set(TC).offsetHSL(0, 0, Math.min(L, 20) * .004);
   if (BC) col.set(BC).offsetHSL(0, 0, L * .004);
   const g = new THREE.Group(), metal = L >= 7 || breed === "gold", TH = Math.min(20, L), anim = [], keepRoots = [], keepIt = o => (keepRoots.push(o), o); // keepIt: animated parts stay out of bake()
@@ -1027,10 +1032,10 @@ function makePig(p) {
   if (L >= 5) for (const z of [-.13, .13]) add(new THREE.ConeGeometry(.03 + Math.min(L, 15) * .002, .1 + Math.min(L, 15) * .009, 8), L >= 10 ? gold : new THREE.MeshStandardMaterial({ color: 0xfff4dc, roughness: .4 }), .93, .6 + Math.min(L, 15) * .003, z * 1.5).rotation.set(z > 0 ? .35 : -.35, 0, -.25); // tusks
   const lane = !F?.special && (p.lane || F?.lane);
   if (L >= 5 && L <= 9) add(new THREE.TorusGeometry(.5, .04, 8, 24), lane === "gold" ? gold : lane === "thorn" ? new THREE.MeshStandardMaterial({ color: 0x5a1a14, metalness: .6, roughness: .35 }) : steel, 0, .55, 0, 1, 1, 1.3).rotation.y = Math.PI / 2;
-  if (lane === "iron" && L >= 5) { for (const z of [-.3, .3]) add(new THREE.BoxGeometry(.55, .3, .05), steel, -.05, .62, z * 1.65); add(new THREE.SphereGeometry(.38, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.6), steel, .62, .8, 0, 1, .8, 1.05); } // side plates and a helmet
-  if (lane === "gold" && L >= 5) { const gl = glow(0xffe28a, 1.6, 0, .7, 0, .25); anim.push(t => gl.material.opacity = .18 + .1 * Math.sin(t * 2)); }
-  if (lane === "thorn" && L >= 5) for (let i = 0; i < 6; i++) { const a = -1.2 + i * .48; add(new THREE.ConeGeometry(.05, .26, 5), new THREE.MeshStandardMaterial({ color: 0x2a0e0a, roughness: .5 }), -.1 + Math.cos(a) * .2, .55 + Math.sin(a) * .12 + .3, (i % 2 ? .46 : -.46)).rotation.x = i % 2 ? 1.1 : -1.1; } // thorny flanks
-  const fam = !F?.special && L >= 10 ? p.fam : null;
+  if (lane === "iron" && LL >= 5) { for (const z of [-.3, .3]) add(new THREE.BoxGeometry(.55, .3, .05), steel, -.05, .62, z * 1.65); add(new THREE.SphereGeometry(.38, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.6), steel, .62, .8, 0, 1, .8, 1.05); } // side plates and a helmet
+  if (lane === "gold" && LL >= 5) { const gl = glow(0xffe28a, 1.6, 0, .7, 0, .25); anim.push(t => gl.material.opacity = .18 + .1 * Math.sin(t * 2)); }
+  if (lane === "thorn" && LL >= 5) for (let i = 0; i < 6; i++) { const a = -1.2 + i * .48; add(new THREE.ConeGeometry(.05, .26, 5), new THREE.MeshStandardMaterial({ color: 0x2a0e0a, roughness: .5 }), -.1 + Math.cos(a) * .2, .55 + Math.sin(a) * .12 + .3, (i % 2 ? .46 : -.46)).rotation.x = i % 2 ? 1.1 : -1.1; } // thorny flanks
+  const fam = !F?.special && LL >= 10 ? p.fam : null;
   if (fam === "citadel") { const tw = new THREE.Group(); tw.position.set(-.3, topY(-.3) - .05, 0); tw.scale.setScalar(1.9); g.add(tw); const st = new THREE.MeshStandardMaterial({ color: 0x8a8076, roughness: .8 });
     const c = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, .32, 10), st); c.position.y = .14; tw.add(c); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, b = new THREE.Mesh(new THREE.BoxGeometry(.06, .07, .06), st); b.position.set(Math.cos(a) * .12, .33, Math.sin(a) * .12); tw.add(b); } } // castle turret
   if (fam === "saw") { const sw = keepIt(new THREE.Group()); sw.position.set(-.25, topY(-.25) + .3, 0); sw.scale.setScalar(1.7); g.add(sw); const sm = new THREE.MeshStandardMaterial({ color: 0xc8ccd2, metalness: .95, roughness: .2 });
@@ -1373,7 +1378,7 @@ const shelfSlots = [];
     part(new THREE.SphereGeometry(.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff0c0 }), 0, top + 1.67, 0);
     shelfSlots.push({ disc, beam, plateTex, key: "" }); } }
 const TIER = L => L >= 20 ? 0xff9bff : L >= 18 ? 0xb9a8ff : L >= 15 ? 0x9fe3ff : L >= 10 ? 0xffd43b : 0xfff0c8;
-function shelfFx() { shelfSlots.forEach((s, i) => { const p = S.shelf[i], L = p ? Math.min(20, Math.max(p.lvl, p.peak || 0)) : 0, c = p ? TIER(L) : 0x806a40, key = p ? `${p.id}:${p.lvl}:${p.breed}` : "";
+function shelfFx() { shelfSlots.forEach((s, i) => { const p = S.shelf[i], L = p ? vis(Math.max(p.lvl, p.peak || 0)) : 0, c = p ? TIER(L) : 0x806a40, key = p ? `${p.id}:${p.lvl}:${p.breed}` : "";
   s.disc.material.color.setHex(c); s.disc.material.opacity = p ? .5 : .1; s.beam.material.color.setHex(c); s.beam.material.opacity = p ? .1 + L * .004 : .03;
   if (s.key === key) return; s.key = key; const x = s.plateTex.image.getContext("2d"); x.fillStyle = "#1e120c"; x.fillRect(0, 0, 256, 64); x.strokeStyle = "#d4a840"; x.lineWidth = 3; x.strokeRect(2, 2, 252, 60);
   x.fillStyle = p ? "#ffe9a8" : "#7a6a50"; x.font = "26px Jua, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(p ? `+${p.lvl} ${pigName(p)}` : "빈 자리", 128, 34, 240); s.plateTex.needsUpdate = true; }); }
@@ -1471,7 +1476,7 @@ function loop(now) {
   if (fz && Math.random() < .5) sparkBurst(anvilPos.clone().add(new THREE.Vector3((Math.random() - .5) * .7, .75, (Math.random() - .5) * .7)), 0xff3df2, 1, .35);
   $("frenzyBar").hidden = !fz;
   if (fz && !frenzyLeft) $("frenzyBar").style.transform = `scaleX(${(frenzyUntil - now) / 7000})`;
-  if (wasFrenzy && !fz) { if (has("syringe") && S.anvil) S.anvil.nbm *= 1.5; if (has("hbell") && S.anvil) { S.anvil.lvl++; banner("+1강", "머리 없는 종", "s"); sfx.play("ok"); } ui(); }
+  if (wasFrenzy && !fz) { if (has("syringe") && S.anvil) S.anvil.nbm *= 1.5; if (has("hbell") && S.anvil) { S.anvil.lvl = Math.min(MAXL, S.anvil.lvl + 1); banner("+1강", "머리 없는 종", "s"); sfx.play("ok"); } ui(); }
   wasFrenzy = fz;
   R.render(scene, cam);
   requestAnimationFrame(loop);
@@ -1532,7 +1537,7 @@ async function doStrike() {
   busy = false; ui(); flushToasts(mastered || twin ? 2600 : 1200);
 }
 async function breakFx(p, before, big) {
-  const pos = anvilPos.clone().setY(.9), top = anvilPos.clone().setY(.74), color = new THREE.Color().setHSL(HSL[Math.min(20, before)][0] / 360, .6, .6);
+  const pos = anvilPos.clone().setY(.9), top = anvilPos.clone().setY(.74), color = new THREE.Color().setHSL(HSL[vis(before)][0] / 360, .6, .6);
   if (Math.random() < .5) { // pretends to succeed, then breaks
     p.lvl = before + 1; ui(); pillar(top, 0x4dabf7, .1, 4, .8); shock(top, 0x4dabf7, 1.3, .5); sparkBurst(pos, 0x4dabf7, 40); banner("성공!", `+${p.lvl} ${pigName(p)}`, "s"); sfx.play("ok");
     await sleep(reduced ? 400 : 1000); banner("…은 구라", "", "fake"); await sleep(350);
@@ -1659,7 +1664,7 @@ $("panel").addEventListener("click", async e => {
   if (id === "soulBell" && S.merchant && !S.bellUsed) { S.bellUsed = true; S.merchant = makeMerchant(); banner("영혼의 종", "유령이 물건을 새로 꺼내 왔어요", "f"); sfx.play("bell"); }
   if (id === "offer") { S.tribute.push(S.hand); S.hand = null; }
   if (d.take) S.hand = S.tribute.splice(+d.take, 1)[0];
-  if (d.shelf !== undefined && S.hand && !S.shelf[+d.shelf]) { const p = S.hand, i = +d.shelf, L = Math.min(20, Math.max(p.lvl, p.peak || 0)), at0 = shelfPos(i).clone().setY(SHELF_SLOT[i][2]);
+  if (d.shelf !== undefined && S.hand && !S.shelf[+d.shelf]) { const p = S.hand, i = +d.shelf, L = vis(Math.max(p.lvl, p.peak || 0)), at0 = shelfPos(i).clone().setY(SHELF_SLOT[i][2]);
     S.shelf[i] = p; S.hand = null; sfx.play("place", L >= 10 ? "gem" : ""); sparkBurst(at0.clone().setY(at0.y + .3), TIER(L), 20 + L * 3, .8); shock(at0, TIER(L), .8 + L * .05, .6);
     if (L >= 10) pillar(at0, TIER(L), .12, 3, .9); banner("진열!", `+${p.lvl} ${pigName(p)}`, L >= 15 ? "g" : "s"); }
   if (d.unshelf !== undefined && !S.hand && S.shelf[+d.unshelf]) { S.hand = S.shelf[+d.unshelf]; S.shelf[+d.unshelf] = null; sfx.play("pick"); }
@@ -1708,13 +1713,13 @@ function showMenu(view = "main") {
   } else if (view === "dex") {
     const cell = (k, label, q) => dex.includes(k) ? `<div class="dexCell seen"><img alt="" data-t='${JSON.stringify(q)}'><small>${label}</small></div>` : `<div class="dexCell"><span>?</span><small>${label.split(" ")[0]} ???</small></div>`;
     const groups = DEX_GROUPS.map(([g, name, n]) => `<div class="label">${name} ${dex.filter(k => k.startsWith(g + ":")).length}/${n}</div><div class="dexGrid">${Array.from({ length: n }, (_, i) =>
-      g === "g" ? cell(`g:${i}`, `+${i} ${NAMES[i]}`, { lvl: i, fam: "citadel" }) : cell(`${g}:${i}`, `+${i * 2} ${FAMS[g].forms[i]} 돼지`, { lvl: i * 2, fam: g })).join("")}</div>`).join("");
+      g === "v" ? cell(`v:${i}`, `+${i * 3} ${NAMES[i * 2]}`, { lvl: i * 3, fam: undefined }) : cell(`${g}:${i}`, `+${i * 3} ${FAMS[g].forms[i]} 돼지`, { lvl: i * 3, fam: g })).join("")}</div>`).join("");
     const breeds = Object.entries(BREEDS).filter(([id]) => id !== "base").map(([id, b]) => `<div class="item ${breedOpen(id) ? "done" : "locked"}">
       <div style="display:flex;gap:8px;align-items:center">${breedOpen(id) ? `<img class="vthumb" alt="" data-t='${JSON.stringify({ lvl: 9, fam: "citadel", breed: id })}'>` : ""}<div><b>${breedOpen(id) ? b.name + " 돼지" : "???"}</b><p>${breedOpen(id) ? `${b.desc} · <b style="font-size:12px">${b.fx}</b>` : breedCond(b)}</p></div></div>
       <span class="label">${breedOpen(id) ? "해금" : "잠김"}</span></div>`).join("");
     const tree = Object.entries(LANES).map(([ln, l]) => `<div class="label">${dex.includes("lane:" + ln) ? `${l.name} 갈래` : "??? 갈래"} · +5에서 ${l.why}</div><div class="dexGrid">${l.fams.flatMap(f => FAMS[f].forms.map((nm, i) =>
-      cell(`f:${f}:${i}`, `+${10 + i * 2} ${nm} 돼지`, { lvl: 10 + i * 2, fam: f, lane: ln }))).join("")}</div><p class="label">+10을 넘길 때 대성공이면 ${FAMS[l.fams[1]].name}, 아니면 ${FAMS[l.fams[0]].name} 계열이 돼요.</p>`).join("");
-    m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>도감 <span class="gold">${dex.length}/${DEX_TOTAL}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
+      cell(`f:${f}:${i}`, `+${10 + i * 4} ${nm} 돼지`, { lvl: 10 + i * 4, fam: f, lane: ln }))).join("")}</div><p class="label">+10을 넘길 때 대성공이면 ${FAMS[l.fams[1]].name}, 아니면 ${FAMS[l.fams[0]].name} 계열이 돼요.</p>`).join("");
+    m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>도감 <span class="gold">${dexCount()}/${DEX_TOTAL}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
       <div class="scroll">${groups}<div class="label" style="color:var(--great);margin-top:6px">테크트리 · 강화 방식에 따라 갈래와 계열이 갈라져요</div>${tree}<div class="label">변종 ${openBreeds().length}/${Object.keys(BREEDS).length - 1} · 업적과 도감을 채우면 새 변종이 배달 돼지에 섞여 와요. 변종마다 능력이 달라요</div><div class="list">${breeds}</div></div></div>`;
     const imgs = [...m.querySelectorAll("img[data-t]")]; // portraits are drawn a few per frame so the list opens instantly
     (function next() { const im = imgs.shift(); if (!im || !im.isConnected) return; im.src = thumb(JSON.parse(im.dataset.t)); setTimeout(next, 0); })();
@@ -1725,7 +1730,7 @@ function showMenu(view = "main") {
     m.innerHTML = `<div class="head"><p class="kicker">멧돼지 군주의 대장간</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}<button class="glassPill" id="mTut" style="margin-top:14px">튜토리얼</button></div>
       <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/${lives()} · 골드 ${G(S.gold)}</small></button>` : ""}
       <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mAch" style="min-height:52px;font-size:17px">업적 ${achCount()}</button><button class="ghost" id="mDex" style="min-height:52px;font-size:17px">도감 ${dex.length}/${DEX_TOTAL}</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mAch" style="min-height:52px;font-size:17px">업적 ${achCount()}</button><button class="ghost" id="mDex" style="min-height:52px;font-size:17px">도감 ${dexCount()}/${DEX_TOTAL}</button></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mSave" style="min-height:52px;font-size:17px">저장 백업</button><button class="ghost" id="mSnd" style="min-height:52px;font-size:17px">${sfx.muted ? "소리 끔" : "소리 켬"}</button></div></div>`;
   }
   m.querySelectorAll("button").forEach(b => b.onclick = () => { sfx.play("tick"); menuClick(b.id); });
@@ -1833,7 +1838,7 @@ function pause(confirmRestart = false) {
   showModal(`<h2>일시정지</h2><p>Day ${S.day} · 분노 ${S.anger}/${lives()} · 골드 ${G(S.gold)}</p>
     <button class="hot" id="pResume">마저하기</button>
     <button class="ghost" id="pRestart">${confirmRestart ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "처음부터 다시 시작하기"}</button>
-    <button class="ghost" id="pDex">도감 ${dex.length}/${DEX_TOTAL}</button>
+    <button class="ghost" id="pDex">도감 ${dexCount()}/${DEX_TOTAL}</button>
     <button class="ghost" id="pMain">메인 화면으로</button>`, () => {
     $("pDex").onclick = () => { paused = false; $("modal").hidden = true; dexFromPause = true; sfx.play("tick"); showMenu("dex"); };
     $("pResume").onclick = resume;
