@@ -54,12 +54,16 @@ button.hot{background:linear-gradient(180deg,#ffc27a,#f07a2a 55%,#c9531a);border
 button.armed{outline:3px solid var(--great)}
 .btns{display:flex;gap:6px;flex-wrap:wrap}
 .btns>button{flex:1 1 30%}
-#strike{font-size:24px;flex-basis:100%;min-height:58px}
+#strike{font-size:24px;flex:3 1 0;min-height:58px} .btns>#lift{flex:1 1 0}
 .odds{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:2px}
 .odds span{font-size:11px;font-weight:700;color:var(--muted)} .odds b{display:block;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line)} .stack i{display:block;height:100%}
 .charges{display:grid;grid-template-columns:repeat(10,1fr);gap:3px} .charges i{height:8px;border-radius:2px;background:var(--line)} .charges i.on{background:var(--frenzy)}
 .list{display:grid;gap:6px}
+.chips{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain;padding-bottom:2px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chips .item{flex:0 0 min(80%,290px);scroll-snap-align:start}
+.chips .item p{font-size:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.chips .item b{font-size:14px}
+.chips .item button{min-height:40px;padding:4px 12px}
 .item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:rgba(0,0,0,.25);border:1px solid rgba(107,82,54,.45);border-radius:3px;padding:6px 8px;text-align:left}
 .item p{margin:0;font-size:12px;color:var(--muted)}
 .item b{font-family:var(--display);font-weight:400;font-size:15px}
@@ -151,7 +155,7 @@ body.menu .hud,body.ko .hud,body.cine .hud{opacity:0;pointer-events:none}
 <div class="hud" id="top">
   <div class="card row">
     <div><span class="label">DAY</span> <span class="big num" id="day"></span> <span class="anger" id="anger" aria-label="분노"></span></div>
-    <div style="text-align:right"><span class="label">공물</span> <span class="big num" id="tsum"></span> <span class="label">/</span> <span class="num gold" id="quota"></span></div>
+    <div style="text-align:right"><span class="label">상납</span> <span class="big num" id="tsum"></span> <span class="label">/</span> <span class="num gold" id="quota"></span></div>
   </div>
   <div class="row" style="padding:4px 8px;border-radius:4px;background:rgba(22,15,11,.8);border:1px solid rgba(107,82,54,.5)"><span><span class="label">골드</span> <b class="num gold" id="gold"></b></span><span><span class="label">크레딧</span> <b class="num" id="credits"></b></span><span id="handInfo" class="label"></span><span style="display:flex;gap:6px"><button class="ghost" id="mute" style="min-height:32px;padding:4px 10px;font-size:13px"></button><button class="ghost" id="pause" aria-label="일시정지" style="min-height:32px;padding:4px 11px;font-size:13px">Ⅱ</button></span></div>
 </div>
@@ -196,46 +200,46 @@ const RELICS = [
   ["bent","휘어진 편자","성공",2,1,"성공 티켓 +4",1],["whet","꿀꿀 숫돌","성공",2,1,"유지 티켓 2장을 성공으로 바꿈"],["stamp","등급 도장","성공",2,1,"성공/대성공마다 가치 +100G",1],
   ["mallet","무딘 나무망치","성공",2,1,"손상 티켓 1장을 성공으로 바꿈"],["brand","첫 낙인","성공",2,1,"돼지의 첫 타격이 성공/대성공이면 +2강"],
   ["knot2","쌍매듭","성공",3,1,"성공/대성공 2연속마다 가치 +10%"],["hand3","세 번째 발굽","성공",3,2,"성공/대성공 2연속마다 +1강"],
-  ["scorch","그을린 부적","성공",3,1,"광란 밖 성공/대성공마다 이 돼지 파괴 확률 -3% (최대 -18%)"],["echo","메아리 망치","성공",5,2,"성공/대성공 때 25% 확률로 +1강"],
+  ["scorch","그을린 부적","성공",3,1,"신들림 밖 성공/대성공마다 이 돼지 파괴 확률 -3% (최대 -18%)"],["echo","메아리 망치","성공",5,2,"성공/대성공 때 25% 확률로 +1강"],
   ["cog","황금 톱니","성공",5,2,"성공마다 기본 가치 +30G"],["spike","왕의 쇠못","성공",6,2,"성공 티켓 +6"],
   ["coal","행운의 숯","대성공",2,1,"대성공 티켓 +1",1],["gnail","금 못","대성공",3,2,"대성공 티켓 +2"],["cbell","금간 방울","대성공",4,1,"대성공마다 가치 +20%"],
-  ["lmark","번개 자국","대성공",4,1,"광란 밖 대성공 후 다음 타격 파괴 확률 ×0.6"],["fork","은 소리굽쇠","대성공",4,2,"광란 밖 대성공마다 +1강"],["die","점쟁이 주사위","대성공",9,3,"대성공 티켓 +4"],
+  ["lmark","번개 자국","대성공",4,1,"신들림 밖 대성공 후 다음 타격 파괴 확률 ×0.6"],["fork","은 소리굽쇠","대성공",4,2,"신들림 밖 대성공마다 +1강"],["die","점쟁이 주사위","대성공",9,3,"대성공 티켓 +4"],
   ["seal","봉인 돌","유지",2,1,"유지 티켓 +2, 유지 2연속마다 +1강",1],["paper","무거운 문진","유지",2,1,"유지마다 가치 +180G"],["weight","인내의 추","유지",2,1,"유지 티켓 +3"],
   ["tea","식은 찻잔","유지",3,1,"유지마다 가치 +6%"],["heart","봉인된 심장","유지",3,2,"유지마다 다음 대성공 +1강 (최대 +4)",1],["sleep","잠자는 불씨","유지",4,3,"유지마다 70% 확률로 +1강"],
   ["thread","빨간 실","방어",2,1,"유지 후 다음 타격 파괴 확률 ×0.8"],
   ["apron","기운 앞치마","손상",2,1,"손상마다 가치 +140G"],["splice","금간 이음새","손상",3,2,"손상마다 이 돼지 파괴 확률 -15% (최대 -60%)",1],
-  ["crown","금간 왕관","손상",3,1,"손상으로 잃는 가치의 50%를 지킴"],["watch","금간 손목시계","손상",3,1,"광란 밖 손상마다 광란 +1"],["oath","꺾이지 않는 맹세","손상",4,2,"손상마다 70% 확률로 +1강"],
+  ["crown","금간 왕관","손상",3,1,"손상으로 잃는 가치의 50%를 지킴"],["watch","금간 손목시계","손상",3,1,"신들림 밖 손상마다 신들림 +1"],["oath","꺾이지 않는 맹세","손상",4,2,"손상마다 70% 확률로 +1강"],
   ["bknot","검은 매듭","방어",2,1,"파괴 확률 ×0.9",1],["hoop","쇠테","방어",3,1,"파괴 티켓 -2"],["fence","철사 울타리","방어",4,2,"하루의 첫 파괴를 손상으로 바꿈"],
   ["tongs","멧돼지 집게","방어",5,2,"+6 이상에서 파괴 확률 ×0.75"],["phoenix","불사조 재","방어",6,3,"돼지마다 1번, 가치 40%를 내고 파괴를 막음"],["stone","굳센 주춧돌","걸작",7,4,"돼지마다 첫 파괴를 손상으로 바꿈",0,1],
   ["sieve","잿빛 체","파괴",2,1,"파괴될 때 +500G"],
-  ["loop","가죽 고리","광란",2,1,"광란 밖 타격 속도 +20%",1],["locket","불씨 목걸이","광란",4,2,"돼지마다 첫 타격에 광란 +2"],["glass","유리 모래시계","광란",5,2,"광란 중 대성공 +3강"],
-  ["hbell","머리 없는 종","광란",6,2,"광란이 끝날 때 +1강"],["collar","방울 목줄","광란",6,2,"광란 중 타격마다 가치 +5%"],["redsand","붉은 모래시계","광란",6,2,"광란 +1초"],
-  ["core","완벽한 마나 핵","걸작",7,4,"광란 중 대성공 티켓 +6",0,1],["wick","꺼지지 않는 심지","업적",8,4,"광란 +2초"],
+  ["loop","가죽 고리","신들림",2,1,"신들림 밖 타격 속도 +20%",1],["locket","불씨 목걸이","신들림",4,2,"돼지마다 첫 타격에 신들림 +2"],["glass","유리 모래시계","신들림",5,2,"신들림 중 대성공 +3강"],
+  ["hbell","머리 없는 종","신들림",6,2,"신들림이 끝날 때 +1강"],["collar","방울 목줄","신들림",6,2,"신들림 중 타격마다 가치 +5%"],["redsand","붉은 모래시계","신들림",6,2,"신들림 +1초"],
+  ["core","완벽한 마나 핵","걸작",7,4,"신들림 중 대성공 티켓 +6",0,1],["wick","꺼지지 않는 심지","업적",8,4,"신들림 +2초"],
   ["pouch","숯 주머니","가치",2,1,"기본 가치 +80G"],["signet","쇠 인장","가치",2,1,"가치 +15%"],["iron","검은 쇳돌","가치",5,2,"+8 이상에서 가치 +30%"],
-  ["lheart","군주의 심장","걸작",8,4,"+7 이상에서 성공/대성공마다 가치 +15%",0,1],["lseal","군주의 인장","가치",9,3,"+12 이상에서 가치 +50%"],
-  ["rebate","봉인된 환급증","경제",5,2,"공물 요구량 -10%"],["tally","세금 장부","경제",5,3,"공물 완납마다 크레딧 +1"],["voucher","낡은 쿠폰","경제",3,2,"매일 무료 리롤 1번"],
+  ["lheart","드래곤의 심장","걸작",8,4,"+7 이상에서 성공/대성공마다 가치 +15%",0,1],["lseal","드래곤의 인장","가치",9,3,"+12 이상에서 가치 +50%"],
+  ["rebate","봉인된 환급증","경제",5,2,"상납액 -10%"],["tally","세금 장부","경제",5,3,"상납 완납마다 크레딧 +1"],["voucher","낡은 쿠폰","경제",3,2,"매일 무료 리롤 1번"],
   ["permit","공급 허가증","경제",8,4,"매일 돼지 +1"],
   ["bronze","청동 톱니","성공",5,3,"성공마다 이 돼지에 성공 티켓 +1"],["obsid","흑요석 눈","대성공",6,2,"+8 이상에서 성공 티켓 2장을 대성공으로 바꿈"],
-  ["chain","사슬 모래시계","유지",3,1,"광란 밖 유지마다 50% 확률로 광란 +1"],["windbell","작은 풍경","유지",3,1,"유지마다 다음 성공 +1강 (최대 +2)"],
+  ["chain","사슬 모래시계","유지",3,1,"신들림 밖 유지마다 50% 확률로 신들림 +1"],["windbell","작은 풍경","유지",3,1,"유지마다 다음 성공 +1강 (최대 +2)"],
   ["thirdeye","감긴 셋째 눈","유지",3,1,"유지 후 다음 타격 성공 티켓 +4"],["kingcup","왕의 빈 잔","유지",6,3,"유지마다 이 돼지에 대성공 티켓 +1"],
   ["thorn","가시 추","손상",3,1,"가치 +10%, 유지 티켓 2장을 손상으로 바꿈"],["comb","쇠빗","손상",3,1,"손상마다 손상 전 가치의 5%를 더함"],
   ["kseal","패배한 왕의 인장","손상",4,3,"손상마다 다음 대성공 +1강"],["spine","거인의 척추","손상",5,2,"손상 2번마다 다음 파괴 1번을 손상으로 바꿈"],
-  ["chalice","장의사의 잔","파괴",2,1,"파괴될 때 최고 가치의 30%를 오늘 공물로 바침"],["molar","굶주린 어금니","파괴",3,1,"+4 이상 돼지가 파괴되면 다음 +0 돼지가 성공 티켓 +4를 평생 가짐"],
-  ["grudge","원한의 못","파괴",3,2,"파괴될 때 그 등급만큼 대성공 티켓을 다음 타격에 1회 추가"],["holy","부러진 성검","파괴",3,1,"파괴된 돼지 강화의 30%를 다음 +0 돼지가 이어받고 광란 +3 (새벽의 칼집과 합산)"],
-  ["mourning","애도의 매듭","파괴",3,1,"공물을 못 낼 때마다 이번 판 대성공 티켓 +1"],["ossuary","납골당 왕의 칼집","파괴",5,3,"+7 이상 돼지가 파괴되면 직전 결과의 티켓 +1을 이번 판 내내 가짐"],
-  ["grip","닳은 손잡이","광란",4,2,"타격 속도 +15%"],["bellows","홀린 풀무","광란",7,3,"광란 중 타격 속도 +30%"],
-  ["hearth","주머니 화덕","가치",7,3,"이번 판 공물 완납마다 기본 가치 +20G"],
-  ["hook","수집가의 갈고리","경제",4,2,"진열장을 바꾸면 그날 첫 +0 돼지를 크레딧 2로 바꿔줌"],["badge","견습생 배지","경제",4,2,"공물 완납 다음 날 배달 돼지가 +2로 시작"],
-  ["testament","대장장이의 유언","경제",5,2,"+10 이상 돼지로 공물 완납 시 다음 배달 돼지 1마리가 그 등급의 30%로 시작"],["writ","은빛 공급 증서","경제",6,2,"상인의 기본 돼지 재고 +2"],
+  ["chalice","장의사의 잔","파괴",2,1,"파괴될 때 최고 가치의 30%를 오늘 상납액에 더함"],["molar","굶주린 어금니","파괴",3,1,"+4 이상 돼지가 파괴되면 다음 +0 돼지가 성공 티켓 +4를 평생 가짐"],
+  ["grudge","원한의 못","파괴",3,2,"파괴될 때 그 등급만큼 대성공 티켓을 다음 타격에 1회 추가"],["holy","부러진 성검","파괴",3,1,"파괴된 돼지 강화의 30%를 다음 +0 돼지가 이어받고 신들림 +3 (새벽의 칼집과 합산)"],
+  ["mourning","애도의 매듭","파괴",3,1,"상납액을 못 채울 때마다 이번 판 대성공 티켓 +1"],["ossuary","납골당 왕의 칼집","파괴",5,3,"+7 이상 돼지가 파괴되면 직전 결과의 티켓 +1을 이번 판 내내 가짐"],
+  ["grip","닳은 손잡이","신들림",4,2,"타격 속도 +15%"],["bellows","홀린 풀무","신들림",7,3,"신들림 중 타격 속도 +30%"],
+  ["hearth","주머니 화덕","가치",7,3,"이번 판 상납 완납마다 기본 가치 +20G"],
+  ["hook","수집가의 갈고리","경제",4,2,"진열장을 바꾸면 그날 첫 +0 돼지를 크레딧 2로 바꿔줌"],["badge","견습생 배지","경제",4,2,"상납 완납 다음 날 배달 돼지가 +2로 시작"],
+  ["testament","대장장이의 유언","경제",5,2,"+10 이상 돼지로 상납 완납 시 다음 배달 돼지 1마리가 그 등급의 30%로 시작"],["writ","은빛 공급 증서","경제",6,2,"상인의 기본 돼지 재고 +2"],
   ["idol","묶인 우상","연속",2,1,"돼지가 처음 +4, +8, +12…에 닿을 때마다 가치 +15%"],["wax","밀랍 인형","연속",2,1,"같은 결과 2연속마다 가치 +150G"],
   ["blinddie","눈먼 주사위","연속",3,1,"손상/유지 후 다음 타격 대성공 티켓 +3"],["censer","그을음 향로","연속",4,2,"직전과 다른 결과가 나오면 기본 가치 +20G"],
   ["weights","맞물린 추","연속",4,2,"손상 직후 성공/대성공이면 +2강"],["mirror","갈라진 쌍거울","연속",6,3,"같은 결과 2연속마다 그 타격의 유물 가치 보너스를 한 번 더"],
   ["sickle","다섯 눈금 저울","업적",6,4,"모든 결과의 기본 티켓을 5장으로 맞춤"],["butter","버터 발굽","업적",6,3,"파괴 티켓 +3, 대성공 티켓 +5"],
-  ["royal","군주의 잔돈","업적",7,4,"공물 초과분의 30%로 다음 공물을 깎음 (최대 30%)"],["pardon","군주의 사면장","업적",6,4,"게임 오버를 한 번 막고 분노를 2로 낮춘 뒤 사라짐"],
+  ["royal","드래곤의 잔돈","업적",7,4,"상납 초과분의 30%로 다음 상납액을 깎음 (최대 30%)"],["pardon","드래곤의 사면장","업적",6,4,"게임 오버를 한 번 막고 분노를 2로 낮춘 뒤 사라짐"],
   ["wledger","떠돌이 유령의 장부","업적",6,3,"유령 상인이 기본 돼지 +1, 특수 돼지 +1을 더 가져옴"],["contract","종신 계약서","업적",10,5,"배달 돼지가 +7로 시작하고 달굴 필요 없음"],
-  ["knife","운명을 깎는 칼","티켓",5,3,"기본 손상 티켓 2장과 기본 유지 티켓 2장을 지움"],["syringe","도파민 주사기","광란",4,2,"광란이 두 배로 빨리 차지만, 광란이 끝난 직후 다음 타격 파괴 확률 ×1.5"],
-  ["dawnholy","새벽에 되살아난 성검","합체",999,0,"파괴된 돼지 강화의 70%를 다음 +0 돼지가 이어받고 광란 +7 · 부러진 성검 + 새벽의 칼집 합체"], // day 999: never sold, only fused
-  ["dawn","새벽의 칼집","걸작",6,3,"파괴된 돼지 강화의 40%를 다음 +0 돼지가 이어받고 광란 +4",0,1],["shaft","멈추지 않는 굴대","걸작",7,4,"성공 2번마다 +1강",0,1],
+  ["knife","운명을 깎는 칼","티켓",5,3,"기본 손상 티켓 2장과 기본 유지 티켓 2장을 지움"],["syringe","도파민 주사기","신들림",4,2,"신들림이 두 배로 빨리 차지만, 신들림이 끝난 직후 다음 타격 파괴 확률 ×1.5"],
+  ["dawnholy","새벽에 되살아난 성검","합체",999,0,"파괴된 돼지 강화의 70%를 다음 +0 돼지가 이어받고 신들림 +7 · 부러진 성검 + 새벽의 칼집 합체"], // day 999: never sold, only fused
+  ["dawn","새벽의 칼집","걸작",6,3,"파괴된 돼지 강화의 40%를 다음 +0 돼지가 이어받고 신들림 +4",0,1],["shaft","멈추지 않는 굴대","걸작",7,4,"성공 2번마다 +1강",0,1],
   ["twins","쌍둥이 인장","걸작",8,4,"살아남은 타격마다 2% 확률로 똑같은 돼지가 하나 더 생김",0,1],["seed","영원의 씨앗","걸작",7,4,"유지 티켓 +6, 유지마다 기본 가치 +40G",0,1],
   ["pearl","심연의 진주","걸작",7,4,"손상 티켓 +3, 돼지마다 첫 손상 2번은 등급이 안 내려감",0,1],["ledger","장의사의 장부","걸작",8,4,"+7 이상 돼지가 파괴되면 다음 날 돼지 +1 (하루 최대 2)",0,1],
 ].map(([id, name, cat, day, cost, desc, gift, mw]) => ({ id, name, cat, day, cost, desc, gift: !!gift, mw: !!mw }));
@@ -256,7 +260,7 @@ const ITEMS = {
   clock:  { name: "되감기 태엽", desc: "모루 위 마지막 타격을 되돌림 (파괴 포함)", k: 1.53, stock: 1, day: 3 },
   chalk:  { name: "빨간 분필", desc: "다음 타격 대성공 티켓 ×2", k: .56, stock: 3, day: 6 },
   powder: { name: "화약 주머니", desc: "다음 타격: 성공/대성공은 대성공, 나머지는 파괴", k: .9, stock: 1, day: 6 },
-  star:   { name: "차가운 별 조각", desc: "광란 +3 (광란 중 사용 불가)", k: .70, stock: 3, day: 6 },
+  star:   { name: "차가운 별 조각", desc: "신들림 +3 (신들림 중 사용 불가)", k: .70, stock: 3, day: 6 },
   note:   { name: "배달 쪽지", desc: "다음 날 돼지 +2", k: .91, stock: 3, day: 6 },
   incense:{ name: "망각의 향", desc: "분노 -1 (게임당 1번)", k: 2.12, stock: 1, day: 9 },
   // Nov update: items that add tickets for the rest of the run, and a 9th relic slot from day 18 (prices are estimates)
@@ -346,7 +350,7 @@ const REGULAR = Object.keys(FAMS).filter(k => !FAMS[k].special), SPECIAL = Objec
 // Tech tree for regular pigs: the way a pig is forged decides its line.
 // At +5 the results so far pick a lane (most Holds → 강철, most Damage → 가시, most Greats → 광휘);
 // at +10 the strike that crosses it picks one of the lane's two families (대성공 → the second, otherwise the first).
-const LANES = { iron: { name: "강철", why: "유지가 가장 많으면", fams: ["citadel", "saw"] }, gold: { name: "광휘", why: "대성공이 가장 많으면", fams: ["holy", "rune"] }, thorn: { name: "가시", why: "손상이 가장 많으면", fams: ["fang", "split"] } };
+const LANES = { iron: { name: "강철", fams: ["citadel", "saw"] }, gold: { name: "광휘", fams: ["holy", "rune"] }, thorn: { name: "가시", fams: ["fang", "split"] } };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 function evolve(p, res) {
   if (FAMS[p.fam]?.special) return;
@@ -362,14 +366,14 @@ function unlock(fam) { if (unlocked(fam)) return false; unlocks.push(fam); try {
 const ACH = {
   clear: { name: "계약 만료", desc: "끝장나기 전에 24일 버티기", relic: "sickle" },
   broken10: { name: "미끄러운 발굽", desc: "한 판에 돼지 10마리 파괴 (유물로 막은 건 제외)", relic: "butter" },
-  frenzy5: { name: "쉬지 않는 망치", desc: "한 판에 광란 5번", relic: "wick" },
-  triple: { name: "통 큰 공물", desc: "공물의 3배 이상 바치기", relic: "royal" },
-  last: { name: "벼랑 끝", desc: "분노 2번인 날 공물 완납", relic: "pardon" },
+  frenzy5: { name: "쉬지 않는 망치", desc: "한 판에 신들림 5번", relic: "wick" },
+  triple: { name: "통 큰 상납", desc: "상납액의 3배 이상 바치기", relic: "royal" },
+  last: { name: "벼랑 끝", desc: "분노 2번인 날 상납 완납", relic: "pardon" },
   soldout: { name: "싹쓸이", desc: "유령 상인 한 번 방문 때 모든 물건 매진", relic: "wledger" },
-  overtime: { name: "종신 고용", desc: "계약 완료 후 공물 3번 완납", relic: "contract" },
+  overtime: { name: "종신 고용", desc: "계약 완료 후 상납 3번 완납", relic: "contract" },
   first10: { name: "두 자릿수", desc: "처음으로 +10 달성" },
   firstdeath: { name: "첫 파산", desc: "처음으로 게임 오버" },
-  firstfrenzy: { name: "첫 광란", desc: "처음으로 광란 발동" },
+  firstfrenzy: { name: "첫 신들림", desc: "처음으로 신들림 발동" },
 };
 const ACH_RELIC = Object.fromEntries(Object.entries(ACH).filter(([, a]) => a.relic).map(([k, a]) => [a.relic, k]));
 let achs = []; try { achs = JSON.parse(localStorage.getItem("pigforge-ach")) || []; } catch {}
@@ -400,15 +404,15 @@ const treeKeys = p => { const L = Math.max(p.lvl, p.peak || 0), k = []; if (FAMS
 function dexSee(p) { const ks = [dexKey(p), ...treeKeys(p)].filter(k => !dex.includes(k)); if (!ks.length) return; dex.push(...ks); const k = ks[0]; try { localStorage.setItem("pigforge-dex", JSON.stringify(dex)); } catch {} setTimeout(announceBreeds, 1600); }
 const BREEDS = { // each breed has one ability (fx) and nudges the tech tree (lean)
   base: { name: "토종", desc: "늘 오던 분홍 돼지", fx: "특별한 능력 없음" },
-  spot: { name: "얼룩", desc: "검은 점박이", fx: "유지 티켓 +1 · 강철로 기울어요", lean: "h", dex: 5 },
-  gold: { name: "황금", desc: "온몸이 금으로 번쩍여요", fx: "가치 +10% · 광휘로 기울어요", lean: "g", ach: "first10" },
-  neon: { name: "광란", desc: "어둠 속에서 자줏빛으로 빛나요", fx: "타격마다 광란 칸 +1 더", ach: "firstfrenzy" },
-  black: { name: "흑", desc: "숯처럼 검은 가죽에 붉은 눈", fx: "파괴 확률 ×0.92 · 가시로 기울어요", lean: "d", ach: "firstdeath" },
-  crystal: { name: "수정", desc: "각진 수정으로 깎은 몸", fx: "대성공 티켓 +1 · 광휘로 기울어요", lean: "g", dex: 15 },
-  lava: { name: "용암", desc: "식은 바위 틈으로 마그마가 맥박쳐요", fx: "손상될 때마다 가치 +8% · 가시로 기울어요", lean: "d", ach: "broken10" },
+  spot: { name: "얼룩", desc: "검은 점박이", fx: "유지 티켓 +1", lean: "h", dex: 5 },
+  gold: { name: "황금", desc: "온몸이 금으로 번쩍여요", fx: "가치 +10%", lean: "g", ach: "first10" },
+  neon: { name: "신들린", desc: "어둠 속에서 자줏빛으로 빛나요", fx: "타격마다 신들림 칸 +1 더", ach: "firstfrenzy" },
+  black: { name: "흑", desc: "숯처럼 검은 가죽에 붉은 눈", fx: "파괴 확률 ×0.92", lean: "d", ach: "firstdeath" },
+  crystal: { name: "수정", desc: "각진 수정으로 깎은 몸", fx: "대성공 티켓 +1", lean: "g", dex: 15 },
+  lava: { name: "용암", desc: "식은 바위 틈으로 마그마가 맥박쳐요", fx: "손상될 때마다 가치 +8%", lean: "d", ach: "broken10" },
   ghost: { name: "유령", desc: "반쯤 비쳐 보이는 창백한 몸", fx: "파괴되면 가치의 15%를 골드로", ach: "soldout" },
-  royal: { name: "왕실", desc: "자줏빛 가죽에 금 목걸이", fx: "성공할 때마다 가치 +3% · 강철로 기울어요", lean: "h", ach: "clear" },
-  cosmos: { name: "성좌", desc: "밤하늘을 두른 몸에 별이 떠돌아요", fx: "이 돼지의 광란 +1초", dex: 30 },
+  royal: { name: "왕실", desc: "자줏빛 가죽에 금 목걸이", fx: "성공할 때마다 가치 +3%", lean: "h", ach: "clear" },
+  cosmos: { name: "성좌", desc: "밤하늘을 두른 몸에 별이 떠돌아요", fx: "이 돼지의 신들림 +1초", dex: 30 },
 };
 const breedOpen = id => { const b = BREEDS[id]; return id === "base" || (b.ach ? achieved(b.ach) : dexCount() >= b.dex); };
 const breedCond = b => b.ach ? `업적 「${ACH[b.ach].name}」 달성` : `도감 ${b.dex}종 발견`;
@@ -630,10 +634,10 @@ function ringBell() {
   if (day === CONTRACT) achieve("clear");
   S.day++; const born = morning();
   if (S.day > bestDay) { bestDay = S.day; try { localStorage.setItem("pigforge-best", bestDay); } catch {} }
-  banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : pardoned ? `군주의 사면장이 목숨을 구했다 · 분노 ${S.anger}/${lives()}` : `${G(q - total)} 모자라요 · 분노 ${S.anger}/${lives()} · 골드 +${G(total)}`, paid ? "s" : "b");
+  banner(paid ? "상납 완납" : "상납 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : pardoned ? `드래곤의 사면장이 목숨을 구했다 · 분노 ${S.anger}/${lives()}` : `${G(q - total)} 모자라요 · 분노 ${S.anger}/${lives()} · 골드 +${G(total)}`, paid ? "s" : "b");
   ui();
   if (paid) sfx.play("coinsBig", "grunt"); else rage(born);
-  if (day === CONTRACT && !S.contract) { S.contract = true; sfx.play("jach"); showModal(`<h2 class="gold">계약 완료!</h2><p>${CONTRACT}일을 버텼어요. 이제부터는 매일 공물이 20%씩 올라요.</p><button id="ok">계속하기</button>`, () => $("ok").onclick = closeModal); }
+  if (day === CONTRACT && !S.contract) { S.contract = true; sfx.play("jach"); showModal(`<h2 class="gold">계약 완료!</h2><p>${CONTRACT}일을 버텼어요. 이제부터는 매일 상납액이 20%씩 올라요.</p><button id="ok">계속하기</button>`, () => $("ok").onclick = closeModal); }
   flushToasts(paid ? 1500 : 4200);
 }
 
@@ -652,7 +656,7 @@ addEventListener("resize", resize);
 
 const STATIONS = [
   { id: "anvil", name: "모루", yaw: 0, pitch: -.33 }, { id: "furnace", name: "화로", yaw: 55, pitch: -.45 }, { id: "pen", name: "돼지 우리", yaw: 110, pitch: -.62 },
-  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "wall", name: "추첨표 · 달력", yaw: -110, pitch: .14 }, { id: "tribute", name: "공물 창구", yaw: -70, pitch: -.42 }, { id: "shelf", name: "진열대", yaw: -35, pitch: -.24 },
+  { id: "bank", name: "유물 제단", yaw: 165, pitch: -.45 }, { id: "ghost", name: "유령 상인", yaw: -140, pitch: -.3 }, { id: "wall", name: "추첨표 · 달력", yaw: -110, pitch: .14 }, { id: "tribute", name: "상납창", yaw: -70, pitch: -.42 }, { id: "shelf", name: "진열대", yaw: -35, pitch: -.24 },
 ];
 const at = (yaw, r, y = 0) => new THREE.Vector3(-Math.sin(yaw * Math.PI / 180) * r, y, -Math.cos(yaw * Math.PI / 180) * r);
 const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .8, ...o });
@@ -808,14 +812,14 @@ async function ghostLeave() {
   ghostSpin = 0; ghost.visible = false; ghostLeaving = false; S.merchant = null; ghostReset(); ghost.visible = false; ui();
   banner("유령이 떠났어요", `다음 방문: Day ${Math.floor(S.day / 3) * 3 + 3}`, "h");
 }
-// Tribute hatch: bars and the boar lord's eyes, set into a thick brick wall
+// Tribute hatch: bars and the dragon's eyes, set into a thick brick wall
 { const w = new THREE.Mesh(rbox(2.9, 4, 2.1, .04), M(0x8a7060, pbr("brick", 2.2, 3))); w.position.copy(at(-70, 4.47, 2)); w.lookAt(0, 2, 0); scene.add(w); }
 const hatch = new THREE.Group(); hatch.position.copy(at(-70, 3.4, 1.15)); hatch.lookAt(0, 1.15, 0); scene.add(hatch);
 { const dark = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0x050302 })); hatch.add(dark);
   const gate = new THREE.Group(), barM = M(0x3a3a3a, { metalness: .8, roughness: .5 }); gate.position.y = .65; hatch.add(gate); hatch.userData.gate = gate; hatch.userData.barM = barM; // pivots at the top so it folds up
   for (let i = -3; i <= 3; i++) { const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.3, 12), barM); bar.position.set(i * .22, -.65, .05); gate.add(bar); }
 }
-// The boar lord's eyes: only two huge slit-pupilled beast eyes burning in the dark, no face
+// The dragon's eyes: only two huge slit-pupilled beast eyes burning in the dark, no face
 const EYE = canvasTex((x, n) => { const c = n / 2; // left eye; the inner (nose) corner is on the right and the lid slants down to it in a scowl
   const lid = () => { x.beginPath(); x.moveTo(16, c + 4); x.bezierCurveTo(70, c - 80, 180, c - 52, 244, c + 32); x.bezierCurveTo(190, c + 64, 80, c + 62, 16, c + 4); x.closePath(); };
   x.save(); lid(); x.clip();
@@ -850,12 +854,13 @@ function tickEyes(dt, t) {
   { const k = (.25 + a * .35 + (raging ? 1.2 : 0)) * eyeOpen; hatch.userData.barM.emissive.setRGB(k * .3, k * .04, 0); } // the bars catch the glow of the eyes
 }
 box(.6, .1, 1.8, wood(0x7a5030), at(-70, 2.9, .5));
-// The boar lord's arm: lives in the hatch frame (+z points into the room), hidden behind the dark opening until the bell rings
-const FUR = canvasTex((x, n) => { x.fillStyle = "#3a2618"; x.fillRect(0, 0, n, n);
-  for (let i = 0; i < 900; i++) { x.strokeStyle = `hsla(${20 + Math.random() * 15},${30 + Math.random() * 25}%,${8 + Math.random() * 22}%,.9)`; x.lineWidth = 1 + Math.random() * 1.5;
-    const X = Math.random() * n, Y = Math.random() * n; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + (Math.random() - .5) * 6, Y + 10 + Math.random() * 14); x.stroke(); } });
+// The dragon's arm: lives in the hatch frame (+z points into the room), hidden behind the dark opening until the bell rings
+const FUR = canvasTex((x, n) => { x.fillStyle = "#1c0d0a"; x.fillRect(0, 0, n, n); const r = n / 16; // overlapping dragon scales
+  for (let row = -1; row < 17; row++) for (let i = -1; i < 9; i++) { const X = (i * 2 + (row & 1)) * r, Y = row * r * .8;
+    x.fillStyle = `hsl(${4 + Math.random() * 10},${45 + Math.random() * 20}%,${14 + Math.random() * 12}%)`; x.strokeStyle = "#0b0504"; x.lineWidth = 2;
+    x.beginPath(); x.arc(X, Y, r * 1.05, 0, Math.PI); x.fill(); x.stroke(); } });
 const arm = new THREE.Group(), handG = new THREE.Group(), fingers = []; arm.visible = false; arm.add(handG); hatch.add(arm); handG.scale.setScalar(1.45);
-{ const skin = M(0x9a6a50, pbr("hide", 1.5)), claw = M(0x16110d, { roughness: .25, metalness: .3 }), fur = M(0x8a6040, { map: FUR, bumpMap: FUR, bumpScale: .04, roughness: 1 });
+{ const skin = M(0x5a2620, pbr("hide", 1.5)), claw = M(0x16110d, { roughness: .25, metalness: .3 }), fur = M(0xa04a38, { map: FUR, bumpMap: FUR, bumpScale: .04, roughness: .6 });
   const palm = new THREE.Mesh(rbox(.36, .11, .3, .045), skin); handG.add(palm);
   for (let i = 0; i < 4; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(.045, 10, 8), skin); k.position.set(-.13 + i * .087, .045, .12); k.scale.set(1, .7, 1); handG.add(k); }
   const digit = (len1, len2, r) => { const f = new THREE.Group(), joint = new THREE.Group();
@@ -1188,7 +1193,7 @@ function sync() {
   shelfFx();
 }
 
-// Rage: after a failed tribute the boar lord throws the morning delivery through the hatch into the pen
+// Rage: after a failed tribute the dragon throws the morning delivery through the hatch into the pen
 const flying = new Set(), flights = [];
 let rageT = 0;
 const penSlot = i => at(110 + (i % 4 - 1.5) * 8, 2.15 + Math.floor(i / 4) * .45, 0);
@@ -1338,12 +1343,12 @@ function drawBoard(now) {
   x.textBaseline = "alphabetic";
   if (!p) { txt("모루가 비어 있어요", W / 2, H / 2 + 14, "46px Jua, sans-serif", "#8a8078", "center"); boardTex.needsUpdate = true; return; }
   txt(pigName(p), 44, 92, "60px Jua, sans-serif", "#f4ece2"); txt(`+${p.lvl}`, W - 44, 92, "60px Jua, sans-serif", "#f4ece2", "right");
-  txt("공물 가치", 44, 158, "26px Jua, sans-serif", "#b8aea4"); txt(G(V(p)).replace("G", " G"), W - 44, 176, "72px Jua, sans-serif", "#f4ece2", "right");
+  txt("상납 가치", 44, 158, "26px Jua, sans-serif", "#b8aea4"); txt(G(V(p)).replace("G", " G"), W - 44, 176, "72px Jua, sans-serif", "#f4ece2", "right");
   const L = boardLast && boardLast.id === p.id ? boardLast : null;
   if (L) { txt(`${BNAME[L.res]}${L.d ? ` ${L.d > 0 ? "+" : ""}${L.d}` : ""}`, 44, 228, "40px Jua, sans-serif", BCOL[L.res]);
     if (L.gain) txt(`${L.gain > 0 ? "+" : "−"}${G(Math.abs(L.gain)).replace("G", " G")}`, 44, 262, "26px Jua, sans-serif", "#cfc6bc"); }
   for (let i = 0; i < 10; i++) { const on = fz || i < p.charge; x.fillStyle = on ? (fz ? "#ff8af0" : "#f6c88a") : "#4a4440"; if (on) { x.shadowColor = x.fillStyle; x.shadowBlur = 14; } x.fillRect(W - 44 - (10 - i) * 30 + 6, 200, 22, 22); x.shadowBlur = 0; }
-  txt(fz ? `광란 ${Math.ceil(left)}s` : `${p.charge} / 10`, W - 44, 258, "26px Jua, sans-serif", fz ? "#ff9bff" : "#cfc6bc", "right");
+  txt(fz ? `신들림 ${Math.ceil(left)}s` : `${p.charge} / 10`, W - 44, 258, "26px Jua, sans-serif", fz ? "#ff9bff" : "#cfc6bc", "right");
   const keys = ["b", "d", "h", "s", "g"], cw = (W - 88 - 4 * 18) / 5;
   keys.forEach((k, i) => { const X = 44 + i * (cw + 18); x.fillStyle = BCOL[k]; x.fillRect(X, 296, cw, 5);
     txt(BNAME[k], X + cw / 2, 346, "30px Jua, sans-serif", BCOL[k], "center"); txt(`${(o[k] * 100).toFixed(1)}%`, X + cw / 2, 400, "44px Jua, sans-serif", "#f4ece2", "center"); });
@@ -1512,7 +1517,7 @@ async function doStrike() {
   }
   hamRate = inFrenzy() ? 1.45 : 1; hamT0 = performance.now(); await sleep(200 / hamRate); hitT = performance.now(); // strike lands at the bottom of the slam
   const v0 = V(p), lane0 = p.lane, fam0 = p.fam, fzBefore = inFrenzy(), { res, frenzyStarted, saved, twin, mastered } = strike(p);
-  const branch = res !== "b" && (p.fam !== fam0 ? `${FAMS[p.fam].name} 계열로 진화!` : p.lane !== lane0 ? `${LANES[p.lane].name} 갈래로!` : "");
+  const branch = res !== "b" && (p.fam !== fam0 ? "진화!" : p.lane !== lane0 ? "모습이 변했다!" : ""); // the result only, never the rule that caused it
   boardLast = { res, d: p.lvl - before, gain: res === "b" ? -v0 : V(p) - v0, id: p.id, t: performance.now() };
   clangAlt = !clangAlt; const clang = clangAlt ? "ting" : "clang"; // 낑, 깡, 낑, 깡…
   if (big) sfx.play(clang, "heavy"); else sfx.play(clang);
@@ -1531,7 +1536,7 @@ async function doStrike() {
     if (branch) setTimeout(() => { banner(branch, pigName(p), "g"); sfx.play("jach"); }, 1300);
     if (twin) setTimeout(() => { banner("쌍둥이!", "똑같은 돼지가 우리에 생겼어요", "f"); sfx.play("plop", "coins"); }, 400);
     if (mastered) setTimeout(() => { banner("걸작 해금!", `${RB[FAMS[mastered].mw].name} · 이제 유물 진열장에 나와요`, "g"); sfx.play("jach"); }, 900);
-    if (frenzyStarted) setTimeout(() => { banner("광란!", "잠깐 동안 깨지지 않아요", "f"); sfx.play("jfrenzy", "spell"); pillar(top, 0xff3df2, .22, 5, 1); shock(top, 0xff3df2, 2.5, .7); }, 350);
+    if (frenzyStarted) setTimeout(() => { banner("신들림!", "잠깐 동안 깨지지 않아요", "f"); sfx.play("jfrenzy", "spell"); pillar(top, 0xff3df2, .22, 5, 1); shock(top, 0xff3df2, 2.5, .7); }, 350);
     if (big) { await sleep(1100); setCine(false); }
   }
   busy = false; ui(); flushToasts(mastered || twin ? 2600 : 1200);
@@ -1556,12 +1561,12 @@ const pct = x => (x * 100).toFixed(1) + "%";
 // forgetax.tools: 15% of the day's tribute (at least 150 G), ×2.5 for every paid reroll already made that day
 const rerollCost = () => Math.round(Math.max(150, .15 * quota(S.day)) * 1.8 ** (S.rerolls || 0)); // shortcut: Nov update made the climb cheaper but gave no number; 1.8× (was 2.5×) until the wiki updates
 // Owned items with their effect text, so the player knows what each does before using it
-function bag(btn) {
+function bag(btn, row) { // row: one swipeable line of cards, so a full bag never covers the pig on the anvil
   const ks = Object.keys(ITEMS).filter(k => S.items[k] > 0 || S.armed[k]);
-  return ks.length ? `<p class="label">내 아이템</p><div class="list">${ks.map(k => `<div class="item"><div><b>${ITEMS[k].name}</b><span class="tag">×${S.items[k] || 0}${S.armed[k] ? " · 적용 대기" : ""}</span><p>${ITEMS[k].desc}</p></div>${btn ? btn(k) : ""}</div>`).join("")}</div>` : "";
+  return ks.length ? `<p class="label">내 아이템${row && ks.length > 2 ? " · 옆으로 밀어 보기" : ""}</p><div class="${row ? "chips" : "list"}">${ks.map(k => `<div class="item"><div><b>${ITEMS[k].name}</b><span class="tag">×${S.items[k] || 0}${S.armed[k] ? " · 적용 대기" : ""}</span><p>${ITEMS[k].desc}</p></div>${btn ? btn(k) : ""}</div>`).join("")}</div>` : "";
 }
 const breedTag = p => BREEDS[p.breed] && p.breed !== "base" ? `<span class="tag" style="background:var(--great);color:#1a120c" title="${BREEDS[p.breed].fx}">${BREEDS[p.breed].name}</span>` : "";
-function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pigName(p)}</b>${breedTag(p)}${FAMS[p.fam]?.special ? '<span class="tag" style="background:var(--frenzy);color:#1a120c">특수</span>' : ""}${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 광란 ${p.charge}/10${BREEDS[p.breed] && p.breed !== "base" ? ` · ${BREEDS[p.breed].fx}` : ""}</p></div>${btn}</div>`; }
+function pigLine(p, btn = "") { return `<div class="item"><div><b>+${p.lvl} ${pigName(p)}</b>${breedTag(p)}${FAMS[p.fam]?.special ? '<span class="tag" style="background:var(--frenzy);color:#1a120c">특수</span>' : ""}${p.heated ? '<span class="tag">달궈짐</span>' : ""}<p class="num">${G(V(p))} · 신들림 ${p.charge}/10${BREEDS[p.breed] && p.breed !== "base" ? ` · ${BREEDS[p.breed].fx}` : ""}</p></div>${btn}</div>`; }
 let confirmBell = false;
 function ui() {
   sync();
@@ -1580,9 +1585,9 @@ function ui() {
         <button class="ghost" id="lift" ${busy || S.hand ? "disabled" : ""}>들기</button>
         </div>${bag(k => k === "clock"
           ? (lastSnap && !busy ? `<button class="ghost" id="undo">사용</button>` : `<span class="label">타격 후 사용</span>`)
-          : `<button class="${S.armed[k] ? "hot" : "ghost"}" data-use="${k}" ${busy ? "disabled" : ""}>${S.armed[k] ? "취소" : "사용"}</button>`)}`;
+          : `<button class="${S.armed[k] ? "hot" : "ghost"}" data-use="${k}" ${busy ? "disabled" : ""}>${S.armed[k] ? "취소" : "사용"}</button>`, true)}`;
     } else if (S.hand) h += `<button id="place" class="hot">모루에 올리기</button>`;
-    else h += `<p class="label">돼지 우리에서 돼지를 들고, 화로에서 달군 뒤 모루에서 내리쳐요.${S.items.clock && lastSnap ? "" : ""}</p>` + (S.items.clock && lastSnap ? `<button class="ghost" id="undo">되감기로 부서진 돼지 되살리기 ×${S.items.clock}</button>` : "");
+    else h += `<p class="label">돼지 우리에서 돼지를 들고 와 모루에 올리세요.</p>` + (S.items.clock && lastSnap ? `<button class="ghost" id="undo">되감기로 부서진 돼지 되살리기 ×${S.items.clock}</button>` : "");
   }
   if (s === "furnace") h += !S.hand ? `<p class="label">돼지는 달구지 않아도 바로 칠 수 있어요. 달구면 붉게 빛나요.</p>` : S.hand.heated ? `<p>이미 달궈졌어요. 모루로 가세요.</p>` : `<button id="heat" class="hot">달구기 (선택)<small>2초 · 붉게 빛나요</small></button>`;
   if (s === "pen") {
@@ -1596,7 +1601,7 @@ function ui() {
     else if (S.day >= 2) h += `<p class="label">오늘 진열장이 비었어요.</p>`; else h += `<p class="label">진열장은 Day 2부터 열려요.</p>`;
     if (S.day >= 2) h += `<button class="ghost" id="reroll" ${S.freeReroll || S.gold >= rerollCost() ? "" : "disabled"}>진열장 바꾸기 · ${S.freeReroll ? "무료" : G(rerollCost())}</button>`;
     h += `<details><summary class="label">업적 ${achCount()} · 일부는 유물을 해금해요</summary><div class="list" style="margin-top:6px">${achList()}</div></details>`;
-    h += `<details><summary class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 해금</summary><div class="list" style="margin-top:6px">${mwList()}</div></details>`;
+    h += `<details><summary class="label">걸작 해금 ${unlocks.length}/9</summary><div class="list" style="margin-top:6px">${mwList()}</div></details>`;
     h += `<p class="label">내 유물 ${S.relics.length}/${relicCap()}</p>` + (S.relics.length ? `<div class="list">${S.relics.map(id => `<div class="item"><div><b>${RB[id].name}</b><p>${RB[id].desc}</p></div><button class="ghost" data-toss="${id}">버리기</button></div>`).join("")}</div>` : "");
   }
   if (s === "ghost") {
@@ -1616,13 +1621,13 @@ function ui() {
   }
   if (s === "tribute") {
     const short = Math.max(0, q - tsum);
-    h += `<div class="row"><span>오늘 공물 <b class="num">${G(tsum)}</b> / ${G(q)}</span>${S.hand ? `<button id="offer">창구에 넣기</button>` : ""}</div>`;
+    h += `<div class="row"><span>오늘 상납액 <b class="num">${G(tsum)}</b> / ${G(q)}</span>${S.hand ? `<button id="offer">상납대에 올리기</button>` : ""}</div>`;
     if (short) h += `<p class="bad">부족 ${G(short)} · 돼지를 더 바쳐야 해요 (골드로는 못 내요)</p>`;
-    if (S.scrap) h += `<p class="label">장의사의 잔 조각 공물 ${G(S.scrap)} 포함</p>`;
-    if (S.carry) h += `<p class="label">군주의 잔돈으로 공물 ${G(S.carry)} 깎임</p>`;
+    if (S.scrap) h += `<p class="label">장의사의 잔 조각 상납 ${G(S.scrap)} 포함</p>`;
+    if (S.carry) h += `<p class="label">드래곤의 잔돈으로 상납액 ${G(S.carry)} 깎임</p>`;
     if (S.tribute.length) h += `<div class="list">${S.tribute.map((p, i) => pigLine(p, `<button class="ghost" data-take="${i}" ${S.hand ? "disabled" : ""}>꺼내기</button>`)).join("")}</div>`;
-    h += `<p class="label">종을 치면 하루가 끝나요. 공물은 돼지로만 낼 수 있어요. 모자라면 분노가 쌓이고, 3번이면 끝이에요. 바친 돼지 가치는 완납이든 아니든 전부 골드로 돌려받아요.</p>
-      <button id="bell" class="${confirmBell ? "hot" : ""}" ${collecting ? "disabled" : ""}>${collecting ? "공물을 가져가는 중…" : confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
+    h += `<p class="label">돼지를 상납대에 올리고 종을 울리세요. 오늘 몫을 채우면 내일도 모루 앞에 설 수 있어요.</p>
+      <button id="bell" class="${confirmBell ? "hot" : ""}" ${collecting ? "disabled" : ""}>${collecting ? "상납을 거둬 가는 중…" : confirmBell ? "정말 칠까요? 한 번 더 누르세요" : "종 울리기"}</button>`;
   }
   $("panel").innerHTML = h; save();
 }
@@ -1636,7 +1641,7 @@ $("panel").addEventListener("click", async e => {
   if (id === "place") { S.anvil = S.hand; S.hand = null; lastSnap = null;
     const a = S.anvil; if (typeof S.inherit === "number") S.inherit = { lvl: S.inherit, charge: 4 };
     if (a.lvl === 0 && a.strikes === 0) {
-      if (S.inherit) { a.lvl = a.peak = S.inherit.lvl; a.charge = Math.min(10, a.charge + S.inherit.charge); banner(`+${S.inherit.lvl} 계승`, `광란 +${S.inherit.charge}`, "f"); S.inherit = null; }
+      if (S.inherit) { a.lvl = a.peak = S.inherit.lvl; a.charge = Math.min(10, a.charge + S.inherit.charge); banner(`+${S.inherit.lvl} 계승`, `신들림 +${S.inherit.charge}`, "f"); S.inherit = null; }
       if (S.molar) { a.tk = { ...(a.tk || {}), s: ((a.tk || {}).s || 0) + 4 }; S.molar = false; banner("굶주린 어금니", "이 돼지는 성공 티켓 +4", "f"); }
     } }
   if (id === "heat") { b.disabled = true; b.textContent = "달구는 중…"; sfx.play("fireWhoosh"); const p = S.hand; await sleep(2000); if (S.hand === p) p.heated = true; sparkBurst(at(55, 1.7, .9), 0xff8a3d, 30); sfx.play("fireDone"); }
@@ -1656,7 +1661,7 @@ $("panel").addEventListener("click", async e => {
     flushToasts(1400);
     banner("구매", d.shop === "pig" ? "돼지가 우리에 들어갔어요" : d.shop === "special" ? pigName(S.hand) : ITEMS[d.shop].name, "s"); sfx.play("coins"); if (soldOut) setTimeout(ghostLeave, 700); }
   if (d.use) { const k = d.use;
-    if (k === "star") { if (inFrenzy()) { sfx.play("error"); return banner("안 돼요", "광란 중엔 못 써요", "h"); } S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
+    if (k === "star") { if (inFrenzy()) { sfx.play("error"); return banner("안 돼요", "신들림 중엔 못 써요", "h"); } S.anvil.charge = Math.min(10, S.anvil.charge + 3); S.items.star--; }
     else if (S.armed[k]) { delete S.armed[k]; S.items[k] = (S.items[k] || 0) + 1; }
     else { S.armed[k] = true; S.items[k]--; banner(ITEMS[k].name, "다음 타격에 적용", "f"); } }
   if (id === "undo" && lastSnap) { S.items.clock--; if (S.anvil) Object.assign(S.anvil, lastSnap.pig); else S.anvil = lastSnap.pig;
@@ -1696,8 +1701,9 @@ function closeModal() { $("modal").hidden = true; ui(); }
 const achCount = () => `${achs.filter(k => ACH[k]).length}/${Object.keys(ACH).length}`;
 const achList = () => Object.entries(ACH).map(([k, a]) =>
   `<div class="item ${achieved(k) ? "done" : "locked"}"><div><b>${a.name}</b>${a.relic ? `<span class="tag">${RB[a.relic].name}</span>` : ""}<p>${a.desc}</p></div><span class="label">${achieved(k) ? "달성" : "미달성"}</span></div>`).join("");
+const famSeen = k => dex.some(d => d.startsWith(k + ":") || d.startsWith(`f:${k}:`));
 const mwList = () => Object.entries(FAMS).map(([k, f]) =>
-  `<div class="item ${unlocked(k) ? "done" : "locked"}"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b><span class="tag">${f.name}${f.special ? " · 특수" : ""}</span><p>${unlocked(k) ? RB[f.mw].desc : `${f.name} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("");
+  `<div class="item ${unlocked(k) ? "done" : "locked"}"><div><b>${unlocked(k) ? RB[f.mw].name : "???"}</b>${famSeen(k) ? `<span class="tag">${f.name}${f.special ? " · 특수" : ""}</span>` : ""}<p>${unlocked(k) ? RB[f.mw].desc : `${famSeen(k) ? f.name : "???"} 돼지 +20 달성 시 해금`}</p></div><span class="label">${unlocked(k) ? "해금" : "잠김"}</span></div>`).join("");
 
 // ===== Title menu =====
 let dexFromPause = false, menu = false, confirmNew = false, bestDay = 0; try { bestDay = +localStorage.getItem("pigforge-best") || 0; } catch {}
@@ -1717,17 +1723,17 @@ function showMenu(view = "main") {
     const breeds = Object.entries(BREEDS).filter(([id]) => id !== "base").map(([id, b]) => `<div class="item ${breedOpen(id) ? "done" : "locked"}">
       <div style="display:flex;gap:8px;align-items:center">${breedOpen(id) ? `<img class="vthumb" alt="" data-t='${JSON.stringify({ lvl: 9, fam: "citadel", breed: id })}'>` : ""}<div><b>${breedOpen(id) ? b.name + " 돼지" : "???"}</b><p>${breedOpen(id) ? `${b.desc} · <b style="font-size:12px">${b.fx}</b>` : breedCond(b)}</p></div></div>
       <span class="label">${breedOpen(id) ? "해금" : "잠김"}</span></div>`).join("");
-    const tree = Object.entries(LANES).map(([ln, l]) => `<div class="label">${dex.includes("lane:" + ln) ? `${l.name} 갈래` : "??? 갈래"} · +5에서 ${l.why}</div><div class="dexGrid">${l.fams.flatMap(f => FAMS[f].forms.map((nm, i) =>
-      cell(`f:${f}:${i}`, `+${10 + i * 4} ${nm} 돼지`, { lvl: 10 + i * 4, fam: f, lane: ln }))).join("")}</div><p class="label">+10을 넘길 때 대성공이면 ${FAMS[l.fams[1]].name}, 아니면 ${FAMS[l.fams[0]].name} 계열이 돼요.</p>`).join("");
+    const tree = Object.entries(LANES).map(([ln, l]) => `<div class="label">${dex.includes("lane:" + ln) ? `${l.name} 갈래` : "??? 갈래"}</div><div class="dexGrid">${l.fams.flatMap(f => FAMS[f].forms.map((nm, i) =>
+      cell(`f:${f}:${i}`, `+${10 + i * 4} ${nm} 돼지`, { lvl: 10 + i * 4, fam: f, lane: ln }))).join("")}</div>`).join("");
     m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>도감 <span class="gold">${dexCount()}/${DEX_TOTAL}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
-      <div class="scroll">${groups}<div class="label" style="color:var(--great);margin-top:6px">테크트리 · 강화 방식에 따라 갈래와 계열이 갈라져요</div>${tree}<div class="label">변종 ${openBreeds().length}/${Object.keys(BREEDS).length - 1} · 업적과 도감을 채우면 새 변종이 배달 돼지에 섞여 와요. 변종마다 능력이 달라요</div><div class="list">${breeds}</div></div></div>`;
+      <div class="scroll">${groups}<div class="label" style="color:var(--great);margin-top:6px">갈래 ${dex.filter(k => /^(f|lane):/.test(k)).length}/39</div>${tree}<div class="label">변종 ${openBreeds().length}/${Object.keys(BREEDS).length - 1} · 업적과 도감을 채우면 새 변종이 배달 돼지에 섞여 와요. 변종마다 능력이 달라요</div><div class="list">${breeds}</div></div></div>`;
     const imgs = [...m.querySelectorAll("img[data-t]")]; // portraits are drawn a few per frame so the list opens instantly
     (function next() { const im = imgs.shift(); if (!im || !im.isConnected) return; im.src = thumb(JSON.parse(im.dataset.t)); setTimeout(next, 0); })();
   } else if (view === "ach") {
     m.innerHTML = `<div></div><div class="achPanel"><div class="row"><h2>업적 <span class="gold">${achCount()}</span></h2><button class="ghost" id="mBack" style="min-height:38px;padding:6px 14px">뒤로</button></div>
-      <div class="scroll"><div class="list">${achList()}</div><div class="label">걸작 해금 ${unlocks.length}/9 · 계열 돼지를 +20까지 만들면 유물 진열장에 나와요</div><div class="list">${mwList()}</div></div></div>`;
+      <div class="scroll"><div class="list">${achList()}</div><div class="label">걸작 해금 ${unlocks.length}/9</div><div class="list">${mwList()}</div></div></div>`;
   } else {
-    m.innerHTML = `<div class="head"><p class="kicker">멧돼지 군주의 대장간</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}<button class="glassPill" id="mTut" style="margin-top:14px">튜토리얼</button></div>
+    m.innerHTML = `<div class="head"><p class="kicker">상납창 너머의 드래곤</p><h1>돼지<br>강화하기</h1>${bestDay ? `<p class="best">최고 기록 · Day ${bestDay}</p>` : ""}<button class="glassPill" id="mTut" style="margin-top:14px">튜토리얼</button></div>
       <div class="foot">${inProgress() ? `<button class="hot" id="mCont">이어하기<small>Day ${S.day} · 분노 ${S.anger}/${lives()} · 골드 ${G(S.gold)}</small></button>` : ""}
       <button class="${inProgress() ? "ghost" : "hot"}" id="mNew">${confirmNew ? "진행 중인 판이 사라져요. 한 번 더 누르세요" : "새로 시작"}</button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="ghost" id="mAch" style="min-height:52px;font-size:17px">업적 ${achCount()}</button><button class="ghost" id="mDex" style="min-height:52px;font-size:17px">도감 ${dexCount()}/${DEX_TOTAL}</button></div>
@@ -1737,17 +1743,17 @@ function showMenu(view = "main") {
 }
 // ===== Tutorial: scroll through liquid-glass cards; each card flies the camera to its station =====
 const TUT = [
-  { at: "anvil", pitch: -.12, t: "멧돼지 군주의 대장간", b: ["당신은 군주에게 빚진 대장장이예요. 돼지를 <b>강화</b>해서 가치를 올리고, 매일 <b>공물</b>을 바쳐 살아남아야 해요."], tip: "아래로 스크롤해서 대장간을 둘러보세요", hint: true },
+  { at: "anvil", pitch: -.12, t: "상납창 너머의 드래곤", b: ["상납할 돼지를 <b>강화</b>하는 대장장이가 되어 보세요.", "매일 오늘 몫을 채우면 내일도 모루 앞에 설 수 있어요."], tip: "아래로 스크롤해서 대장간을 둘러보세요", hint: true },
   { at: "pen", t: "1. 돼지 우리", b: ["매일 아침 돼지 <b>3마리</b>가 들어와요.", "돼지를 <b>들기</b>로 손에 들고 작업대로 가져가요."], tip: "화면을 좌우로 밀거나 ◀ ▶ 로 작업대를 옮겨 다녀요" },
   { at: "furnace", t: "2. 화로", b: ["이제 달구지 않아도 바로 칠 수 있어요.", "화로에 넣으면 붉게 달아올라 멋져 보여요 (선택)."] },
-  { at: "anvil", t: "3. 모루", b: ["달군 돼지를 올리고 <b>내리치기</b>! 화면을 눌러도 쳐요.", "결과는 <b>대성공 +2 · 성공 +1 · 유지 · 손상 −1 · 파괴</b> 다섯 가지예요.", "1강마다 가치가 <b>1.5배</b>, 등급이 오를수록 파괴 확률도 올라요."], tip: "모루 뒤 게시판에 다음 타격 확률이 늘 떠 있어요" },
-  { at: "anvil", pitch: -.2, t: "4. 광란", b: ["같은 돼지를 <b>10번</b> 치면 게시판의 칸이 다 차고, 다음 타격부터 <b>4초 동안 절대 깨지지 않아요</b>.", "15강부터는 한 번 칠 때마다 긴장감 넘치는 클로즈업이 나와요."] },
+  { at: "anvil", t: "3. 모루", b: ["돼지를 올리고 <b>내리치기</b>! 화면을 눌러도 쳐요.", "결과는 <b>대성공 +2 · 성공 +1 · 유지 · 손상 −1 · 파괴</b> 다섯 가지예요.", "1강마다 가치가 <b>1.5배</b>, 등급이 오를수록 파괴 확률도 올라요."], tip: "모루 뒤 게시판에 다음 타격 확률이 늘 떠 있어요" },
+  { at: "anvil", pitch: -.2, t: "4. 신들림", b: ["같은 돼지를 <b>10번</b> 치면 게시판의 칸이 다 차고, 다음 타격부터 <b>4초 동안 절대 깨지지 않아요</b>.", "15강부터는 한 번 칠 때마다 긴장감 넘치는 클로즈업이 나와요."] },
   { at: "wall", t: "5. 추첨표 · 달력", b: ["타격마다 추첨표의 티켓 한 장을 뽑아요. 유물이 티켓을 <b>+ 더하거나 × 지워요</b>.", "달력에는 지난 날과 유령 상인이 오는 날이 표시돼요."] },
-  { at: "tribute", t: "6. 공물 창구", b: ["강화한 돼지를 창구에 넣고 <b>종</b>을 치면 하루가 끝나요.", "돼지 가치 합이 공물보다 적으면 <b>분노</b>가 쌓이고, <b>3번</b>이면 끝장이에요.", "바친 돼지 가치만큼 골드를 돌려받아요."], tip: "공물은 날마다 커져요. 24일을 버티면 계약 완료!" },
+  { at: "tribute", t: "6. 상납창", b: ["강화한 돼지를 상납대에 올리고 <b>종</b>을 울리면 하루가 끝나요.", "돼지 가치 합이 상납액보다 적으면 <b>분노</b>가 쌓이고, <b>3번</b>이면 끝장이에요.", "바친 돼지 가치만큼 골드를 돌려받아요."], tip: "상납액은 날마다 커져요. 24일을 버티면 계약 완료!" },
   { at: "bank", t: "7. 유물 제단", b: ["돼지 1마리를 넣으면 <b>크레딧 1</b>.", "크레딧으로 유물을 사요. 유물은 티켓·확률·가치를 바꿔 줘요.", "골드로 진열장을 다시 돌릴 수 있어요 (돌릴수록 비싸져요)."] },
   { at: "ghost", t: "8. 유령 상인", b: ["<b>3일마다</b> 찾아와 기본 돼지, 특수 돼지, 강화 아이템을 팔아요.", "물건을 전부 사면 흡족해하며 떠나요."] },
-  { at: "shelf", t: "9. 테크트리 · 진열대", b: ["+5에서 그동안의 결과로 <b>강철 · 광휘 · 가시</b> 갈래가 정해지고, +10을 넘기는 타격으로 계열이 갈라져요.", "자랑하고 싶은 돼지는 진열대에 올려 두세요."], tip: "변종 돼지는 저마다 능력이 달라요. 도감에서 확인하세요" },
-  { at: "anvil", pitch: -.12, t: "준비 완료!", b: ["이제 군주를 만족시킬 차례예요. 행운을 빌어요."], end: true },
+  { at: "shelf", t: "9. 진열대", b: ["돼지는 3강마다 모습이 바뀌고, +30에서 최종 형태가 돼요.", "자랑하고 싶은 돼지는 진열대에 올려 두세요."], tip: "발견한 모습은 도감에 남아요" },
+  { at: "anvil", pitch: -.12, t: "준비 완료!", b: ["혹시 모르죠. 언젠가 당신이 강화한 돼지로 그 드래곤에게 복수할 날이 올지."], end: true },
 ];
 let tut = null;
 function tutView(f) { // f: fractional card index → interpolated camera yaw/pitch between the two cards' stations
@@ -1795,7 +1801,7 @@ function menuClick(id) {
 function hideMenu() { thawFrenzy(); menu = false; $("menu").hidden = true; document.body.classList.remove("menu"); yaw = STATIONS[st].yaw + 40; sfx.play("swish"); ui(); }
 function newRun() { resetKO(); frenzyLeft = 0; frenzyUntil = 0; S = fresh(); uid = 1; morning(); st = 2; save(); }
 
-// ===== Game over: the boar lord punches the camera, the view falls and the eyes slowly close =====
+// ===== Game over: the dragon punches the camera, the view falls and the eyes slowly close =====
 let ko = null;
 const FIST = 1.75; // fingers fold 90° down then back into the palm so the knuckles face the lens
 function resetKO() { ko = null; collecting = false; document.body.classList.remove("ko"); $("lidT").style.height = $("lidB").style.height = "0"; $("gl").style.filter = ""; }
@@ -1816,7 +1822,7 @@ async function knockout(day, total, q) {
   const lids = h => { $("lidT").style.height = $("lidB").style.height = h + "vh"; $("gl").style.filter = `blur(${(h / 9).toFixed(1)}px)`; };
   for (const [a, b, ms] of [[0, 30, 700], [30, 12, 450], [12, 42, 800], [42, 28, 350], [28, 53, 1100]]) await tween(ms * sp, k => lids(lerp(a, b, k)));
   await sleep(500 * sp);
-  showModal(`<h2 class="bad">녹아웃</h2><p>Day ${day} 공물 ${G(total)} / ${G(q)}<br>철창 너머의 멧돼지 군주가 인내심을 잃었어요.</p>
+  showModal(`<h2 class="bad">녹아웃</h2><p>Day ${day} 상납 ${G(total)} / ${G(q)}<br>상납창 너머의 드래곤이 인내심을 잃었어요.</p>
     <button class="hot" id="again">처음부터</button><button class="ghost" id="toMenu">메인 화면</button>`, () => { $("again").onclick = restart; $("toMenu").onclick = () => { closeModal(); newRun(); showMenu(); }; });
   flushToasts(600);
 }
