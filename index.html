@@ -1881,3 +1881,16 @@ setTimeout(() => { // warm-up: build each effect once out of sight and compile a
   try { R.compile(scene, cam); } catch {} }, 1500);
 showMenu();
 </script>
+
+<script>
+// 방문자 카운터: 화면에 아무것도 그리지 않고, 브라우저 세션당 1회만 백그라운드로 집계한다.
+// 네트워크·스토리지 오류는 모두 조용히 무시해서 게임 실행에는 어떤 영향도 주지 않는다.
+(function () {
+  try { if (sessionStorage.getItem("pig_visit_counted")) return; } catch (e) {}
+  try { sessionStorage.setItem("pig_visit_counted", "1"); } catch (e) {}
+  try {
+    fetch("https://abacus.jasoncameron.dev/hit/4ks292gyjc-pigupgrade/visits", { keepalive: true, cache: "no-store" })
+      .catch(function () {});
+  } catch (e) {}
+})();
+</script>
