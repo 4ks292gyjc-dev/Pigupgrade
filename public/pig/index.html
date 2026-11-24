@@ -1,4 +1,5 @@
 <title>돼지 강화하기</title>
+<script src="/hub.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -633,6 +634,7 @@ function ringBell() {
   }
   if (day === CONTRACT) achieve("clear");
   S.day++; const born = morning();
+  window.hubSubmit?.("pig", S.day);
   if (S.day > bestDay) { bestDay = S.day; try { localStorage.setItem("pigforge-best", bestDay); } catch {} }
   banner(paid ? "공물 완납" : "공물 부족", paid ? `골드 +${G(total)} · Day ${S.day}` : pardoned ? `용의 사면장이 목숨을 구했다 · 분노 ${S.anger}/${lives()}` : `${G(q - total)} 모자라요 · 분노 ${S.anger}/${lives()} · 골드 +${G(total)}`, paid ? "s" : "b");
   ui();
